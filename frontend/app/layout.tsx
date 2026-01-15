@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/shared/Header";
 import MobileNav from "@/components/shared/MobileNav";
+import { CartProvider } from "@/context/CartContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,16 +20,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-slate-50 text-slate-900`}>
-        {/* Top Header */}
-        <Header />
-        
-        {/* Main Content Area */}
-        <main className="min-h-screen max-w-7xl mx-auto px-4 py-6 mb-20 md:mb-0">
-          {children}
-        </main>
+       <CartProvider>
+          {/* Top Header */}
+          <Header />
+          
+          {/* Main Content Area */}
+          <main className="min-h-screen max-w-7xl mx-auto px-4 py-6 mb-20 md:mb-0">
+            {children}
+          </main>
 
-        {/* Bottom Nav (Mobile Only) */}
-        <MobileNav />
+          {/* Bottom Nav (Mobile Only) */}
+          <MobileNav />
+       </CartProvider>
       </body>
     </html>
   );

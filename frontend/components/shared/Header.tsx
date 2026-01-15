@@ -1,7 +1,11 @@
+"use client";
 import Link from "next/link";
 import { Search, ShoppingCart, User, Menu } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 export default function Header() {
+  const { totalItems } = useCart();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white shadow-sm">
       <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -18,7 +22,7 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Search Bar (Hidden on small mobile) */}
+        {/* Search Bar (Hidden on mobile) */}
         <div className="hidden md:flex flex-1 max-w-md mx-8">
           <div className="relative w-full">
             <input
@@ -36,9 +40,13 @@ export default function Header() {
         <div className="flex items-center gap-4">
           <Link href="/cart" className="relative p-2 hover:bg-slate-100 rounded-full transition">
             <ShoppingCart className="h-6 w-6 text-slate-700" />
-            <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
-              2
-            </span>
+
+            {/* Only show badge if items exist */}
+            {totalItems > 0 && (
+              <span className="absolute top-0 right-0 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center animate-in zoom-in">
+                {totalItems}
+              </span>
+            )}
           </Link>
           
           <Link href="/login" className="hidden md:flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-blue-600">

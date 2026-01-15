@@ -1,14 +1,18 @@
+"use client"; // Client side for interactivity
+
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Star } from "lucide-react";
 import { Product } from "@/types";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/context/CartContext";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { addItem } = useCart(); // Get the function
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
@@ -64,6 +68,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
 
           <button 
+            onClick={() => addItem(product)}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600 transition hover:bg-blue-600 hover:text-white active:scale-95"
             aria-label="Add to cart"
           >
