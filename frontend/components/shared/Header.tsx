@@ -49,7 +49,7 @@ export default function Header() {
             )}
           </Link>
           
-          <Link href="/login" className="hidden md:flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-blue-600">
+          <Link href="/auth/login" className="hidden md:flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-blue-600">
             <User className="h-5 w-5" />
             <span>Sign In</span>
           </Link>
