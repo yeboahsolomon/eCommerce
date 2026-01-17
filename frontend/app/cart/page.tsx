@@ -31,7 +31,7 @@ export default function CartPage() {
 
   // --- FILLED CART STATE ---
   return (
-    <div className="max-w-7xl mx-auto pb-24 md:pb-0"> {/* Padding bottom for mobile nav */}
+    <div className="max-w-7xl mx-auto pb-24 md:pb-0">
       <h1 className="text-2xl font-bold text-slate-900 mb-8">Shopping Cart</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -66,9 +66,9 @@ export default function CartPage() {
             </div>
 
             {/* Checkout Button */}
-            <button className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
+            <Link href="/checkout" className="block w-full text-center bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 active:scale-[0.98]">
               Proceed to Checkout
-            </button>
+            </Link>
 
             {/* Trust Badges */}
             <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-500 bg-slate-50 py-2 rounded-lg">
@@ -90,9 +90,9 @@ export default function CartPage() {
             <p className="text-xs text-slate-500">Total</p>
             <p className="text-lg font-bold text-slate-900">₵{totalPrice.toLocaleString()}</p>
           </div>
-          <button className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold shadow-md">
+          <Link href="/checkout" className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold shadow-md">
             Checkout
-          </button>
+          </Link>
         </div>
       </div>
 
