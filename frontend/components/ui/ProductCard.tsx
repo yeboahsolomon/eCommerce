@@ -6,16 +6,26 @@ import { ShoppingCart, Star } from "lucide-react";
 import { Product } from "@/types";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { addItem } = useCart(); // Get the function
+  const { addItem, items } = useCart(); 
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
+
+  // Calculate quantity of this specific product in cart
+  const cartItem = items.find((item) => item.id === product.id);
+  const quantity = cartItem ? cartItem.quantity : 0;
+
+  const handleAddToCart = () => {
+    addItem(product);
+    toast.success("Product added to cart");
+  };
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:shadow-md">
@@ -68,11 +78,18 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
 
           <button 
-            onClick={() => addItem(product)}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600 transition hover:bg-blue-600 hover:text-white active:scale-95"
+            onClick={handleAddToCart}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-600 transition hover:bg-blue-600 hover:text-white active:scale-95"
             aria-label="Add to cart"
           >
             <ShoppingCart className="h-5 w-5" />
+            
+            {/* Quantity Badge */}
+            {quantity > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white animate-in zoom-in">
+                {quantity}
+              </span>
+            )}
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, ShoppingBag } from "lucide-react";
+import { ShieldCheck, ShoppingBag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import CartItemRow from "@/components/cart/CartItemRow";
 
@@ -17,7 +17,7 @@ export default function CartPage() {
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Your cart is empty</h2>
         <p className="text-slate-500 mb-8 max-w-sm">
-          Looks like you haven't added anything yet. Browse our categories to find the best deals in Ghana.
+          Looks like you haven&apos;t added anything yet. Browse our categories to find the best deals in Ghana.
         </p>
         <Link
           href="/"

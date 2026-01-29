@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/shared/Header";
 import MobileNav from "@/components/shared/MobileNav";
 import { CartProvider } from "@/context/CartContext";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,6 +32,7 @@ export default function RootLayout({
 
           {/* Bottom Nav (Mobile Only) */}
           <MobileNav />
+          <Toaster richColors position="top-center" />
        </CartProvider>
       </body>
     </html>
