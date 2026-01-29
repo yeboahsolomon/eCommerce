@@ -6,26 +6,65 @@ import { notFound } from "next/navigation";
 import { PRODUCTS } from "@/lib/dummy-data";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
-import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, ChevronRight } from "lucide-react";
+import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, ChevronRight, Minus, Plus } from "lucide-react";
 import { use } from "react";
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const product = PRODUCTS.find((p) => p.id === id);
-  const { addItem } = useCart();
+  const { addItem, items, updateQuantity } = useCart();
 
   if (!product) {
     notFound();
   }
+
+  const cartItem = items.find((item) => item.id === product.id);
+  const quantity = cartItem ? cartItem.quantity : 0;
 
   const handleAddToCart = () => {
     addItem(product);
     toast.success("Product added to cart");
   };
 
+  const handleUpdateQuantity = (newQty: number) => {
+    updateQuantity(product.id, newQty);
+  };
+
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
+
+  const AddToCartButton = ({ className }: { className?: string }) => {
+    if (quantity > 0) {
+      return (
+        <div className={`flex items-center justify-between bg-white border-2 border-blue-600 rounded-xl overflow-hidden h-14 ${className}`}>
+          <button
+            onClick={() => handleUpdateQuantity(quantity - 1)}
+            className="h-full px-5 text-blue-600 hover:bg-blue-50 transition active:scale-95 flex items-center justify-center"
+          >
+            <Minus className="h-5 w-5" />
+          </button>
+          <span className="font-bold text-xl text-slate-900 w-12 text-center">{quantity}</span>
+          <button
+            onClick={() => handleUpdateQuantity(quantity + 1)}
+            className="h-full px-5 text-blue-600 hover:bg-blue-50 transition active:scale-95 flex items-center justify-center"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <button 
+        onClick={handleAddToCart}
+        className={`bg-blue-600 text-white h-14 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2 active:scale-[0.98] text-lg ${className}`}
+      >
+        <ShoppingCart className="h-5 w-5" />
+        Add to Cart
+      </button>
+    );
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen pb-24 md:pb-12">
@@ -114,13 +153,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
               {/* Action Buttons */}
               <div className="flex gap-4 mt-auto">
-                 <button 
-                  onClick={handleAddToCart}
-                  className="w-full bg-blue-600 text-white h-14 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2 active:scale-[0.98] text-lg"
-                 >
-                   <ShoppingCart className="h-5 w-5" />
-                   Add to Cart
-                 </button>
+                 <div className="w-full">
+                    <AddToCartButton className="w-full" />
+                 </div>
               </div>
             </div>
           </div>
@@ -279,12 +314,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 <p className="text-xs text-slate-500">Total Price</p>
                 <p className="text-xl font-bold text-slate-900">₵{product.price.toLocaleString()}</p>
              </div>
-             <button 
-               onClick={handleAddToCart}
-               className="bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition-transform"
-             >
-               Add to Cart
-             </button>
+             <div className="w-40">
+               <AddToCartButton className="w-full" />
+             </div>
         </div>
       </div>
 
