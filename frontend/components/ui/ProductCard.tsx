@@ -31,7 +31,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:shadow-md">
       
       {/* Image Section */}
-      <div className="relative aspect-square overflow-hidden bg-slate-100">
+      <Link href={`/product/${product.id}`} className="relative aspect-square overflow-hidden bg-slate-100 block">
         {discount > 0 && (
           <span className="absolute top-2 left-2 z-10 rounded bg-red-500 px-2 py-1 text-[10px] font-bold text-white">
             -{discount}%
@@ -44,7 +44,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
         />
-      </div>
+      </Link>
 
       {/* Details Section */}
       <div className="flex flex-1 flex-col p-4">
