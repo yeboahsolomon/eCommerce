@@ -16,7 +16,7 @@ const router = Router();
 
 /**
  * GET /api/products
- * List all products with pagination, filtering, and sorting
+ * List products with filtering, sorting, and pagination
  */
 router.get(
   '/',
@@ -25,7 +25,7 @@ router.get(
     try {
       const {
         page = '1',
-        limit = '12',
+        limit = '20',
         category,
         search,
         inStock,
@@ -33,39 +33,66 @@ router.get(
         maxPrice,
         sortBy = 'createdAt',
         order = 'desc',
+        featured,
       } = req.query;
       
-      const pageNum = parseInt(page as string, 10);
-      const limitNum = Math.min(parseInt(limit as string, 10), 50); // Max 50 items
+      const pageNum = parseInt(page as string, 10) || 1;
+      const limitNum = Math.min(parseInt(limit as string, 10) || 20, 50);
       const skip = (pageNum - 1) * limitNum;
       
-      // Build where clause
-      const where: Record<string, unknown> = {};
+      // Build filter
+      const where: any = {
+        isActive: true,
+      };
       
+      // Category filter (by ID or slug)
       if (category) {
-        where.category = { slug: category };
+        const cat = await prisma.category.findFirst({
+          where: { OR: [{ id: category as string }, { slug: category as string }] },
+          include: { children: { select: { id: true } } },
+        });
+        if (cat) {
+          // Include subcategories
+          const categoryIds = [cat.id, ...cat.children.map(c => c.id)];
+          where.categoryId = { in: categoryIds };
+        }
       }
       
+      // Search
       if (search) {
         where.OR = [
           { name: { contains: search as string, mode: 'insensitive' } },
           { description: { contains: search as string, mode: 'insensitive' } },
+          { sku: { equals: search as string, mode: 'insensitive' } },
         ];
       }
       
+      // Stock filter
       if (inStock === 'true') {
-        where.inStock = true;
-      } else if (inStock === 'false') {
-        where.inStock = false;
+        where.OR = [
+          { trackInventory: false },
+          { stockQuantity: { gt: 0 } },
+          { allowBackorder: true },
+        ];
       }
       
+      // Price range (in pesewas)
       if (minPrice || maxPrice) {
-        where.price = {};
-        if (minPrice) (where.price as Record<string, number>).gte = parseFloat(minPrice as string);
-        if (maxPrice) (where.price as Record<string, number>).lte = parseFloat(maxPrice as string);
+        where.priceInPesewas = {};
+        if (minPrice) where.priceInPesewas.gte = parseInt(minPrice as string, 10);
+        if (maxPrice) where.priceInPesewas.lte = parseInt(maxPrice as string, 10);
       }
       
-      // Query products
+      // Featured
+      if (featured === 'true') {
+        where.isFeatured = true;
+      }
+      
+      // Build sort
+      const orderBy: any = {};
+      orderBy[sortBy as string] = order;
+      
+      // Fetch products
       const [products, total] = await Promise.all([
         prisma.product.findMany({
           where,
@@ -73,18 +100,30 @@ router.get(
             category: {
               select: { id: true, name: true, slug: true },
             },
+            images: {
+              orderBy: { sortOrder: 'asc' },
+              take: 5,
+            },
           },
-          orderBy: { [sortBy as string]: order },
+          orderBy,
           skip,
           take: limitNum,
         }),
         prisma.product.count({ where }),
       ]);
       
+      // Transform prices to include cedis
+      const transformedProducts = products.map(product => ({
+        ...product,
+        priceInCedis: product.priceInPesewas / 100,
+        comparePriceInCedis: product.comparePriceInPesewas ? product.comparePriceInPesewas / 100 : null,
+        inStock: !product.trackInventory || product.stockQuantity > 0 || product.allowBackorder,
+      }));
+      
       res.json({
         success: true,
         data: {
-          products,
+          products: transformedProducts,
           pagination: {
             page: pageNum,
             limit: limitNum,
@@ -109,17 +148,29 @@ router.get(
     try {
       const { id } = req.params;
       
-      // Try to find by ID first, then by slug
       const product = await prisma.product.findFirst({
         where: {
           OR: [
             { id },
             { slug: id },
+            { sku: id },
           ],
+          isActive: true,
         },
         include: {
-          category: {
-            select: { id: true, name: true, slug: true },
+          category: true,
+          images: {
+            orderBy: { sortOrder: 'asc' },
+          },
+          reviews: {
+            where: { isApproved: true },
+            include: {
+              user: {
+                select: { firstName: true, lastName: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
           },
         },
       });
@@ -130,7 +181,14 @@ router.get(
       
       res.json({
         success: true,
-        data: { product },
+        data: {
+          product: {
+            ...product,
+            priceInCedis: product.priceInPesewas / 100,
+            comparePriceInCedis: product.comparePriceInPesewas ? product.comparePriceInPesewas / 100 : null,
+            inStock: !product.trackInventory || product.stockQuantity > 0 || product.allowBackorder,
+          },
+        },
       });
     } catch (error) {
       next(error);
@@ -140,7 +198,7 @@ router.get(
 
 /**
  * POST /api/products
- * Create new product (Admin only)
+ * Create new product (Admin/Seller only)
  */
 router.post(
   '/',
@@ -149,40 +207,46 @@ router.post(
   validate(createProductSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = req.body as CreateProductInput;
+      const productData = req.body as CreateProductInput;
       
-      // Check category exists
-      const category = await prisma.category.findUnique({
-        where: { id: data.categoryId },
-      });
+      // Generate slug
+      let slug = generateSlug(productData.name);
       
-      if (!category) {
-        throw new ApiError(400, 'Category not found.');
+      // Check for duplicate slug
+      const existing = await prisma.product.findUnique({ where: { slug } });
+      if (existing) {
+        slug = `${slug}-${Date.now().toString(36)}`;
       }
       
-      // Generate unique slug
-      let slug = generateSlug(data.name);
-      const existingProduct = await prisma.product.findUnique({ where: { slug } });
-      if (existingProduct) {
-        slug = `${slug}-${Date.now()}`;
+      // Check SKU uniqueness
+      if (productData.sku) {
+        const existingSku = await prisma.product.findUnique({ 
+          where: { sku: productData.sku } 
+        });
+        if (existingSku) {
+          throw new ApiError(409, 'A product with this SKU already exists.');
+        }
       }
       
       const product = await prisma.product.create({
         data: {
-          ...data,
+          ...productData,
           slug,
         },
         include: {
-          category: {
-            select: { id: true, name: true, slug: true },
-          },
+          category: true,
         },
       });
       
       res.status(201).json({
         success: true,
         message: 'Product created successfully!',
-        data: { product },
+        data: {
+          product: {
+            ...product,
+            priceInCedis: product.priceInPesewas / 100,
+          },
+        },
       });
     } catch (error) {
       next(error);
@@ -192,7 +256,7 @@ router.post(
 
 /**
  * PUT /api/products/:id
- * Update product (Admin only)
+ * Update product (Admin/Seller only)
  */
 router.put(
   '/:id',
@@ -202,7 +266,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const data = req.body as UpdateProductInput;
+      const updateData = req.body as UpdateProductInput;
       
       // Check product exists
       const existingProduct = await prisma.product.findUnique({ where: { id } });
@@ -210,33 +274,36 @@ router.put(
         throw new ApiError(404, 'Product not found.');
       }
       
-      // Update slug if name changed
-      let updateData: UpdateProductInput & { slug?: string } = { ...data };
-      if (data.name && data.name !== existingProduct.name) {
-        let newSlug = generateSlug(data.name);
-        const slugExists = await prisma.product.findFirst({ 
-          where: { slug: newSlug, id: { not: id } } 
+      // If updating name, update slug too
+      if (updateData.name && updateData.name !== existingProduct.name) {
+        (updateData as any).slug = generateSlug(updateData.name);
+      }
+      
+      // Check SKU uniqueness if updating
+      if (updateData.sku && updateData.sku !== existingProduct.sku) {
+        const existingSku = await prisma.product.findFirst({
+          where: { sku: updateData.sku, id: { not: id } },
         });
-        if (slugExists) {
-          newSlug = `${newSlug}-${Date.now()}`;
+        if (existingSku) {
+          throw new ApiError(409, 'A product with this SKU already exists.');
         }
-        updateData.slug = newSlug;
       }
       
       const product = await prisma.product.update({
         where: { id },
         data: updateData,
-        include: {
-          category: {
-            select: { id: true, name: true, slug: true },
-          },
-        },
+        include: { category: true },
       });
       
       res.json({
         success: true,
         message: 'Product updated successfully!',
-        data: { product },
+        data: {
+          product: {
+            ...product,
+            priceInCedis: product.priceInPesewas / 100,
+          },
+        },
       });
     } catch (error) {
       next(error);
@@ -246,7 +313,7 @@ router.put(
 
 /**
  * DELETE /api/products/:id
- * Delete product (Admin only)
+ * Delete product (Admin only) - Soft delete by setting isActive to false
  */
 router.delete(
   '/:id',
@@ -261,12 +328,29 @@ router.delete(
         throw new ApiError(404, 'Product not found.');
       }
       
-      await prisma.product.delete({ where: { id } });
+      // Check if product has order history
+      const orderCount = await prisma.orderItem.count({ where: { productId: id } });
       
-      res.json({
-        success: true,
-        message: 'Product deleted successfully!',
-      });
+      if (orderCount > 0) {
+        // Soft delete - preserve order history
+        await prisma.product.update({
+          where: { id },
+          data: { isActive: false },
+        });
+        
+        res.json({
+          success: true,
+          message: 'Product deactivated (preserved for order history).',
+        });
+      } else {
+        // Hard delete - no orders reference this product
+        await prisma.product.delete({ where: { id } });
+        
+        res.json({
+          success: true,
+          message: 'Product deleted successfully!',
+        });
+      }
     } catch (error) {
       next(error);
     }

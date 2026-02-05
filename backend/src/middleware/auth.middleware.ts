@@ -137,3 +137,6 @@ export async function optionalAuth(
     next();
   }
 }
+
+// Alias for backward compatibility
+export const authMiddleware = authenticate;

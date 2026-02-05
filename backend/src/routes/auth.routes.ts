@@ -17,7 +17,7 @@ router.post(
   validate(registerSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, password, fullName, phone } = req.body as RegisterInput;
+      const { email, password, firstName, lastName, phone } = req.body as RegisterInput;
       
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
@@ -31,20 +31,28 @@ router.post(
       // Hash password
       const hashedPassword = await hashPassword(password);
       
-      // Create user
+      // Create user with cart
       const user = await prisma.user.create({
         data: {
           email: email.toLowerCase(),
           password: hashedPassword,
-          fullName,
+          firstName,
+          lastName,
           phone,
+          role: 'BUYER',
+          status: 'ACTIVE',
+          cart: {
+            create: {},  // Create empty cart
+          },
         },
         select: {
           id: true,
           email: true,
-          fullName: true,
+          firstName: true,
+          lastName: true,
           phone: true,
           role: true,
+          status: true,
           createdAt: true,
         },
       });
@@ -54,11 +62,6 @@ router.post(
         userId: user.id,
         email: user.email,
         role: user.role,
-      });
-      
-      // Create empty cart for user
-      await prisma.cart.create({
-        data: { userId: user.id },
       });
       
       res.status(201).json({
@@ -95,12 +98,23 @@ router.post(
         throw new ApiError(401, 'Invalid email or password.');
       }
       
+      // Check if account is active
+      if (user.status !== 'ACTIVE') {
+        throw new ApiError(403, 'Your account has been suspended or deactivated.');
+      }
+      
       // Check password
       const isValidPassword = await comparePassword(password, user.password);
       
       if (!isValidPassword) {
         throw new ApiError(401, 'Invalid email or password.');
       }
+      
+      // Update last login
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
       
       // Generate token
       const token = generateToken({
@@ -116,7 +130,8 @@ router.post(
           user: {
             id: user.id,
             email: user.email,
-            fullName: user.fullName,
+            firstName: user.firstName,
+            lastName: user.lastName,
             phone: user.phone,
             role: user.role,
           },
@@ -143,11 +158,22 @@ router.get(
         select: {
           id: true,
           email: true,
-          fullName: true,
+          firstName: true,
+          lastName: true,
           phone: true,
           role: true,
+          status: true,
+          emailVerified: true,
+          phoneVerified: true,
+          avatarUrl: true,
           createdAt: true,
-          addresses: true,
+          lastLoginAt: true,
+          addresses: {
+            orderBy: [
+              { isDefault: 'desc' },
+              { createdAt: 'desc' },
+            ],
+          },
         },
       });
       

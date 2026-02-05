@@ -1,5 +1,6 @@
-// Prisma Schema for eCommerce Backend
-// PostgreSQL Database
+// =================================================================
+// GHANA MARKET - DATABASE SCHEMA
+// =================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -10,118 +11,294 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== ENUMS ====================
+// =================================================================
+// IDENTITY (Who is acting?)
+// =================================================================
 
 enum Role {
-  CUSTOMER
-  ADMIN
+  BUYER   // Regular customer
+  SELLER  // Can list products
+  ADMIN   // Full system access
 }
 
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED  // Soft delete - preserves order history
 }
-
-enum PaymentMethod {
-  MOMO
-  CARD
-  CASH
-}
-
-// ==================== USER & AUTH ====================
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  fullName  String
-  phone     String?
-  role      Role     @default(CUSTOMER)
+  id            String        @id @default(cuid())
+  email         String        @unique
+  password      String        // bcrypt hashed
+  phone         String?       // Crucial for MoMo payments
+  firstName     String
+  lastName      String
+  role          Role          @default(BUYER)
+  status        AccountStatus @default(ACTIVE)
+  emailVerified Boolean       @default(false)
+  phoneVerified Boolean       @default(false)
+  
+  // Profile
+  avatarUrl     String?
   
   // Relations
-  addresses Address[]
-  orders    Order[]
-  cart      Cart?
+  addresses     Address[]
+  cart          Cart?
+  orders        Order[]
+  reviews       Review[]
+  wishlist      Wishlist?
+  sellerProfile SellerProfile?
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Timestamps
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  lastLoginAt   DateTime?
 
   @@index([email])
+  @@index([phone])
+  @@index([status])
+}
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
 }
 
 model Address {
-  id         String  @id @default(cuid())
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-  fullName   String
-  phone      String
-  region     String
-  city       String
-  address    String
-  gpsAddress String?
-  isDefault  Boolean @default(false)
+  id          String      @id @default(cuid())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
   
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  // Address Details
+  label       String      // "Home", "Work", "Office"
+  type        AddressType @default(HOME)
+  fullName    String      // Recipient name
+  phone       String      // Delivery contact
+  
+  // Location (Ghana-specific)
+  region      String      // Greater Accra, Ashanti, etc.
+  city        String
+  area        String?     // Neighborhood/suburb
+  streetAddress String    // Street name, house number, landmarks
+  gpsAddress  String?     // GhanaPost GPS (e.g., GA-183-8164)
+  
+  // Flags
+  isDefault   Boolean     @default(false)
+  
+  // Timestamps
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   @@index([userId])
+  @@index([isDefault])
 }
 
-// ==================== PRODUCTS ====================
+// For SELLER role users
+model SellerProfile {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String   @unique
+  
+  businessName  String
+  businessPhone String
+  businessEmail String?
+  description   String?
+  logoUrl       String?
+  
+  // Verification
+  isVerified    Boolean  @default(false)
+  verifiedAt    DateTime?
+  
+  // Relations
+  products      Product[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// =================================================================
+// CATALOG (What are we selling?)
+// =================================================================
 
 model Category {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  slug     String    @unique
-  image    String?
-  products Product[]
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  description String?
+  image       String?
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Hierarchical Categories (Electronics -> Phones -> Samsung)
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryHierarchy")
+  
+  // Metadata
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  
+  // Relations
+  products    Product[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([parentId])
+  @@index([slug])
+  @@index([isActive])
 }
 
 model Product {
-  id            String   @id @default(cuid())
-  name          String
-  slug          String   @unique
-  description   String?
-  price         Decimal  @db.Decimal(10, 2)
-  originalPrice Decimal? @db.Decimal(10, 2)
-  image         String
-  images        String[] @default([])
-  rating        Decimal  @default(0) @db.Decimal(2, 1)
-  reviewCount   Int      @default(0)
-  inStock       Boolean  @default(true)
-  stockQuantity Int      @default(0)
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  
+  // PRICING - Using Int (Pesewas) to avoid floating point issues
+  // Store in pesewas: ₵10.99 = 1099 pesewas
+  priceInPesewas  Int
+  comparePriceInPesewas Int?  // Original/compare-at price for discounts
+  costInPesewas   Int?        // Cost price (for profit calculation)
+  
+  // INVENTORY - With concurrency handling
+  stockQuantity   Int      @default(0)
+  lowStockThreshold Int    @default(5)
+  trackInventory  Boolean  @default(true)
+  allowBackorder  Boolean  @default(false)
+  
+  // SKU & Identification
+  sku             String?  @unique
+  barcode         String?
+  
+  // Media
+  images          ProductImage[]
+  
+  // Categorization
+  category        Category @relation(fields: [categoryId], references: [id])
+  categoryId      String
+  
+  // Seller (for marketplace)
+  seller          SellerProfile? @relation(fields: [sellerId], references: [id])
+  sellerId        String?
+  
+  // SEO & Display
+  metaTitle       String?
+  metaDescription String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  isFeatured      Boolean  @default(false)
+  
+  // Ratings (denormalized for performance)
+  averageRating   Decimal  @default(0) @db.Decimal(2, 1)
+  reviewCount     Int      @default(0)
+  
+  // Physical properties (for shipping)
+  weightInGrams   Int?
   
   // Relations
-  category   Category    @relation(fields: [categoryId], references: [id])
-  categoryId String
-  orderItems OrderItem[]
-  cartItems  CartItem[]
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  reviews         Review[]
+  wishlistItems   WishlistItem[]
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([categoryId])
+  @@index([sellerId])
+  @@index([isActive])
+  @@index([isFeatured])
   @@index([slug])
-  @@index([inStock])
+  @@index([sku])
 }
 
-// ==================== CART ====================
+model ProductImage {
+  id        String  @id @default(cuid())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+  
+  createdAt DateTime @default(now())
 
-model Cart {
-  id     String     @id @default(cuid())
-  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String     @unique
-  items  CartItem[]
+  @@index([productId])
+}
+
+model Review {
+  id        String  @id @default(cuid())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  
+  rating    Int     // 1-5
+  title     String?
+  comment   String?
+  
+  isVerifiedPurchase Boolean @default(false)
+  isApproved Boolean @default(false)
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([productId, userId]) // One review per product per user
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+}
+
+// =================================================================
+// WISHLIST (Saved for Later)
+// =================================================================
+
+model Wishlist {
+  id        String         @id @default(cuid())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String         @unique  // One wishlist per user
+  
+  items     WishlistItem[]
+  
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  wishlistId String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+  
+  note       String?  // Optional user note
+  
+  createdAt  DateTime @default(now())
+  
+  @@unique([wishlistId, productId]) // Can't add same product twice
+  @@index([wishlistId])
+  @@index([productId])
+}
+
+// =================================================================
+// CART & SESSIONS (The "Maybe" Pile)
+// =================================================================
+
+model Cart {
+  id        String     @id @default(cuid())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String     @unique  // One cart per user (persistent)
+  
+  items     CartItem[]
+  
+  // For abandoned cart recovery
+  lastActivityAt DateTime @default(now())
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model CartItem {
@@ -130,7 +307,11 @@ model CartItem {
   cartId    String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
+  
   quantity  Int     @default(1)
+  
+  // Price at time of adding (for price change notifications)
+  priceAtAddInPesewas Int
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -140,47 +321,250 @@ model CartItem {
   @@index([productId])
 }
 
-// ==================== ORDERS ====================
+// =================================================================
+// ORDERS (The Financial Record)
+// =================================================================
+
+enum OrderStatus {
+  PENDING         // Just created, awaiting payment
+  PAYMENT_PENDING // Payment initiated but not confirmed
+  CONFIRMED       // Payment received, ready for processing
+  PROCESSING      // Being prepared/packed
+  SHIPPED         // Handed to courier
+  OUT_FOR_DELIVERY
+  DELIVERED       // Successfully delivered
+  CANCELLED       // Cancelled before delivery
+  REFUNDED        // Money returned to customer
+  FAILED          // Order failed (payment failed, etc.)
+}
 
 model Order {
-  id              String        @id @default(cuid())
-  orderNumber     String        @unique @default(cuid())
-  user            User          @relation(fields: [userId], references: [id])
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique  // Human-readable: GH-20260205-ABCD
+  
+  user            User        @relation(fields: [userId], references: [id])
   userId          String
-  items           OrderItem[]
-  status          OrderStatus   @default(PENDING)
-  subtotal        Decimal       @db.Decimal(10, 2)
-  deliveryFee     Decimal       @default(0) @db.Decimal(10, 2)
-  total           Decimal       @db.Decimal(10, 2)
-  paymentMethod   PaymentMethod
   
-  // Shipping Address (stored as JSON for historical record)
-  shippingAddress Json
+  status          OrderStatus @default(PENDING)
   
-  // Contact info at time of order
-  contactName     String
-  contactEmail    String
-  contactPhone    String
+  // ===== SNAPSHOT DATA (Immutable after creation) =====
+  // These are COPIED at order time, not linked
   
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  // Financial Snapshot (in Pesewas to avoid float issues)
+  subtotalInPesewas   Int
+  shippingFeeInPesewas Int     @default(0)
+  taxInPesewas        Int      @default(0)
+  discountInPesewas   Int      @default(0)
+  totalInPesewas      Int
+  
+  // Shipping Address Snapshot (copied from Address at order time)
+  shippingFullName    String
+  shippingPhone       String
+  shippingRegion      String
+  shippingCity        String
+  shippingArea        String?
+  shippingStreetAddress String
+  shippingGpsAddress  String?
+  
+  // Contact info at order time
+  customerEmail       String
+  customerPhone       String
+  
+  // Order Items (with price snapshots)
+  items               OrderItem[]
+  
+  // Payment
+  payment             Payment?
+  
+  // Delivery
+  deliveryMethod      String?   // e.g., "standard", "express", "pickup"
+  deliveryNotes       String?
+  estimatedDeliveryAt DateTime?
+  deliveredAt         DateTime?
+  
+  // Tracking
+  trackingNumber      String?
+  trackingUrl         String?
+  
+  // Internal notes
+  notes               String?
+  
+  // Timestamps
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  confirmedAt         DateTime?
+  shippedAt           DateTime?
+  cancelledAt         DateTime?
+  
+  // Cancellation
+  cancellationReason  String?
 
   @@index([userId])
   @@index([orderNumber])
   @@index([status])
+  @@index([createdAt])
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId   String
-  product   Product @relation(fields: [productId], references: [id])
-  productId String
-  quantity  Int
-  price     Decimal @db.Decimal(10, 2) // Price at time of order
+  id              String  @id @default(cuid())
+  order           Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId         String
+  product         Product @relation(fields: [productId], references: [id])
+  productId       String
   
-  createdAt DateTime @default(now())
+  // ===== SNAPSHOT DATA (THE CRITICAL RULE) =====
+  // These values are COPIED at purchase time and NEVER change
+  productName     String        // Snapshot of product.name
+  productSku      String?       // Snapshot of product.sku
+  productImage    String?       // Snapshot of primary image URL
+  
+  quantity        Int
+  unitPriceInPesewas Int        // Price per unit AT TIME OF PURCHASE
+  totalPriceInPesewas Int       // quantity * unitPrice
+  
+  createdAt       DateTime @default(now())
 
   @@index([orderId])
   @@index([productId])
+}
+
+// =================================================================
+// PAYMENTS (The Status)
+// =================================================================
+
+enum PaymentMethod {
+  MOMO_MTN        // MTN Mobile Money
+  MOMO_VODAFONE   // Vodafone Cash
+  MOMO_AIRTELTIGO // AirtelTigo Money
+  CARD            // Credit/Debit Card
+  BANK_TRANSFER   // Bank Transfer
+  CASH_ON_DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING     // Awaiting payment initiation
+  PROCESSING  // Payment gateway processing
+  SUCCESS     // Payment confirmed
+  FAILED      // Payment failed
+  REFUNDED    // Fully refunded
+  PARTIALLY_REFUNDED
+  CANCELLED   // Payment cancelled
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  order           Order         @relation(fields: [orderId], references: [id])
+  orderId         String        @unique
+  
+  // Amount (in Pesewas)
+  amountInPesewas Int
+  
+  // Payment Details
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  
+  // ===== GATEWAY REFERENCES (For reconciliation) =====
+  // Store the external reference IDs to match with gateway records
+  gatewayProvider String?       // "paystack", "hubtel", "flutterwave"
+  gatewayReference String?      // Their transaction ID
+  gatewayResponse Json?         // Full response for debugging
+  
+  // Customer payment info (for MoMo)
+  momoPhoneNumber String?
+  momoNetwork     String?       // MTN, Vodafone, AirtelTigo
+  
+  // Card info (masked/partial)
+  cardLast4       String?
+  cardBrand       String?       // VISA, Mastercard
+  
+  // Failure info
+  failureReason   String?
+  failureCode     String?
+  
+  // Timestamps
+  initiatedAt     DateTime      @default(now())
+  confirmedAt     DateTime?
+  failedAt        DateTime?
+  
+  // Refunds
+  refunds         Refund[]
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+  @@index([gatewayReference])
+}
+
+model Refund {
+  id              String  @id @default(cuid())
+  payment         Payment @relation(fields: [paymentId], references: [id])
+  paymentId       String
+  
+  amountInPesewas Int
+  reason          String
+  
+  // Gateway info
+  gatewayReference String?
+  
+  status          PaymentStatus @default(PENDING)
+  
+  processedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([paymentId])
+}
+
+// =================================================================
+// AUDIT & SYSTEM
+// =================================================================
+
+// For tracking all inventory changes (audit trail)
+model InventoryLog {
+  id          String   @id @default(cuid())
+  productId   String
+  
+  action      String   // "SALE", "RESTOCK", "ADJUSTMENT", "RETURN"
+  quantityChange Int   // Positive for additions, negative for reductions
+  previousQuantity Int
+  newQuantity Int
+  
+  // Reference
+  orderId     String?
+  userId      String?  // Who made the change
+  notes       String?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
+
+// Coupon/Discount codes
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  
+  // Discount
+  discountType String  // "percentage" or "fixed"
+  discountValue Int    // Percentage (10 = 10%) or fixed amount in Pesewas
+  
+  // Limits
+  minOrderInPesewas Int?
+  maxDiscountInPesewas Int?
+  usageLimit  Int?
+  usageCount  Int      @default(0)
+  
+  // Validity
+  startsAt    DateTime @default(now())
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([code])
+  @@index([isActive])
 }
