@@ -19,10 +19,7 @@ npm install
 ```
 
 ### 2. Configure Environment
-Copy `.env.example` to `.env` and update the values:
-```bash
-cp .env.example .env
-```
+Add `.env` and update the values:
 
 Update `DATABASE_URL` with your PostgreSQL connection string.
 
