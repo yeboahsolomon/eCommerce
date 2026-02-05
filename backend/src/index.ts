@@ -1,8 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import path from 'path';
 import { config } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
+import { generalLimiter, authLimiter } from './middleware/rate-limit.middleware.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -10,13 +14,29 @@ import productRoutes from './routes/products.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import cartRoutes from './routes/cart.routes.js';
 import orderRoutes from './routes/orders.routes.js';
+import paymentRoutes from './routes/payments.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
+import wishlistRoutes from './routes/wishlist.routes.js';
+import reviewRoutes from './routes/reviews.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import searchRoutes from './routes/search.routes.js';
 
 const app = express();
 
 // ==================== MIDDLEWARE ====================
 
+// Request logging (development only)
+if (config.nodeEnv === 'development') {
+  app.use(morgan('dev'));
+}
+
 // Security headers
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow image loading
+}));
+
+// Compression for responses
+app.use(compression());
 
 // CORS configuration
 app.use(cors({
@@ -30,23 +50,53 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files (uploaded images)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// General rate limiting (100 req/min for most routes)
+app.use('/api', generalLimiter);
+
 // ==================== ROUTES ====================
 
-// Health check
+// Health check (no rate limit)
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     message: 'eCommerce API is running',
-    timestamp: new Date().toISOString()
+    version: '2.0.0',
+    timestamp: new Date().toISOString(),
+    features: [
+      'authentication',
+      'products',
+      'cart',
+      'orders',
+      'payments (MTN MoMo)',
+      'wishlist',
+      'reviews',
+      'search',
+      'admin dashboard',
+    ],
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
+// Auth routes (stricter rate limit)
+app.use('/api/auth', authLimiter, authRoutes);
+
+// Core API routes
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+
+// New feature routes
+app.use('/api/payments', paymentRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/search', searchRoutes);
+
+// Admin routes
+app.use('/api/admin', adminRoutes);
 
 // ==================== ERROR HANDLING ====================
 
@@ -60,14 +110,26 @@ app.use(errorHandler);
 
 app.listen(config.port, () => {
   console.log(`
-╔═══════════════════════════════════════════════════╗
-║                                                   ║
-║   🛒 eCommerce API Server                         ║
-║                                                   ║
-║   📍 Local:   http://localhost:${config.port}              ║
-║   🔐 Mode:    ${config.nodeEnv}                       ║
-║                                                   ║
-╚═══════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║   🛒 GhanaMarket eCommerce API Server v2.0                ║
+║                                                           ║
+║   📍 Local:    http://localhost:${config.port}                    ║
+║   🔐 Mode:     ${config.nodeEnv.padEnd(15)}                      ║
+║                                                           ║
+║   📚 API Endpoints:                                       ║
+║   • Auth:      /api/auth                                  ║
+║   • Products:  /api/products                              ║
+║   • Cart:      /api/cart                                  ║
+║   • Orders:    /api/orders                                ║
+║   • Payments:  /api/payments (MTN MoMo)                   ║
+║   • Wishlist:  /api/wishlist                              ║
+║   • Reviews:   /api/reviews                               ║
+║   • Search:    /api/search                                ║
+║   • Admin:     /api/admin                                 ║
+║   • Upload:    /api/upload                                ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
   `);
 });
 
