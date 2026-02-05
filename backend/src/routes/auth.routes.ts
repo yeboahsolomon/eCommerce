@@ -191,4 +191,45 @@ router.get(
   }
 );
 
+/**
+ * PUT /api/auth/me
+ * Update current user profile
+ */
+router.put(
+  '/me',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { firstName, lastName, phone } = req.body;
+      
+      const user = await prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          firstName,
+          lastName,
+          phone,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          status: true,
+          avatarUrl: true,
+        },
+      });
+      
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: { user },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;

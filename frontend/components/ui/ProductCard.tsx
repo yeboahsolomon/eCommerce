@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Star } from "lucide-react";
+import { ShoppingCart, Star, ImageOff } from "lucide-react";
 import { Product } from "@/types";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
@@ -13,18 +13,17 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { addItem, items } = useCart(); 
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  const { addItem, cart } = useCart(); 
+  const discount = product.comparePriceInCedis
+    ? Math.round(((product.comparePriceInCedis - product.priceInCedis) / product.comparePriceInCedis) * 100)
     : 0;
 
   // Calculate quantity of this specific product in cart
-  const cartItem = items.find((item) => item.id === product.id);
+  const cartItem = cart?.items?.find((item) => item.productId === product.id);
   const quantity = cartItem ? cartItem.quantity : 0;
 
-  const handleAddToCart = () => {
-    addItem(product);
-    toast.success("Product added to cart");
+  const handleAddToCart = async () => {
+    await addItem(product.id, 1);
   };
 
   return (
@@ -37,19 +36,25 @@ export default function ProductCard({ product }: ProductCardProps) {
             -{discount}%
           </span>
         )}
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
-        />
+        {product.image ? (
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-slate-100">
+            <ImageOff className="h-10 w-10 text-slate-300" />
+          </div>
+        )}
       </Link>
 
       {/* Details Section */}
       <div className="flex flex-1 flex-col p-4">
         {/* Category */}
-        <p className="mb-1 text-xs text-slate-500">{product.category}</p>
+        <p className="mb-1 text-xs text-slate-500">{product.category.name}</p>
         
         {/* Title */}
         <Link href={`/product/${product.id}`} className="mb-2">
@@ -61,18 +66,18 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Rating */}
         <div className="mb-3 flex items-center gap-1">
           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-          <span className="text-xs text-slate-600">{product.rating.toFixed(1)}</span>
+          <span className="text-xs text-slate-600">{product.averageRating.toFixed(1)}</span>
         </div>
 
         {/* Price & Action */}
         <div className="mt-auto flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-lg font-bold text-slate-900">
-              ₵{product.price.toLocaleString()}
+              ₵{product.priceInCedis.toLocaleString()}
             </span>
-            {product.originalPrice && (
+            {product.comparePriceInCedis && (
               <span className="text-xs text-slate-400 line-through">
-                ₵{product.originalPrice.toLocaleString()}
+                ₵{product.comparePriceInCedis.toLocaleString()}
               </span>
             )}
           </div>

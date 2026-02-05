@@ -131,11 +131,11 @@ class ApiClient {
   }
 
   async getProfile() {
-    return this.request<{ user: object }>('/auth/profile');
+    return this.request<{ user: object }>('/auth/me');
   }
 
   async updateProfile(data: { firstName?: string; lastName?: string; phone?: string }) {
-    return this.request<{ user: object }>('/auth/profile', {
+    return this.request<{ user: object }>('/auth/me', {
       method: 'PUT',
       body: JSON.stringify(data),
     });

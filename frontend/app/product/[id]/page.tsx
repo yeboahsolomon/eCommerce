@@ -12,17 +12,17 @@ import { use } from "react";
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const product = PRODUCTS.find((p) => p.id === id);
-  const { addItem, items, updateQuantity } = useCart();
+  const { addItem, cart, updateQuantity } = useCart();
 
   if (!product) {
     notFound();
   }
 
-  const cartItem = items.find((item) => item.id === product.id);
+  const cartItem = cart?.items?.find((item) => item.productId === product.id);
   const quantity = cartItem ? cartItem.quantity : 0;
 
   const handleAddToCart = () => {
-    addItem(product);
+    addItem(product.id);
     toast.success("Product added to cart");
   };
 
@@ -30,8 +30,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     updateQuantity(product.id, newQty);
   };
 
-  const discount = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  const discount = product.comparePriceInCedis
+    ? Math.round(((product.comparePriceInCedis - product.priceInCedis) / product.comparePriceInCedis) * 100)
     : 0;
 
   const AddToCartButton = ({ className }: { className?: string }) => {
@@ -72,7 +72,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       <div className="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center text-sm text-slate-500 gap-2">
         <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
         <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
-        <Link href="/products" className="hover:text-blue-600 transition-colors">{product.category}</Link>
+        <Link href="/products" className="hover:text-blue-600 transition-colors">{product.category.name}</Link>
         <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
         <span className="text-slate-900 font-medium truncate max-w-[200px] sm:max-w-md">{product.name}</span>
       </div>
@@ -93,14 +93,20 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   </span>
                 )}
                 <div className="relative w-full h-full">
+                  {product.image ? (
                     <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-contain"
-                    priority
-                    sizes="(max-width: 768px) 100vw, 50vw"
+                      src={product.image}
+                      alt={product.name}
+                      fill
+                      className="object-contain"
+                      priority
+                      sizes="(max-width: 768px) 100vw, 50vw"
                     />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
+                      No Image Available
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -118,7 +124,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                       <Star
                         key={star}
                         className={`h-4 w-4 ${
-                          star <= Math.round(product.rating)
+                          star <= Math.round(product.averageRating)
                             ? "fill-yellow-400 text-yellow-400"
                             : "text-slate-300"
                         }`}
@@ -134,14 +140,14 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
                 <div className="border-t border-b border-slate-100 py-6 mb-8">
                   <div className="flex items-baseline gap-3 mb-2">
-                    <span className="text-3xl lg:text-4xl font-bold text-slate-900">₵{product.price.toLocaleString()}</span>
-                    {product.originalPrice && (
-                      <span className="text-lg text-slate-400 line-through">₵{product.originalPrice.toLocaleString()}</span>
+                    <span className="text-3xl lg:text-4xl font-bold text-slate-900">₵{product.priceInCedis.toLocaleString()}</span>
+                    {product.comparePriceInCedis && (
+                      <span className="text-lg text-slate-400 line-through">₵{product.comparePriceInCedis.toLocaleString()}</span>
                     )}
                   </div>
-                  {product.originalPrice && (
+                  {product.comparePriceInCedis && (
                     <p className="text-sm text-orange-600 font-medium">
-                      You save ₵{(product.originalPrice - product.price).toLocaleString()}
+                      You save ₵{(product.comparePriceInCedis - product.priceInCedis).toLocaleString()}
                     </p>
                   )}
                   <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
@@ -312,7 +318,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         <div className="flex items-center gap-4 max-w-7xl mx-auto">
              <div className="flex-1">
                 <p className="text-xs text-slate-500">Total Price</p>
-                <p className="text-xl font-bold text-slate-900">₵{product.price.toLocaleString()}</p>
+                <p className="text-xl font-bold text-slate-900">₵{product.priceInCedis.toLocaleString()}</p>
              </div>
              <div className="w-40">
                <AddToCartButton className="w-full" />

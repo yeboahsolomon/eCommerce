@@ -6,7 +6,9 @@ import { useCart } from "@/context/CartContext";
 import CartItemRow from "@/components/cart/CartItemRow";
 
 export default function CartPage() {
-  const { items, totalPrice } = useCart();
+  const { cart, subtotal } = useCart();
+  const items = cart?.items || [];
+  const totalPrice = subtotal;
 
   // --- EMPTY STATE ---
   if (items.length === 0) {
