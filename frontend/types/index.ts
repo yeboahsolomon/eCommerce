@@ -257,7 +257,7 @@ export interface RegisterData {
 export interface CartContextType {
   cart: Cart | null;
   isLoading: boolean;
-  addItem: (productId: string, quantity?: number) => Promise<void>;
+  addItem: (productId: string, quantity?: number, product?: Product) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
   removeItem: (productId: string) => Promise<void>;
   clearCart: () => Promise<void>;

@@ -12,7 +12,9 @@ import Link from "next/link";
 import { ChevronLeft, Lock } from "lucide-react";
 
 export default function CheckoutPage() {
-  const { items, totalPrice } = useCart();
+  const { cart, subtotal } = useCart();
+  const items = cart?.items || [];
+  const totalPrice = subtotal;
   const router = useRouter();
 
   // Redirect if empty
@@ -130,14 +132,14 @@ export default function CheckoutPage() {
                 <div key={item.id} className="flex gap-3">
                   <div className="relative h-12 w-12 rounded bg-slate-100 overflow-hidden">
                      {/* In production, we use Image component here */}
-                     <img src={item.image} alt={item.name} className="object-cover h-full w-full" />
+                     {item.product.image && <img src={item.product.image} alt={item.product.name} className="object-cover h-full w-full" />}
                      <span className="absolute bottom-0 right-0 bg-slate-800 text-white text-[10px] px-1">{item.quantity}</span>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium line-clamp-1">{item.name}</p>
-                    <p className="text-xs text-slate-500">₵{item.price}</p>
+                    <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
+                    <p className="text-xs text-slate-500">₵{item.product.priceInCedis}</p>
                   </div>
-                  <p className="text-sm font-bold">₵{item.price * item.quantity}</p>
+                  <p className="text-sm font-bold">₵{item.product.priceInCedis * item.quantity}</p>
                 </div>
               ))}
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { Cart, CartContextType } from "@/types";
+import { Cart, CartContextType, Product } from "@/types";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -56,7 +56,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // --- ACTIONS ---
 
-  const addItem = async (productId: string, quantity: number = 1) => {
+  const addItem = async (productId: string, quantity: number = 1, product?: Product) => {
     // If authenticated, API call
     if (isAuthenticated) {
       try {
@@ -69,14 +69,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         toast.error("Failed to add to cart");
       }
     } else {
-      // Local Logic - Complex because we need Product details to create CartItem
-      // This is the limitation of ID-only addItem.
-      // We will fetch product details from API first (public endpoint).
+      // Local Logic
       try {
-        const res = await api.getProduct(productId);
-        if (res.success && (res.data as any).product) {
-           const product = (res.data as any).product;
-           
+        let productToAdd = product;
+        
+        // If product not provided, fetch from API
+        if (!productToAdd) {
+             const res = await api.getProduct(productId);
+             if (res.success && (res.data as any).product) {
+                 productToAdd = (res.data as any).product;
+             }
+        }
+
+        if (productToAdd) {
            setCart((currentCart) => {
               const newCart = currentCart ? { ...currentCart } : { id: 'local', items: [], itemCount: 0, subtotalInCedis: 0 };
               
@@ -85,19 +90,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               if (existingItemIndex > -1) {
                   newCart.items[existingItemIndex].quantity += quantity;
               } else {
+                  // Ensure price is handled correctly (backend might send diff format, but Product type expects priceInCedis)
+                  // If productToAdd comes from API it might be any, cast carefully or check props
+                  const price = (productToAdd as any).priceInCedis || ((productToAdd as any).priceInPesewas / 100) || 0;
+                  
                   newCart.items.push({
                       id: `local-${Date.now()}`,
                       productId,
                       quantity,
-                      priceAtAddInCedis: product.priceInPesewas / 100, // Approximation
+                      priceAtAddInCedis: price,
                       product: {
-                          id: product.id,
-                          name: product.name,
-                          slug: product.slug,
-                          priceInCedis: product.priceInPesewas / 100,
-                          image: product.images?.[0]?.url || null,
-                          inStock: product.stockQuantity > 0,
-                          stockQuantity: product.stockQuantity
+                          id: productToAdd!.id,
+                          name: productToAdd!.name,
+                          slug: productToAdd!.slug,
+                          priceInCedis: price,
+                          image: productToAdd!.image || (productToAdd!.images && productToAdd!.images[0] ? productToAdd!.images[0].url : null),
+                          inStock: productToAdd!.inStock,
+                          stockQuantity: productToAdd!.stockQuantity || 0
                       }
                   });
               }
@@ -109,6 +118,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               return newCart;
            });
            toast.success("Added to cart");
+        } else {
+            toast.error("Could not load product details");
         }
       } catch (error) {
         console.error(error);

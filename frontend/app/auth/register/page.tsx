@@ -9,11 +9,13 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 // Define the Validation Schema
 const registerSchema = z
   .object({
-    fullName: z.string().min(2, "Name must be at least 2 characters"),
+    firstName: z.string().min(2, "First name must be at least 2 characters"),
+    lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
@@ -28,6 +30,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { register: registerUser } = useAuth();
 
   const {
     register,
@@ -40,17 +43,26 @@ export default function RegisterPage() {
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
 
-    // Simulate API Call
-    setTimeout(() => {
-      console.log("Registered with:", data);
+    try {
+      const response = await registerUser({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+
+      if (response.success) {
+        toast.success("Account created successfully! Logging you in...");
+        router.push("/");
+      } else {
+        toast.error(response.message || "Registration failed");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+      console.error(error);
+    } finally {
       setIsLoading(false);
-      
-      // Success Feedback
-      toast.success("Account created successfully!");
-      
-      // Redirect to Login
-      router.push("/auth/login");
-    }, 2000);
+    }
   }
 
   return (
@@ -71,12 +83,20 @@ export default function RegisterPage() {
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         
-        <Input
-          label="Full Name"
-          placeholder="Kwame Mensah"
-          {...register("fullName")}
-          error={errors.fullName?.message}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="First Name"
+            placeholder="Kwame"
+            {...register("firstName")}
+            error={errors.firstName?.message}
+          />
+          <Input
+            label="Last Name"
+            placeholder="Mensah"
+            {...register("lastName")}
+            error={errors.lastName?.message}
+          />
+        </div>
 
         <Input
           label="Email"
