@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
-import { Search, ShoppingCart, User, Menu } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, LogOut } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Header() {
   const { itemCount } = useCart();
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
@@ -49,10 +51,29 @@ export default function Header() {
             )}
           </Link>
           
-          <Link href="/auth/login" className="hidden md:flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors hover:bg-secondary/20 px-4 py-2 rounded-full">
-            <User className="h-5 w-5" />
-            <span>Sign In</span>
-          </Link>
+          {isAuthenticated ? (
+            <div className="hidden md:flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                  {user?.firstName?.[0] || 'U'}
+                </div>
+                <span className="text-sm font-medium text-foreground">
+                  {user?.firstName}
+                </span>
+              </div>
+              <button 
+                onClick={logout}
+                className="text-sm font-medium text-muted-foreground hover:text-destructive transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <Link href="/auth/login" className="hidden md:flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors hover:bg-secondary/20 px-4 py-2 rounded-full">
+              <User className="h-5 w-5" />
+              <span>Sign In</span>
+            </Link>
+          )}
         </div>
       </div>
     </header>

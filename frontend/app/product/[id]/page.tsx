@@ -22,7 +22,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const quantity = cartItem ? cartItem.quantity : 0;
 
   const handleAddToCart = () => {
-    addItem(product.id);
+    addItem(product.id, 1, product);
     toast.success("Product added to cart");
   };
 

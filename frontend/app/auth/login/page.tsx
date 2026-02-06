@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 // Define the Validation Schema
 const loginSchema = z.object({
@@ -19,6 +22,15 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { login, isAuthenticated } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, router]);
 
   // Initialize the Form Hook
   const {
@@ -33,12 +45,22 @@ export default function LoginPage() {
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
     
-    // Simulate Network Request (We will connect real Auth later)
-    setTimeout(() => {
-      console.log("Logged in with:", data);
+    try {
+      const response = await login(data.email, data.password);
+      
+      if (response.success) {
+        toast.success("Login successful!");
+        router.push("/");
+        router.refresh(); 
+      } else {
+        toast.error(response.message || "Invalid credentials");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+      console.error(error);
+    } finally {
       setIsLoading(false);
-      alert("Login logic triggered! (Check Console)");
-    }, 2000);
+    }
   }
 
   return (

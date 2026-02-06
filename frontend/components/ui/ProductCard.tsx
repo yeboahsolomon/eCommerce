@@ -23,7 +23,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const quantity = cartItem ? cartItem.quantity : 0;
 
   const handleAddToCart = async () => {
-    await addItem(product.id, 1);
+    await addItem(product.id, 1, product);
   };
 
   return (

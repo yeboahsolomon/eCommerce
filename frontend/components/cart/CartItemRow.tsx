@@ -22,12 +22,17 @@ export default function CartItemRow({ item }: Props) {
     <div className="flex gap-4 py-6 border-b border-slate-100 last:border-0">
       {/* Product Image */}
       <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-slate-200">
-        <Image
-          src={item.image}
-          alt={item.name}
-          fill
-          className="object-cover"
-        />
+        {item.product.image ? (
+          <Image
+            src={item.product.image}
+            alt={item.product.name}
+            fill
+            className="object-cover"
+            sizes="96px"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-slate-100 text-xs text-slate-400">No Img</div>
+        )}
       </div>
 
       {/* Details & Controls */}
@@ -35,12 +40,11 @@ export default function CartItemRow({ item }: Props) {
         <div className="flex justify-between">
           <div>
             <h3 className="text-sm font-medium text-slate-900 line-clamp-2">
-              {item.name}
+              {item.product.name}
             </h3>
-            <p className="mt-1 text-sm text-slate-500">{item.category}</p>
           </div>
           <p className="text-sm font-bold text-slate-900">
-            ₵{(item.price * item.quantity).toLocaleString()}
+            ₵{(item.product.priceInCedis * item.quantity).toLocaleString()}
           </p>
         </div>
 
