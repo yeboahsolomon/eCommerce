@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import path from 'path';
 import { config } from './config/env.js';
@@ -37,6 +38,7 @@ app.use(helmet({
 
 // Compression for responses
 app.use(compression());
+app.use(cookieParser());
 
 // CORS configuration
 app.use(cors({
