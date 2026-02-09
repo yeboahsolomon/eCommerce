@@ -22,22 +22,23 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground`}>
-       <AuthProvider>
-         <CartProvider>
+        <AuthProvider>
+          <CartProvider>
             {/* Top Header */}
             <Header />
             
             {/* Main Content Area */}
-            <main className="min-h-screen max-w-7xl mx-auto px-4 py-6 mb-20 md:mb-0">
+            <main className="min-h-screen max-w-7xl mx-auto px-4 py-6 pt-36 md:pt-40 mb-20 md:mb-0">
               {children}
             </main>
   
             {/* Bottom Nav (Mobile Only) */}
             <MobileNav />
             <Toaster richColors position="top-center" />
-         </CartProvider>
-       </AuthProvider>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );
 }
+

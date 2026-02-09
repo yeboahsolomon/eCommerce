@@ -14,7 +14,7 @@ export default function CartItemRow({ item }: Props) {
   const { updateQuantity, removeItem } = useCart();
 
   const handleRemove = () => {
-    removeItem(item.id);
+    removeItem(item.productId);
     toast.success("Product removed successfully");
   };
 
@@ -44,7 +44,7 @@ export default function CartItemRow({ item }: Props) {
             </h3>
           </div>
           <p className="text-sm font-bold text-slate-900">
-            ₵{(item.product.priceInCedis * item.quantity).toLocaleString()}
+            ₵{((item.product.priceInPesewas / 100) * item.quantity).toLocaleString()}
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export default function CartItemRow({ item }: Props) {
           {/* Quantity Controls */}
           <div className="flex items-center rounded-lg border border-slate-200">
             <button
-              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
               className="p-2 text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-50"
               disabled={item.quantity <= 1}
             >
@@ -62,7 +62,7 @@ export default function CartItemRow({ item }: Props) {
               {item.quantity}
             </span>
             <button
-              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
               className="p-2 text-slate-600 hover:bg-slate-50 hover:text-blue-600"
             >
               <Plus className="h-4 w-4" />

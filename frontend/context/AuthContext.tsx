@@ -13,16 +13,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check for existing session on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = api.getToken();
-      if (token) {
+      try {
         const response = await api.getProfile();
         if (response.success && response.data) {
           setUser(response.data.user as User);
-        } else {
-          api.setToken(null);
         }
+      } catch (error) {
+        // Not authenticated
+        console.log('Not authenticated');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     checkAuth();
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await api.register(data);
       if (response.success && response.data) {
         // Auto-login after registration
-        api.setToken(response.data.token);
+        // Auto-login after registration (cookie set by backend)
         setUser(response.data.user as User);
         return { success: true };
       }

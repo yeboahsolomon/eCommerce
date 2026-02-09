@@ -137,9 +137,9 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
-                    <p className="text-xs text-slate-500">₵{item.product.priceInCedis}</p>
+                    <p className="text-xs text-slate-500">₵{(item.product.priceInPesewas / 100).toLocaleString()}</p>
                   </div>
-                  <p className="text-sm font-bold">₵{item.product.priceInCedis * item.quantity}</p>
+                  <p className="text-sm font-bold">₵{((item.product.priceInPesewas * item.quantity) / 100).toLocaleString()}</p>
                 </div>
               ))}
             </div>

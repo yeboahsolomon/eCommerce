@@ -1,15 +1,43 @@
 "use client";
 import Link from "next/link";
-import { Search, ShoppingCart, User, Menu, Heart, Phone, HelpCircle, ChevronDown, Smartphone } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, ShoppingCart, User, Menu, Heart, ChevronDown, Smartphone } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, FormEvent } from "react";
 
 export default function Header() {
-  const { itemCount } = useCart();
+  const router = useRouter();
+  const { itemCount, subtotal } = useCart();
   const { user, isAuthenticated, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const profileRef = useRef<HTMLDivElement>(null);
+  
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  // Smart Navbar Scroll Handler
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY < 10) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY) {
+        // Scrolling down
+        setIsVisible(false);
+      } else {
+        // Scrolling up
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -24,10 +52,19 @@ export default function Header() {
     };
   }, []);
 
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
     <div className="flex flex-col w-full z-50">
       {/* 2. MAIN HEADER: Logo, Search, Actions */}
-      <header className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm z-40 transition-all duration-300">
+      <header 
+        className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm z-40"
+      >
         <div className="max-w-7xl mx-auto px-4 lg:px-6 h-20 flex items-center justify-between gap-8">
           
           {/* LOGO */}
@@ -42,23 +79,25 @@ export default function Header() {
           </Link>
 
           {/* SEARCH BAR (Desktop) */}
-          <div className="hidden md:flex flex-1 max-w-2xl relative">
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-2xl relative">
              <div className="flex w-full">
-                <button className="flex items-center gap-2 px-4 bg-slate-100 border border-slate-300 border-r-0 rounded-l-full text-sm font-medium text-slate-600 hover:bg-slate-200 transition-colors">
+                <button type="button" className="flex items-center gap-2 px-4 bg-slate-100 border border-slate-300 border-r-0 rounded-l-full text-sm font-medium text-slate-600 hover:bg-slate-200 transition-colors">
                    All <ChevronDown className="h-3 w-3" />
                 </button>
                 <div className="relative flex-1">
                    <input
                      type="text"
+                     value={searchQuery}
+                     onChange={(e) => setSearchQuery(e.target.value)}
                      placeholder="Search for products..."
                      className="w-full h-11 border border-slate-300 border-x-0 bg-white px-4 text-sm outline-none focus:border-blue-500 transition-colors placeholder:text-slate-400"
                    />
                 </div>
-                <button className="px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-r-full flex items-center justify-center transition-colors shadow-sm">
+                <button type="submit" className="px-8 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-r-full flex items-center justify-center transition-colors shadow-sm">
                    <Search className="h-5 w-5" />
                 </button>
              </div>
-          </div>
+          </form>
 
           {/* MOBILE SEARCH ICON (Visible only on mobile) */}
           <button className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-full">
@@ -135,7 +174,7 @@ export default function Header() {
                 <div className="hidden lg:flex flex-col leading-tight">
                    <span className="text-xs text-slate-500">My Cart</span>
                    <span className="text-sm font-bold text-slate-900 flex items-center gap-1">
-                      ₵0.00
+                      ₵{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                    </span>
                 </div>
              </Link>

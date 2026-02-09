@@ -24,8 +24,8 @@ export interface Product {
   name: string;
   slug: string;
   description?: string;
-  priceInCedis: number;
-  comparePriceInCedis?: number;
+  priceInPesewas: number;
+  comparePriceInPesewas?: number;
   image: string | null;
   images?: ProductImage[];
   category: Category;
@@ -71,7 +71,7 @@ export interface CartItem {
     id: string;
     name: string;
     slug: string;
-    priceInCedis: number;
+    priceInPesewas: number;
     image: string | null;
     inStock: boolean;
     stockQuantity: number;
@@ -96,8 +96,8 @@ export interface WishlistItem {
     id: string;
     name: string;
     slug: string;
-    priceInCedis: number;
-    comparePriceInCedis?: number;
+    priceInPesewas: number;
+    comparePriceInPesewas?: number;
     image: string | null;
     category: Category;
     inStock: boolean;
@@ -193,8 +193,8 @@ export interface SearchResult {
   name: string;
   slug: string;
   description?: string;
-  priceInCedis: number;
-  comparePriceInCedis?: number;
+  priceInPesewas: number;
+  comparePriceInPesewas?: number;
   image: string | null;
   category: Category;
   averageRating: number;
@@ -208,6 +208,7 @@ export interface SearchSuggestion {
   id: string;
   text: string;
   slug: string;
+  description: string;
 }
 
 // ==================== PAGINATION ====================

@@ -30,8 +30,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     updateQuantity(product.id, newQty);
   };
 
-  const discount = product.comparePriceInCedis
-    ? Math.round(((product.comparePriceInCedis - product.priceInCedis) / product.comparePriceInCedis) * 100)
+  const discount = product.comparePriceInPesewas
+    ? Math.round(((product.comparePriceInPesewas - product.priceInPesewas) / product.comparePriceInPesewas) * 100)
     : 0;
 
   const AddToCartButton = ({ className }: { className?: string }) => {
@@ -140,14 +140,14 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
                 <div className="border-t border-b border-slate-100 py-6 mb-8">
                   <div className="flex items-baseline gap-3 mb-2">
-                    <span className="text-3xl lg:text-4xl font-bold text-slate-900">₵{product.priceInCedis.toLocaleString()}</span>
-                    {product.comparePriceInCedis && (
-                      <span className="text-lg text-slate-400 line-through">₵{product.comparePriceInCedis.toLocaleString()}</span>
+                    <span className="text-3xl lg:text-4xl font-bold text-slate-900">₵{(product.priceInPesewas / 100).toLocaleString()}</span>
+                    {product.comparePriceInPesewas && (
+                      <span className="text-lg text-slate-400 line-through">₵{(product.comparePriceInPesewas / 100).toLocaleString()}</span>
                     )}
                   </div>
-                  {product.comparePriceInCedis && (
+                  {product.comparePriceInPesewas && (
                     <p className="text-sm text-orange-600 font-medium">
-                      You save ₵{(product.comparePriceInCedis - product.priceInCedis).toLocaleString()}
+                      You save ₵{((product.comparePriceInPesewas - product.priceInPesewas) / 100).toLocaleString()}
                     </p>
                   )}
                   <p className="text-xs text-slate-500 mt-3 flex items-center gap-1">
@@ -318,7 +318,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         <div className="flex items-center gap-4 max-w-7xl mx-auto">
              <div className="flex-1">
                 <p className="text-xs text-slate-500">Total Price</p>
-                <p className="text-xl font-bold text-slate-900">₵{product.priceInCedis.toLocaleString()}</p>
+                <p className="text-xl font-bold text-slate-900">₵{(product.priceInPesewas / 100).toLocaleString()}</p>
              </div>
              <div className="w-40">
                <AddToCartButton className="w-full" />
