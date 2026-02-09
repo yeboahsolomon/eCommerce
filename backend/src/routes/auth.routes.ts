@@ -1,8 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../config/database.js';
+import { config } from '../config/env.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
+import { ApiResponseHandler } from '../utils/response.js';
 import { registerSchema, loginSchema, RegisterInput, LoginInput } from '../utils/validators.js';
 import { hashPassword, comparePassword, generateToken } from '../utils/helpers.js';
 
@@ -63,15 +65,16 @@ router.post(
         email: user.email,
         role: user.role,
       });
-      
-      res.status(201).json({
-        success: true,
-        message: 'Account created successfully!',
-        data: {
-          user,
-          token,
-        },
+
+      // Set HttpOnly cookie
+      res.cookie('accessToken', token, {
+        httpOnly: true,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
+      
+      return ApiResponseHandler.success(res, { user, token }, 'Account created successfully!', 201);
     } catch (error) {
       next(error);
     }
@@ -122,22 +125,26 @@ router.post(
         email: user.email,
         role: user.role,
       });
-      
-      res.json({
-        success: true,
-        message: 'Login successful!',
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phone: user.phone,
-            role: user.role,
-          },
-          token,
-        },
+
+      // Set HttpOnly cookie
+      res.cookie('accessToken', token, {
+        httpOnly: true,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
+      
+      return ApiResponseHandler.success(res, {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          role: user.role,
+        },
+        token,
+      }, 'Login successful!');
     } catch (error) {
       next(error);
     }
@@ -181,10 +188,7 @@ router.get(
         throw new ApiError(404, 'User not found.');
       }
       
-      res.json({
-        success: true,
-        data: { user },
-      });
+      return ApiResponseHandler.success(res, { user });
     } catch (error) {
       next(error);
     }
@@ -221,14 +225,22 @@ router.put(
         },
       });
       
-      res.json({
-        success: true,
-        message: 'Profile updated successfully',
-        data: { user },
-      });
+      return ApiResponseHandler.success(res, { user }, 'Profile updated successfully');
     } catch (error) {
       next(error);
     }
+  }
+);
+
+/**
+ * POST /api/auth/logout
+ * Clear authentication cookie
+ */
+router.post(
+  '/logout',
+  (req: Request, res: Response) => {
+    res.clearCookie('accessToken');
+    return ApiResponseHandler.success(res, null, 'Logged out successfully');
   }
 );
 

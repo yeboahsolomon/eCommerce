@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 import { ApiError } from './error.middleware.js';
+import { ApiResponseHandler } from '../utils/response.js';
 
 /**
  * Validation middleware factory
@@ -18,14 +19,7 @@ export function validate<T>(schema: ZodSchema<T>) {
           message: err.message,
         }));
         
-        res.status(400).json({
-          success: false,
-          error: {
-            message: 'Validation failed',
-            statusCode: 400,
-            details: formattedErrors,
-          },
-        });
+        ApiResponseHandler.error(res, 'Validation failed', 400, { details: formattedErrors });
         return;
       }
       next(error);
@@ -48,14 +42,7 @@ export function validateQuery<T>(schema: ZodSchema<T>) {
           message: err.message,
         }));
         
-        res.status(400).json({
-          success: false,
-          error: {
-            message: 'Invalid query parameters',
-            statusCode: 400,
-            details: formattedErrors,
-          },
-        });
+        ApiResponseHandler.error(res, 'Invalid query parameters', 400, { details: formattedErrors });
         return;
       }
       next(error);

@@ -31,6 +31,10 @@ export function notFoundHandler(
 /**
  * Global error handler
  */
+import { ApiResponseHandler } from '../utils/response.js';
+
+// ... (imports)
+
 export function errorHandler(
   error: Error | ApiError,
   req: Request,
@@ -69,13 +73,6 @@ export function errorHandler(
     stack: error.stack,
   });
   
-  // Send response
-  res.status(statusCode).json({
-    success: false,
-    error: {
-      message,
-      statusCode,
-      ...(stack && { stack }),
-    },
-  });
+  // Send response using Standardized Handler
+  ApiResponseHandler.error(res, message, statusCode, stack ? { stack } : undefined);
 }
