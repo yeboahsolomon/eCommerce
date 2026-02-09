@@ -2,6 +2,7 @@
 
 import ProductCard from "@/components/ui/ProductCard";
 import { api } from "@/lib/api";
+import { PRODUCTS } from "@/lib/dummy-data";
 import { Product } from "@/types";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
@@ -10,7 +11,6 @@ import { useEffect, useState } from "react";
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -19,10 +19,14 @@ export default function Home() {
         if (res.success && res.data?.products) {
           setProducts(res.data.products as Product[]);
         } else {
-          setError(res.message || "Failed to load products");
+          // Fallback to dummy data if API fails
+          console.log("API unavailable, using dummy data");
+          setProducts(PRODUCTS.filter(p => p.isFeatured).slice(0, 8));
         }
       } catch (err) {
-        setError("Failed to load products");
+        // Fallback to dummy data on network error
+        console.log("Network error, using dummy data");
+        setProducts(PRODUCTS.filter(p => p.isFeatured).slice(0, 8));
       } finally {
         setIsLoading(false);
       }
@@ -34,7 +38,7 @@ export default function Home() {
   return (
     <div className="space-y-10">
       {/* Hero Section */}
-      <section className="bg-blue-600 rounded-3xl p-8 text-white sm:p-12 overflow-hidden relative">
+      <section className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-8 text-white sm:p-12 overflow-hidden relative">
         <div className="relative z-10 max-w-lg">
           <h1 className="text-4xl font-bold mb-4">Best Deals in Drobo</h1>
           <p className="mb-6 text-blue-100 text-lg">
@@ -62,10 +66,6 @@ export default function Home() {
           <div className="flex justify-center items-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
-        ) : error ? (
-           <div className="text-center py-20 text-red-500">
-             {error}
-           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
             {products.map((product) => (
