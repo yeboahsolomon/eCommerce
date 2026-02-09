@@ -1,30 +1,29 @@
-"use client"; // Client side for interactivity
-
+"use client";
+import { memo, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, Star, ImageOff } from "lucide-react";
 import { Product } from "@/types";
-import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
-import { toast } from "sonner";
 
 interface ProductCardProps {
   product: Product;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+function ProductCard({ product }: ProductCardProps) {
   const { addItem, cart } = useCart(); 
   const discount = product.comparePriceInCedis
     ? Math.round(((product.comparePriceInCedis - product.priceInCedis) / product.comparePriceInCedis) * 100)
     : 0;
 
   // Calculate quantity of this specific product in cart
+  // Note: We might want to pass quantity as a prop to fully optimize, but this is a good step.
   const cartItem = cart?.items?.find((item) => item.productId === product.id);
   const quantity = cartItem ? cartItem.quantity : 0;
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = useCallback(async () => {
     await addItem(product.id, 1, product);
-  };
+  }, [addItem, product]);
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:shadow-md">
@@ -101,3 +100,5 @@ export default function ProductCard({ product }: ProductCardProps) {
     </div>
   );
 }
+
+export default memo(ProductCard);
