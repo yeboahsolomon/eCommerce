@@ -1,7 +1,4 @@
-// ==================== API CLIENT SERVICE ====================
-// Centralized API client for the eCommerce frontend
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { axiosInstance } from './axios';
 
 // ==================== TYPES ====================
 
@@ -22,392 +19,198 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// ==================== API CLIENT CLASS ====================
+// ==================== HELPER ====================
 
-class ApiClient {
-  private baseUrl: string;
-  private token: string | null = null;
+async function request<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+  url: string,
+  data?: any,
+  config?: any
+): Promise<ApiResponse<T>> {
+  try {
+    const response = await axiosInstance({
+      method,
+      url,
+      data,
+      ...config,
+    });
 
-  constructor() {
-    this.baseUrl = API_BASE_URL;
-    // Load token from localStorage if available
-    if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
-    }
-  }
-
-  setToken(token: string | null) {
-    this.token = token;
-    if (typeof window !== 'undefined') {
-      if (token) {
-        localStorage.setItem('auth_token', token);
-      } else {
-        localStorage.removeItem('auth_token');
-      }
-    }
-  }
-
-  getToken(): string | null {
-    return this.token;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
-    const url = `${this.baseUrl}${endpoint}`;
+    return response.data;
+  } catch (error: any) {
+    console.error('API Error:', error);
     
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    };
-
-    if (this.token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Handle token expiration
-        if (response.status === 401) {
-          this.setToken(null);
-          // Optionally redirect to login
-        }
-        return {
-          success: false,
-          message: data.message || 'An error occurred',
-          errors: data.errors,
-        };
-      }
-
-      return data;
-    } catch (error) {
-      console.error('API Error:', error);
+    // Handle error response from backend
+    if (error.response) {
       return {
         success: false,
-        message: 'Network error. Please check your connection.',
+        message: error.response.data.message || error.response.data.error?.message || 'An error occurred',
+        errors: error.response.data.error?.details,
       };
     }
-  }
 
+    return {
+      success: false,
+      message: error.message || 'Network error. Please check your connection.',
+    };
+  }
+}
+
+// ==================== API OBJECT ====================
+
+export const api = {
   // ==================== AUTH ====================
-
-  async register(data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phone?: string;
-  }) {
-    return this.request<{ user: object; token: string }>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
+  
+  async register(data: any) {
+    return request<{ user: any; token: string }>('POST', '/auth/register', data);
+  },
 
   async login(email: string, password: string) {
-    const response = await this.request<{ user: object; token: string }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (response.success && response.data?.token) {
-      this.setToken(response.data.token);
-    }
-
-    return response;
-  }
+    return request<{ user: any; token: string }>('POST', '/auth/login', { email, password });
+  },
 
   async logout() {
-    this.setToken(null);
-    return { success: true };
-  }
+    return request<null>('POST', '/auth/logout');
+  },
 
   async getProfile() {
-    return this.request<{ user: object }>('/auth/me');
-  }
+    return request<{ user: any }>('GET', '/auth/me');
+  },
 
-  async updateProfile(data: { firstName?: string; lastName?: string; phone?: string }) {
-    return this.request<{ user: object }>('/auth/me', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
+  async updateProfile(data: any) {
+    return request<{ user: any }>('PUT', '/auth/me', data);
+  },
 
   // ==================== PRODUCTS ====================
 
-  async getProducts(params?: {
-    page?: number;
-    limit?: number;
-    category?: string;
-    search?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    sort?: string;
-    featured?: boolean;
-  }) {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.set(key, String(value));
-        }
-      });
-    }
-    return this.request<{ products: object[]; pagination: object }>(
-      `/products?${searchParams.toString()}`
-    );
-  }
+  async getProducts(params?: any) {
+    return request<{ products: any[]; pagination: any }>('GET', '/products', undefined, { params });
+  },
 
   async getProduct(idOrSlug: string) {
-    return this.request<{ product: object }>(`/products/${idOrSlug}`);
-  }
+    return request<{ product: any }>('GET', `/products/${idOrSlug}`);
+  },
 
   async getFeaturedProducts(limit = 8) {
-    return this.request<{ products: object[] }>(`/products?featured=true&limit=${limit}`);
-  }
+    return request<{ products: any[] }>('GET', '/products', undefined, { params: { featured: true, limit } });
+  },
 
   // ==================== CATEGORIES ====================
 
   async getCategories() {
-    return this.request<{ categories: object[] }>('/categories');
-  }
+    return request<{ categories: any[] }>('GET', '/categories');
+  },
 
-  async getCategoryProducts(slug: string, params?: { page?: number; limit?: number }) {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.set(key, String(value));
-        }
-      });
-    }
-    return this.request<{ category: object; products: object[] }>(
-      `/categories/${slug}/products?${searchParams.toString()}`
-    );
-  }
+  async getCategoryProducts(slug: string, params?: any) {
+    return request<{ category: any; products: any[] }>('GET', `/categories/${slug}/products`, undefined, { params });
+  },
 
   // ==================== CART ====================
 
   async getCart() {
-    return this.request<{ cart: object }>('/cart');
-  }
+    return request<{ cart: any }>('GET', '/cart');
+  },
 
   async addToCart(productId: string, quantity = 1) {
-    return this.request<{ cart: object }>('/cart/items', {
-      method: 'POST',
-      body: JSON.stringify({ productId, quantity }),
-    });
-  }
+    return request<{ cart: any }>('POST', '/cart/items', { productId, quantity });
+  },
 
   async updateCartItem(productId: string, quantity: number) {
-    return this.request<{ cart: object }>(`/cart/items/${productId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ quantity }),
-    });
-  }
+    return request<{ cart: any }>('PUT', `/cart/items/${productId}`, { quantity });
+  },
 
   async removeFromCart(productId: string) {
-    return this.request<{ cart: object }>(`/cart/items/${productId}`, {
-      method: 'DELETE',
-    });
-  }
+    return request<{ cart: any }>('DELETE', `/cart/items/${productId}`);
+  },
 
   async clearCart() {
-    return this.request<{ cart: object }>('/cart', {
-      method: 'DELETE',
-    });
-  }
+    return request<{ cart: any }>('DELETE', '/cart');
+  },
 
   // ==================== WISHLIST ====================
 
   async getWishlist() {
-    return this.request<{ items: object[] }>('/wishlist');
-  }
+    return request<{ items: any[] }>('GET', '/wishlist');
+  },
 
   async addToWishlist(productId: string, note?: string) {
-    return this.request<{ id: string }>('/wishlist/items', {
-      method: 'POST',
-      body: JSON.stringify({ productId, note }),
-    });
-  }
+    return request<{ id: string }>('POST', '/wishlist/items', { productId, note });
+  },
 
   async removeFromWishlist(productId: string) {
-    return this.request<void>(`/wishlist/items/${productId}`, {
-      method: 'DELETE',
-    });
-  }
+    return request<void>('DELETE', `/wishlist/items/${productId}`);
+  },
 
   async checkWishlist(productId: string) {
-    return this.request<{ inWishlist: boolean }>(`/wishlist/check/${productId}`);
-  }
+    return request<{ inWishlist: boolean }>('GET', `/wishlist/check/${productId}`);
+  },
 
   async moveWishlistToCart() {
-    return this.request<{ movedCount: number }>('/wishlist/move-to-cart', {
-      method: 'POST',
-    });
-  }
+    return request<{ movedCount: number }>('POST', '/wishlist/move-to-cart');
+  },
 
   // ==================== ORDERS ====================
 
-  async createOrder(data: {
-    shippingAddressId?: string;
-    shippingAddress?: object;
-    paymentMethod: string;
-    notes?: string;
-  }) {
-    return this.request<{ order: object }>('/orders', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
+  async createOrder(data: any) {
+    return request<{ order: any }>('POST', '/orders', data);
+  },
 
-  async getOrders(params?: { page?: number; limit?: number }) {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.set(key, String(value));
-        }
-      });
-    }
-    return this.request<{ orders: object[]; pagination: object }>(
-      `/orders?${searchParams.toString()}`
-    );
-  }
+  async getOrders(params?: any) {
+    return request<{ orders: any[]; pagination: any }>('GET', '/orders', undefined, { params });
+  },
 
   async getOrder(id: string) {
-    return this.request<{ order: object }>(`/orders/${id}`);
-  }
+    return request<{ order: any }>('GET', `/orders/${id}`);
+  },
 
   // ==================== PAYMENTS ====================
 
   async initiateMoMoPayment(orderId: string, phoneNumber: string) {
-    return this.request<{ 
-      paymentId: string;
-      reference: string; 
-      status: string;
-      amount: number;
-      currency: string;
-      provider: string;
-    }>('/payments/momo/initialize', {
-      method: 'POST',
-      body: JSON.stringify({ orderId, phoneNumber }),
-    });
-  }
+    return request<any>('POST', '/payments/momo/initialize', { orderId, phoneNumber });
+  },
 
   async verifyMoMoPayment(reference: string) {
-    return this.request<{ 
-      status: string;
-      message?: string;
-      orderNumber?: string;
-    }>(`/payments/momo/verify/${reference}`);
-  }
+    return request<any>('GET', `/payments/momo/verify/${reference}`);
+  },
 
   async initiatePaystackPayment(orderId: string, email: string, callbackUrl?: string) {
-    return this.request<{
-      paymentId: string;
-      reference: string;
-      authorizationUrl: string;
-      accessCode: string;
-      amount: number;
-      currency: string;
-      provider: string;
-    }>('/payments/paystack/initialize', {
-      method: 'POST',
-      body: JSON.stringify({ orderId, email, callbackUrl }),
-    });
-  }
+    return request<any>('POST', '/payments/paystack/initialize', { orderId, email, callbackUrl });
+  },
 
   async verifyPaystackPayment(reference: string) {
-    return this.request<{
-      status: string;
-      message?: string;
-      orderNumber?: string;
-      channel?: string;
-    }>(`/payments/paystack/verify/${reference}`);
-  }
+    return request<any>('GET', `/payments/paystack/verify/${reference}`);
+  },
 
   async getPaymentMethods() {
-    return this.request<{
-      methods: Array<{
-        id: string;
-        name: string;
-        description: string;
-        icon: string;
-        channels?: string[];
-        networks?: string[];
-      }>;
-      defaultMethod: string;
-      currency: string;
-    }>('/payments/methods');
-  }
+    return request<any>('GET', '/payments/methods');
+  },
 
   // ==================== REVIEWS ====================
 
-  async getProductReviews(productId: string, params?: { page?: number; sort?: string }) {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.set(key, String(value));
-        }
-      });
-    }
-    return this.request<{ reviews: object[]; summary: object }>(
-      `/reviews/product/${productId}?${searchParams.toString()}`
-    );
-  }
+  async getProductReviews(productId: string, params?: any) {
+    return request<{ reviews: any[]; summary: any }>('GET', `/reviews/product/${productId}`, undefined, { params });
+  },
 
-  async submitReview(productId: string, data: { rating: number; title?: string; comment?: string }) {
-    return this.request<{ review: object }>(`/reviews/product/${productId}`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
+  async submitReview(productId: string, data: any) {
+    return request<{ review: any }>('POST', `/reviews/product/${productId}`, data);
+  },
 
   async getMyReviews() {
-    return this.request<{ reviews: object[] }>('/reviews/my-reviews');
-  }
+    return request<{ reviews: any[] }>('GET', '/reviews/my-reviews');
+  },
 
   // ==================== SEARCH ====================
 
-  async search(query: string, params?: {
-    category?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    rating?: number;
-    inStock?: boolean;
-    sort?: string;
-    page?: number;
-  }) {
-    const searchParams = new URLSearchParams({ q: query });
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.set(key, String(value));
-        }
-      });
-    }
-    return this.request<{ results: object[]; pagination: object }>(
-      `/search?${searchParams.toString()}`
-    );
-  }
+  async search(query: string, params?: any) {
+    return request<{ results: any[]; pagination: any }>('GET', '/search', undefined, { params: { q: query, ...params } });
+  },
 
   async getSearchSuggestions(query: string) {
-    return this.request<{ suggestions: object[] }>(`/search/suggestions?q=${encodeURIComponent(query)}`);
-  }
+    return request<{ suggestions: any[] }>('GET', '/search/suggestions', undefined, { params: { q: query } });
+  },
 
   async getPopularSearches() {
-    return this.request<{ popular: object[] }>('/search/popular');
-  }
+    return request<{ popular: any[] }>('GET', '/search/popular');
+  },
 
   // ==================== UPLOADS ====================
 
@@ -416,23 +219,25 @@ class ApiClient {
     formData.append('image', file);
     formData.append('type', type);
 
-    const url = `${this.baseUrl}/upload/image`;
-    
+    // Upload needs special handling for headers
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
-        body: formData,
+      const response = await axiosInstance.post('/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-
-      return await response.json();
-    } catch (error) {
+      return response.data;
+    } catch (error: any) {
       console.error('Upload error:', error);
+       if (error.response) {
+        return {
+          success: false,
+          message: error.response.data.message || 'Upload failed',
+        };
+      }
       return { success: false, message: 'Upload failed' };
     }
-  }
-}
+  },
+};
 
-// Export singleton instance
-export const api = new ApiClient();
 export default api;

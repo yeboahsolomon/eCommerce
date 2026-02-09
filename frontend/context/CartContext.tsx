@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
 import { Cart, CartContextType, Product } from "@/types";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -10,7 +11,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const isAuthenticated = typeof window !== 'undefined' && !!api.getToken();
+  const { isAuthenticated } = useAuth();
 
   // Load Cart
   useEffect(() => {
@@ -20,8 +21,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await api.getCart();
           if (res.success && res.data?.cart) {
-            // Check if backend response matches Cart interface
-            // If backend returns object directly:
              setCart(res.data.cart as unknown as Cart);
           }
         } catch (error) {
@@ -90,9 +89,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               if (existingItemIndex > -1) {
                   newCart.items[existingItemIndex].quantity += quantity;
               } else {
-                  // Ensure price is handled correctly (backend might send diff format, but Product type expects priceInCedis)
-                  // If productToAdd comes from API it might be any, cast carefully or check props
-                  const price = (productToAdd as any).priceInCedis || ((productToAdd as any).priceInPesewas / 100) || 0;
+                  // Ensure price is handled correctly
+                  const price = (productToAdd!.priceInPesewas / 100) || 0;
                   
                   newCart.items.push({
                       id: `local-${Date.now()}`,
@@ -103,7 +101,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                           id: productToAdd!.id,
                           name: productToAdd!.name,
                           slug: productToAdd!.slug,
-                          priceInCedis: price,
+                          priceInPesewas: productToAdd!.priceInPesewas,
                           image: productToAdd!.image || (productToAdd!.images && productToAdd!.images[0] ? productToAdd!.images[0].url : null),
                           inStock: productToAdd!.inStock,
                           stockQuantity: productToAdd!.stockQuantity || 0
@@ -113,7 +111,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               
               // Recalculate totals
               newCart.itemCount = newCart.items.reduce((acc, item) => acc + item.quantity, 0);
-              newCart.subtotalInCedis = newCart.items.reduce((acc, item) => acc + (item.product.priceInCedis * item.quantity), 0);
+              newCart.subtotalInCedis = newCart.items.reduce((acc, item) => acc + ((item.product.priceInPesewas / 100) * item.quantity), 0);
               
               return newCart;
            });
@@ -135,21 +133,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const item = cart.items.find((i) => i.productId === productId);
         if (item) {
             try {
-                const res = await api.removeFromCart(item.id); // Assuming this returns updated cart
-                if (res.success) {
-                    if (res.data?.cart) {
-                        setCart(res.data.cart as unknown as Cart);
-                    } else {
-                        // Optimistic remove
-                         setCart(prev => prev ? ({
-                             ...prev,
-                             items: prev.items.filter(i => i.id !== item.id),
-                             itemCount: prev.itemCount - item.quantity,
-                             subtotalInCedis: prev.subtotalInCedis - (item.product.priceInCedis * item.quantity)
-                         }) : null);
-                    }
-                    toast.success("Removed from cart");
+                const res = await api.removeFromCart(item.id); 
+                if (res.success && res.data?.cart) {
+                     setCart(res.data.cart as unknown as Cart);
+                } else if (res.success) {
+                   // Fallback optimistic
+                   setCart(prev => prev ? ({
+                       ...prev,
+                       items: prev.items.filter(i => i.id !== item.id),
+                       itemCount: prev.itemCount - item.quantity,
+                       subtotalInCedis: prev.subtotalInCedis - ((item.product.priceInPesewas / 100) * item.quantity)
+                   }) : null);
                 }
+                toast.success("Removed from cart");
             } catch(e) {
                 toast.error("Failed to remove");
             }
@@ -157,17 +153,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } else {
         setCart((currentCart) => {
               if (!currentCart) return null;
-              const newCart = { ...currentCart };
-              const item = newCart.items.find(i => i.productId === productId);
-              if (!item) return newCart;
               
-              newCart.items = newCart.items.filter(i => i.productId !== productId);
+              const newItems = currentCart.items.filter(i => i.productId !== productId);
+              
+              if (newItems.length === currentCart.items.length) {
+                  return currentCart;
+              }
               
               // Recalculate totals
-              newCart.itemCount = newCart.items.reduce((acc, i) => acc + i.quantity, 0);
-              newCart.subtotalInCedis = newCart.items.reduce((acc, i) => acc + (i.product.priceInCedis * i.quantity), 0);
+              const itemCount = newItems.reduce((acc, i) => acc + i.quantity, 0);
+              const subtotalInCedis = newItems.reduce((acc, i) => acc + ((i.product.priceInPesewas / 100) * i.quantity), 0);
               
-              return newCart;
+              return {
+                  ...currentCart,
+                  items: newItems,
+                  itemCount,
+                  subtotalInCedis
+              };
         });
     }
   };
@@ -190,17 +192,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } else {
          setCart((currentCart) => {
               if (!currentCart) return null;
-              const newCart = { ...currentCart };
-              const index = newCart.items.findIndex(i => i.productId === productId);
-              if (index === -1) return newCart;
               
-              newCart.items[index].quantity = quantity;
+              const newItems = [...currentCart.items];
+              const index = newItems.findIndex(i => i.productId === productId);
+              
+              if (index === -1) return currentCart;
+              
+              newItems[index] = {
+                  ...newItems[index],
+                  quantity: quantity
+              };
               
               // Recalculate totals
-              newCart.itemCount = newCart.items.reduce((acc, i) => acc + i.quantity, 0);
-              newCart.subtotalInCedis = newCart.items.reduce((acc, i) => acc + (i.product.priceInCedis * i.quantity), 0);
+              const itemCount = newItems.reduce((acc, i) => acc + i.quantity, 0);
+              const subtotalInCedis = newItems.reduce((acc, i) => acc + ((i.product.priceInPesewas / 100) * i.quantity), 0);
               
-              return newCart;
+              return {
+                  ...currentCart,
+                  items: newItems,
+                  itemCount,
+                  subtotalInCedis
+              };
         });
     }
   };
