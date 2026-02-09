@@ -2,6 +2,7 @@
 
 import ProductCard from "@/components/ui/ProductCard";
 import { api } from "@/lib/api";
+import { PRODUCTS } from "@/lib/dummy-data";
 import { Product } from "@/types";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -11,7 +12,6 @@ import { useEffect, useState } from "react";
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -20,10 +20,14 @@ export default function ProductsPage() {
         if (res.success && res.data?.products) {
           setProducts(res.data.products as Product[]);
         } else {
-          setError(res.message || "Failed to load products");
+          // Fallback to dummy data if API fails
+          console.log("API unavailable, using dummy data");
+          setProducts(PRODUCTS);
         }
       } catch (err) {
-        setError("Failed to load products");
+        // Fallback to dummy data on network error
+        console.log("Network error, using dummy data");
+        setProducts(PRODUCTS);
       } finally {
         setIsLoading(false);
       }
@@ -52,10 +56,6 @@ export default function ProductsPage() {
           <div className="flex justify-center items-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
-        ) : error ? (
-           <div className="text-center py-20 text-red-500">
-             {error}
-           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((product) => (
