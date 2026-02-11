@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { authMiddleware } from '../middleware/auth.middleware.js';
-import { requireSellerOrAdmin } from '../middleware/admin.middleware.js';
+import { requireSellerOrAdmin } from '../middleware/auth.middleware.js';
 import { uploadLimiter } from '../middleware/rate-limit.middleware.js';
 import {
   uploadSingleImage,

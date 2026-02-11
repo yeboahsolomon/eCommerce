@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
-import { requireAdmin } from '../middleware/admin.middleware.js';
+import { requireAdmin } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
@@ -335,6 +335,98 @@ router.put('/users/:userId/status', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update user status',
+    });
+  }
+});
+
+// ==================== SELLER MANAGEMENT ====================
+
+router.get('/sellers', async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const search = req.query.search as string;
+    const isVerified = req.query.isVerified; // 'true', 'false', or undefined
+
+    const where: any = {
+      role: 'SELLER',
+    };
+
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search } },
+        { sellerProfile: { businessName: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (isVerified !== undefined) {
+      where.sellerProfile = {
+        isVerified: isVerified === 'true',
+      };
+    } else {
+      // Ensure they HAVE a profile
+      where.sellerProfile = { isNot: null };
+    }
+
+    const [sellers, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          status: true,
+          createdAt: true,
+          sellerProfile: {
+            include: {
+              _count: { select: { products: true, sellerOrders: true } }
+            }
+          },
+          _count: { select: { orders: true } }, // Buyer orders
+          // To get seller orders count, we need to query SellerOrder separate or via relation if it exists on User? 
+          // SellerProfile has relation to SellerOrder? No, SellerProfile(id) -> SellerOrder(sellerId).
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        sellers: sellers.map((s) => ({
+          id: s.id,
+          email: s.email,
+          name: `${s.firstName} ${s.lastName}`,
+          phone: s.phone,
+          status: s.status,
+          businessName: s.sellerProfile?.businessName,
+          sellerId: s.sellerProfile?.id,
+          isVerified: s.sellerProfile?.isVerified,
+          joinedAt: s.createdAt,
+          productCount: s.sellerProfile?._count?.products || 0,
+          salesCount: s.sellerProfile?._count?.sellerOrders || 0,
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('Get sellers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get sellers',
     });
   }
 });

@@ -10,10 +10,12 @@ const router = Router();
 /**
  * POST /api/orders
  * Create new order from cart (ACID Transaction)
+ * Supports Multi-Vendor: Splits order into SellerOrders
  */
 router.post(
   '/',
   authenticate,
+  // requireBuyer, // Optional
   validate(createOrderSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -32,6 +34,9 @@ router.post(
                     where: { isPrimary: true },
                     take: 1,
                   },
+                  seller: {
+                    select: { id: true, businessName: true } // Fetch seller info
+                  }
                 },
               },
             },
@@ -55,6 +60,17 @@ router.post(
           throw new ApiError(400, `"${item.product.name}" only has ${item.product.stockQuantity} items in stock.`);
         }
       }
+
+      // Group items by Seller
+      const sellerGroups = new Map<string | 'PLATFORM', typeof cart.items>();
+      
+      for (const item of cart.items) {
+        const sellerId = item.product.sellerId || 'PLATFORM';
+        if (!sellerGroups.has(sellerId)) {
+          sellerGroups.set(sellerId, []);
+        }
+        sellerGroups.get(sellerId)!.push(item);
+      }
       
       // Calculate totals (in pesewas)
       const subtotalInPesewas = cart.items.reduce(
@@ -62,7 +78,8 @@ router.post(
         0
       );
       
-      // Apply coupon if provided
+      // Apply coupon if provided (Global Coupon for now)
+      // TODO: Support seller-specific coupons
       let discountInPesewas = 0;
       if (orderData.couponCode) {
         const coupon = await prisma.coupon.findUnique({
@@ -92,7 +109,7 @@ router.post(
         }
       }
       
-      const shippingFeeInPesewas = 0;  // Free shipping for now
+      const shippingFeeInPesewas = 0;  // Free shipping for now (Global)
       const taxInPesewas = 0;  // No tax for now
       const totalInPesewas = subtotalInPesewas - discountInPesewas + shippingFeeInPesewas + taxInPesewas;
       
@@ -102,23 +119,22 @@ router.post(
       const orderNumber = `GH-${datePart}-${randomPart}`;
       
       // ===== ACID TRANSACTION =====
-      // All of these operations succeed or fail together
       const order = await prisma.$transaction(async (tx) => {
-        // 1. Create the order with SNAPSHOT data
+        // 1. Create Parent Order
         const newOrder = await tx.order.create({
           data: {
             orderNumber,
             userId,
             status: orderData.paymentMethod === 'CASH_ON_DELIVERY' ? 'CONFIRMED' : 'PAYMENT_PENDING',
             
-            // Financial snapshot (immutable)
+            // Financials
             subtotalInPesewas,
             shippingFeeInPesewas,
             taxInPesewas,
             discountInPesewas,
             totalInPesewas,
             
-            // Shipping address snapshot
+            // Shipping
             shippingFullName: orderData.shippingFullName,
             shippingPhone: orderData.shippingPhone,
             shippingRegion: orderData.shippingRegion,
@@ -127,33 +143,20 @@ router.post(
             shippingStreetAddress: orderData.shippingStreetAddress,
             shippingGpsAddress: orderData.shippingGpsAddress || null,
             
-            // Contact snapshot
+            // Contact
             customerEmail: orderData.customerEmail,
             customerPhone: orderData.customerPhone,
             
             // Delivery
             deliveryMethod: orderData.deliveryMethod,
             deliveryNotes: orderData.deliveryNotes,
-            
-            // Order items with PRICE SNAPSHOT
-            items: {
-              create: cart.items.map(item => ({
-                productId: item.productId,
-                productName: item.product.name,       // Snapshot
-                productSku: item.product.sku,         // Snapshot
-                productImage: item.product.images[0]?.url || null,  // Snapshot
-                quantity: item.quantity,
-                unitPriceInPesewas: item.product.priceInPesewas,  // Snapshot!
-                totalPriceInPesewas: item.product.priceInPesewas * item.quantity,
-              })),
-            },
-            
-            // Create payment record
+
+            // Payment
             payment: {
               create: {
                 amountInPesewas: totalInPesewas,
                 method: orderData.paymentMethod,
-                status: orderData.paymentMethod === 'CASH_ON_DELIVERY' ? 'PENDING' : 'PENDING',
+                status: 'PENDING',
                 momoPhoneNumber: orderData.momoPhoneNumber,
                 momoNetwork: orderData.paymentMethod.startsWith('MOMO_') 
                   ? orderData.paymentMethod.replace('MOMO_', '') 
@@ -161,40 +164,101 @@ router.post(
               },
             },
           },
-          include: {
-            items: true,
-            payment: true,
-          },
         });
-        
-        // 2. Decrease stock for each item (inventory concurrency)
-        for (const item of cart.items) {
-          if (item.product.trackInventory) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: {
-                stockQuantity: {
-                  decrement: item.quantity,
+
+        // 2. Create Seller Orders (Sub-orders)
+        for (const [sellerId, items] of sellerGroups.entries()) {
+          // Calculate stats for this seller
+          const sellerSubtotal = items.reduce((sum, item) => sum + item.product.priceInPesewas * item.quantity, 0);
+          
+          // Distribute discount proportional to value? Or just applying global logic.
+          // For now, simpler to not split discount precisely per seller unless we have per-item discount.
+          // We will store "Seller Order Amount" as just the sum of items for now (ignoring global coupon impact on seller payout? Complex topic.)
+          // Decision: Seller Payout = Seller Subtotal - Commission. Coupon burn is on Platform (usually).
+          
+          let sellerOrderData: any = {
+            orderId: newOrder.id,
+            sellerId: sellerId === 'PLATFORM' ? null : sellerId, // Handle platform items if any
+            status: 'PENDING', // Will update when main order is confirmed
+            subtotalInPesewas: sellerSubtotal,
+            shippingFeeInPesewas: 0, // Assuming global free shipping
+            taxInPesewas: 0,
+            discountInPesewas: 0, // Simplified
+            totalInPesewas: sellerSubtotal, // + shipping + tax - discount
+            payoutAmountInPesewas: Math.round(sellerSubtotal * 0.95), // 5% Commission deduced (Example)
+            commissionAmountInPesewas: Math.round(sellerSubtotal * 0.05),
+          };
+
+          // Remove null sellerId if it was strictly required?
+          // Schema says `sellerId` in `SellerOrder` is `String` (from Chunk 1).
+          // Wait, `SellerOrder` model has `seller SellerProfile`. `sellerId String`.
+          // So 'PLATFORM' items (null sellerId) CANNOT create a `SellerOrder` if `sellerId` is mandatory.
+          // If product can have null sellerId, we have a problem.
+          // In Step 410, Product `sellerId` is `String?`.
+          // In Step 398 (Chunk 1), `SellerOrder` has `sellerId String`.
+          // So if we have PLATFORM products, we cannot create a `SellerOrder` for them unless we have a "Platform Seller" profile.
+          // OR, we don't create `SellerOrder` for platform items?
+          // But then `OrderItem` needs to link to `SellerOrder?`.
+          // My schema has `sellerOrder SellerOrder @relation(...)`. It became MANDATORY in Step 404 replacement?
+          // In Step 404: `sellerOrder SellerOrder @relation(...)`. MANDATORY.
+          // This implies ALL ordered items MUST belong to a Seller.
+          // So Platform MUST have a Seller Profile (e.g. "Official Store").
+          // Ideally, I should fetch the "Official Store" ID if sellerId is null.
+          // For now, I'll assume valid products have sellers (since I added `sellerId` to `Product`).
+          // If `sellerId` is null, I will skip `SellerOrder` creation for those items? No, that breaks `OrderItem` relation.
+          // I will throw error if `sellerId` is missing for now, OR I will create a "dummy" id if specific case.
+          // Since I can't query DB for "Official Store", I will error if product has no seller.
+          
+          if (sellerId === 'PLATFORM') {
+             // Fallback: If product has no seller, currently we can't process it with this schema unless we have a placeholder.
+             // I'll skip this check assuming migration/seed ensured sellers.
+             // Actually, I'll throw error to be safe.
+             throw new ApiError(500, 'Product missing seller information.');
+          }
+
+          const sellerOrder = await tx.sellerOrder.create({
+            data: sellerOrderData
+          });
+
+          // 3. Create Order Items linked to both Order and SellerOrder
+          await tx.orderItem.createMany({
+            data: items.map(item => ({
+              orderId: newOrder.id,
+              sellerOrderId: sellerOrder.id,
+              productId: item.productId,
+              productName: item.product.name,
+              productSku: item.product.sku,
+              productImage: item.product.images[0]?.url || null,
+              quantity: item.quantity,
+              unitPriceInPesewas: item.product.priceInPesewas,
+              totalPriceInPesewas: item.product.priceInPesewas * item.quantity,
+            }))
+          });
+          
+          // 4. Update Stock & Log (Per item)
+          for (const item of items) {
+             if (item.product.trackInventory) {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stockQuantity: { decrement: item.quantity } },
+              });
+              
+              await tx.inventoryLog.create({
+                data: {
+                  productId: item.productId,
+                  action: 'SALE',
+                  quantityChange: -item.quantity,
+                  previousQuantity: item.product.stockQuantity,
+                  newQuantity: item.product.stockQuantity - item.quantity,
+                  orderId: newOrder.id,
+                  userId,
                 },
-              },
-            });
-            
-            // Log inventory change
-            await tx.inventoryLog.create({
-              data: {
-                productId: item.productId,
-                action: 'SALE',
-                quantityChange: -item.quantity,
-                previousQuantity: item.product.stockQuantity,
-                newQuantity: item.product.stockQuantity - item.quantity,
-                orderId: newOrder.id,
-                userId,
-              },
-            });
+              });
+            }
           }
         }
-        
-        // 3. Increment coupon usage if used
+
+        // 5. Update Coupon & Clear Cart
         if (orderData.couponCode && discountInPesewas > 0) {
           await tx.coupon.update({
             where: { code: orderData.couponCode.toUpperCase() },
@@ -202,7 +266,6 @@ router.post(
           });
         }
         
-        // 4. Clear the cart
         await tx.cartItem.deleteMany({
           where: { cartId: cart.id },
         });
@@ -245,13 +308,16 @@ router.get(
         prisma.order.findMany({
           where: { userId: req.user!.id },
           include: {
-            items: true,
+            // items: true, // Don't fetch items in list view for performance
             payment: {
               select: {
                 status: true,
                 method: true,
               },
             },
+            sellerOrders: { // Include sub-order status?
+               select: { status: true, id: true }
+            }
           },
           orderBy: { createdAt: 'desc' },
           skip,
@@ -302,6 +368,11 @@ router.get(
         include: {
           items: true,
           payment: true,
+          sellerOrders: {
+            include: {
+               seller: { select: { businessName: true, slug: true } }
+            }
+          }
         },
       });
       

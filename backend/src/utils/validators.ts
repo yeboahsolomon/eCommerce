@@ -30,6 +30,29 @@ export const createAddressSchema = z.object({
   isDefault: z.boolean().optional().default(false),
 });
 
+// ==================== SELLER SCHEMAS ====================
+
+export const createSellerProfileSchema = z.object({
+  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
+  slug: z.string().min(2, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with dashes'),
+  businessPhone: z.string().regex(/^0(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
+  businessEmail: z.string().email('Invalid business email').optional(),
+  description: z.string().optional(),
+  logoUrl: z.string().url().optional(),
+  bannerUrl: z.string().url().optional(),
+  // Socials
+  website: z.string().url().optional(),
+  instagram: z.string().optional(),
+  facebook: z.string().optional(),
+  twitter: z.string().optional(),
+  // Verification (usually separate process, but maybe allowed here for testing)
+  taxId: z.string().optional(),
+  idCardType: z.string().optional(),
+  idCardNumber: z.string().optional(),
+});
+
+export const updateSellerProfileSchema = createSellerProfileSchema.partial();
+
 // ==================== PRODUCT SCHEMAS ====================
 
 export const createProductSchema = z.object({
@@ -39,6 +62,7 @@ export const createProductSchema = z.object({
   comparePriceInPesewas: z.number().int().positive().optional(),
   costInPesewas: z.number().int().positive().optional(),
   categoryId: z.string().cuid('Invalid category ID'),
+  sellerId: z.string().cuid('Invalid seller ID').optional(),
   stockQuantity: z.number().int().nonnegative().optional().default(0),
   lowStockThreshold: z.number().int().nonnegative().optional().default(5),
   trackInventory: z.boolean().optional().default(true),
@@ -136,6 +160,8 @@ export const idParamSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateAddressInput = z.infer<typeof createAddressSchema>;
+export type CreateSellerProfileInput = z.infer<typeof createSellerProfileSchema>;
+export type UpdateSellerProfileInput = z.infer<typeof updateSellerProfileSchema>;
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type ProductQueryInput = z.infer<typeof productQuerySchema>;

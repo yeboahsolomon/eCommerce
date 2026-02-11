@@ -12,6 +12,10 @@ declare global {
         id: string;
         email: string;
         role: string;
+        sellerProfile?: {
+          id: string;
+          isActive: boolean;
+        } | null;
       };
     }
   }
@@ -50,7 +54,12 @@ export async function authenticate(
     // Check if user still exists
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, role: true }
+      select: { 
+        id: true, 
+        email: true, 
+        role: true,
+        sellerProfile: { select: { id: true, isActive: true } }
+      }
     });
     
     if (!user) {
@@ -62,6 +71,7 @@ export async function authenticate(
       id: user.id,
       email: user.email,
       role: user.role,
+      sellerProfile: user.sellerProfile,
     };
     
     next();
@@ -96,6 +106,27 @@ export function requireAdmin(
 }
 
 /**
+ * Middleware to check if user has seller or admin role
+ */
+export function requireSellerOrAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  if (!req.user) {
+    next(new ApiError(401, 'Authentication required.'));
+    return;
+  }
+  
+  if (req.user.role !== 'ADMIN' && req.user.role !== 'SELLER') {
+    next(new ApiError(403, 'Seller or Admin access required.'));
+    return;
+  }
+  
+  next();
+}
+
+/**
  * Optional authentication - attaches user if token valid, continues otherwise
  */
 export async function optionalAuth(
@@ -120,7 +151,12 @@ export async function optionalAuth(
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, role: true }
+      select: { 
+        id: true, 
+        email: true, 
+        role: true,
+        sellerProfile: { select: { id: true, isActive: true } }
+      }
     });
     
     if (user) {
@@ -128,6 +164,7 @@ export async function optionalAuth(
         id: user.id,
         email: user.email,
         role: user.role,
+        sellerProfile: user.sellerProfile,
       };
     }
     

@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../config/database.js';
 import { validate, validateQuery } from '../middleware/validate.middleware.js';
-import { authenticate, requireAdmin, optionalAuth } from '../middleware/auth.middleware.js';
+import { authenticate, requireAdmin, requireSellerOrAdmin, optionalAuth } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { 
   createProductSchema, 
@@ -203,11 +203,21 @@ router.get(
 router.post(
   '/',
   authenticate,
-  requireAdmin,
+  authenticate,
+  requireSellerOrAdmin,
   validate(createProductSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const productData = req.body as CreateProductInput;
+      
+      // Assign Seller ID
+      let sellerId = productData.sellerId;
+      if (req.user?.role === 'SELLER') {
+        if (!req.user.sellerProfile) {
+          throw new ApiError(400, 'Seller profile not found. Please complete your seller profile.');
+        }
+        sellerId = req.user.sellerProfile.id;
+      }
       
       // Generate slug
       let slug = generateSlug(productData.name);
@@ -232,6 +242,7 @@ router.post(
         data: {
           ...productData,
           slug,
+          sellerId,
         },
         include: {
           category: true,
