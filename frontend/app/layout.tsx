@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/shared/Header";
+import Footer from "@/components/shared/Footer";
 import MobileNav from "@/components/shared/MobileNav";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -32,6 +33,9 @@ export default function RootLayout({
               {children}
             </main>
   
+            {/* Footer (Desktop) */}
+            <Footer />
+
             {/* Bottom Nav (Mobile Only) */}
             <MobileNav />
             <Toaster richColors position="top-center" />
