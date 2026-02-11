@@ -275,3 +275,57 @@ export interface WishlistContextType {
   moveToCart: () => Promise<void>;
   itemCount: number;
 }
+
+// ==================== REQUEST PAYLOADS ====================
+
+export interface CreateAddressInput {
+  label: string;
+  type?: 'HOME' | 'WORK' | 'OTHER';
+  fullName: string;
+  phone: string;
+  region: string;
+  city: string;
+  area?: string;
+  streetAddress: string;
+  gpsAddress?: string;
+  isDefault?: boolean;
+}
+
+export interface CreateOrderInput {
+  // Shipping Address
+  shippingFullName: string;
+  shippingPhone: string;
+  shippingRegion: string;
+  shippingCity: string;
+  shippingArea?: string;
+  shippingStreetAddress: string;
+  shippingGpsAddress?: string;
+
+  // Contact
+  customerEmail: string;
+  customerPhone: string;
+
+  // Payment
+  paymentMethod: 'MOMO_MTN' | 'MOMO_VODAFONE' | 'MOMO_AIRTELTIGO' | 'CARD' | 'BANK_TRANSFER' | 'CASH_ON_DELIVERY';
+  momoPhoneNumber?: string;
+
+  // Delivery
+  deliveryMethod?: string;
+  deliveryNotes?: string;
+
+  // Coupon
+  couponCode?: string;
+}
+
+export interface ProductQueryParams {
+  page?: number;
+  limit?: number;
+  category?: string;
+  search?: string;
+  inStock?: boolean;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: 'priceInPesewas' | 'averageRating' | 'createdAt' | 'name';
+  order?: 'asc' | 'desc';
+  featured?: boolean;
+}
