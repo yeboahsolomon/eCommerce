@@ -21,6 +21,7 @@ import wishlistRoutes from './routes/wishlist.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import searchRoutes from './routes/search.routes.js';
+import sellerRoutes from './routes/seller.routes.js';
 
 const app = express();
 
@@ -99,6 +100,9 @@ app.use('/api/search', searchRoutes);
 
 // Admin routes
 app.use('/api/admin', adminRoutes);
+
+// Seller routes
+app.use('/api/seller', sellerRoutes);
 
 // ==================== ERROR HANDLING ====================
 

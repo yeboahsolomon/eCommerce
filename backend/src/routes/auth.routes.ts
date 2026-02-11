@@ -6,9 +6,30 @@ import { authenticate } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { ApiResponseHandler } from '../utils/response.js';
 import { registerSchema, loginSchema, RegisterInput, LoginInput } from '../utils/validators.js';
-import { hashPassword, comparePassword, generateToken } from '../utils/helpers.js';
+import { hashPassword, comparePassword, generateToken, generateRefreshToken } from '../utils/helpers.js';
+import { hashToken } from '../utils/token.helpers.js';
 
 const router = Router();
+
+// Helper to set cookies
+const setAuthCookies = (res: Response, accessToken: string, refreshToken: string) => {
+  // Access Token: Short lived (15m)
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: config.nodeEnv === 'production',
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000, 
+  });
+
+  // Refresh Token: Long lived (7d)
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: config.nodeEnv === 'production',
+    sameSite: 'strict',
+    path: '/api/auth', // Scope to auth routes (refresh/logout)
+    maxAge: 7 * 24 * 60 * 60 * 1000, 
+  });
+};
 
 /**
  * POST /api/auth/register
@@ -21,7 +42,6 @@ router.post(
     try {
       const { email, password, firstName, lastName, phone } = req.body as RegisterInput;
       
-      // Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: email.toLowerCase() },
       });
@@ -30,10 +50,8 @@ router.post(
         throw new ApiError(409, 'An account with this email already exists.');
       }
       
-      // Hash password
       const hashedPassword = await hashPassword(password);
       
-      // Create user with cart
       const user = await prisma.user.create({
         data: {
           email: email.toLowerCase(),
@@ -43,9 +61,7 @@ router.post(
           phone,
           role: 'BUYER',
           status: 'ACTIVE',
-          cart: {
-            create: {},  // Create empty cart
-          },
+          cart: { create: {} },
         },
         select: {
           id: true,
@@ -59,22 +75,29 @@ router.post(
         },
       });
       
-      // Generate token
-      const token = generateToken({
+      // Generate Tokens
+      const accessToken = generateToken({
         userId: user.id,
         email: user.email,
         role: user.role,
       });
-
-      // Set HttpOnly cookie
-      res.cookie('accessToken', token, {
-        httpOnly: true,
-        secure: config.nodeEnv === 'production',
-        sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-      });
       
-      return ApiResponseHandler.success(res, { user, token }, 'Account created successfully!', 201);
+      const refreshToken = generateRefreshToken({ userId: user.id });
+      const refreshTokenHash = hashToken(refreshToken);
+
+      // Store Refresh Token
+      await prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          token: refreshTokenHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        },
+      });
+
+      setAuthCookies(res, accessToken, refreshToken);
+      
+      // Return Access Token (for mobile apps/local storage if needed) + User
+      return ApiResponseHandler.success(res, { user, accessToken }, 'Account created successfully!', 201);
     } catch (error) {
       next(error);
     }
@@ -83,7 +106,7 @@ router.post(
 
 /**
  * POST /api/auth/login
- * Authenticate user and return JWT
+ * Authenticate user and return JWTs
  */
 router.post(
   '/login',
@@ -92,7 +115,6 @@ router.post(
     try {
       const { email, password } = req.body as LoginInput;
       
-      // Find user
       const user = await prisma.user.findUnique({
         where: { email: email.toLowerCase() },
       });
@@ -101,12 +123,10 @@ router.post(
         throw new ApiError(401, 'Invalid email or password.');
       }
       
-      // Check if account is active
       if (user.status !== 'ACTIVE') {
         throw new ApiError(403, 'Your account has been suspended or deactivated.');
       }
       
-      // Check password
       const isValidPassword = await comparePassword(password, user.password);
       
       if (!isValidPassword) {
@@ -119,20 +139,26 @@ router.post(
         data: { lastLoginAt: new Date() },
       });
       
-      // Generate token
-      const token = generateToken({
+      // Generate Tokens
+      const accessToken = generateToken({
         userId: user.id,
         email: user.email,
         role: user.role,
       });
 
-      // Set HttpOnly cookie
-      res.cookie('accessToken', token, {
-        httpOnly: true,
-        secure: config.nodeEnv === 'production',
-        sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      const refreshToken = generateRefreshToken({ userId: user.id });
+      const refreshTokenHash = hashToken(refreshToken);
+
+      // Store Refresh Token
+      await prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          token: refreshTokenHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        },
       });
+
+      setAuthCookies(res, accessToken, refreshToken);
       
       return ApiResponseHandler.success(res, {
         user: {
@@ -143,8 +169,122 @@ router.post(
           phone: user.phone,
           role: user.role,
         },
-        token,
+        accessToken,
       }, 'Login successful!');
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/auth/refresh
+ * Refresh Access Token using Refresh Token cookie
+ */
+router.post(
+  '/refresh',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+      
+      if (!refreshToken) {
+        throw new ApiError(401, 'No refresh token provided.');
+      }
+
+      const refreshTokenHash = hashToken(refreshToken);
+
+      // Find token in DB
+      const storedToken = await prisma.refreshToken.findUnique({
+        where: { token: refreshTokenHash },
+        include: { user: true },
+      });
+
+      if (!storedToken) {
+        // Token Reuse Detection could happen here (if we tracked families)
+        // For now, simple invalid
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
+        throw new ApiError(401, 'Invalid refresh token.');
+      }
+
+      if (storedToken.revoked) {
+        // Potential theft
+        await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
+        throw new ApiError(401, 'Token revoked.');
+      }
+
+      if (new Date() > storedToken.expiresAt) {
+        await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
+        throw new ApiError(401, 'Session expired. Please login again.');
+      }
+
+      // Valid! Rotate Token
+      // Delete old
+      await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+
+      // Create new
+      const newRefreshToken = generateRefreshToken({ userId: storedToken.userId });
+      const newRefreshTokenHash = hashToken(newRefreshToken);
+
+      await prisma.refreshToken.create({
+        data: {
+          userId: storedToken.userId,
+          token: newRefreshTokenHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // New Access Token
+      const newAccessToken = generateToken({
+        userId: storedToken.user.id,
+        email: storedToken.user.email,
+        role: storedToken.user.role,
+      });
+
+      setAuthCookies(res, newAccessToken, newRefreshToken);
+
+      return ApiResponseHandler.success(res, { accessToken: newAccessToken }, 'Token refreshed');
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/auth/logout
+ * Revoke refresh token and clear cookies
+ */
+router.post(
+  '/logout',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+
+      if (refreshToken) {
+        const refreshTokenHash = hashToken(refreshToken);
+        
+        // Revoke in DB
+        // We delete it for cleanliness, or mark revoked if audit needed.
+        // Let's delete to keep table small.
+        try {
+          // Attempt delete, might fail if already gone or invalid (ignore)
+          const storedToken = await prisma.refreshToken.findUnique({ where: { token: refreshTokenHash } });
+          if (storedToken) {
+             await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      res.clearCookie('accessToken');
+      res.clearCookie('refreshToken', { path: '/api/auth' }); // Path must match
+      
+      return ApiResponseHandler.success(res, null, 'Logged out successfully');
     } catch (error) {
       next(error);
     }
@@ -229,18 +369,6 @@ router.put(
     } catch (error) {
       next(error);
     }
-  }
-);
-
-/**
- * POST /api/auth/logout
- * Clear authentication cookie
- */
-router.post(
-  '/logout',
-  (req: Request, res: Response) => {
-    res.clearCookie('accessToken');
-    return ApiResponseHandler.success(res, null, 'Logged out successfully');
   }
 );
 
