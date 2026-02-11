@@ -238,6 +238,47 @@ export const api = {
       return { success: false, message: 'Upload failed' };
     }
   },
+
+  // ==================== ADDRESSES ====================
+
+  async getAddresses() {
+    return request<{ addresses: any[] }>('GET', '/addresses');
+  },
+
+  async createAddress(data: any) {
+    return request<{ address: any }>('POST', '/addresses', data);
+  },
+
+  async updateAddress(id: string, data: any) {
+    return request<{ address: any }>('PUT', `/addresses/${id}`, data);
+  },
+
+  async deleteAddress(id: string) {
+    return request<void>('DELETE', `/addresses/${id}`);
+  },
+
+  async setDefaultAddress(id: string) {
+    return request<{ address: any }>('PATCH', `/addresses/${id}/default`);
+  },
+
+  // ==================== ADMIN ====================
+
+  async getAdminStats() {
+    return request<any>('GET', '/admin/stats');
+  },
+
+  async getAdminOrders(params?: any) {
+    return request<{ orders: any[] }>('GET', '/admin/orders', undefined, { params });
+  },
+
+  async updateOrderStatus(orderId: string, status: string) {
+    return request<{ order: any }>('PATCH', `/admin/orders/${orderId}/status`, { status });
+  },
+
+  async deleteProduct(productId: string) {
+    return request<void>('DELETE', `/products/${productId}`);
+  },
 };
 
 export default api;
+
