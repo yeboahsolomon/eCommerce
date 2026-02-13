@@ -18,7 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.success && response.data) {
           setUser(response.data.user as User);
         }
-      } catch (error) {
+      } catch {
         // Not authenticated
         console.log('Not authenticated');
       } finally {

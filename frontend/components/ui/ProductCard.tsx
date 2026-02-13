@@ -83,7 +83,7 @@ function ProductCard({ product }: ProductCardProps) {
         {/* Rating */}
         <div className="mb-3 flex items-center gap-1">
           <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-          <span className="text-xs text-slate-600">{product.averageRating.toFixed(1)}</span>
+          <span className="text-xs text-slate-600">{Number(product.averageRating || 0).toFixed(1)}</span>
         </div>
 
         {/* Price & Action */}

@@ -11,7 +11,8 @@ export default function Error({
 }) {
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error(error);
+    console.error("Global Error Caught:", error);
+    if(error.stack) console.error(error.stack);
   }, [error]);
 
   return (

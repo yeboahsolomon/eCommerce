@@ -34,6 +34,7 @@ export interface Product {
   inStock: boolean;
   stockQuantity?: number;
   isFeatured: boolean;
+  isActive?: boolean;
   seller?: {
     id: string;
     businessName: string;
@@ -329,3 +330,26 @@ export interface ProductQueryParams {
   order?: 'asc' | 'desc';
   featured?: boolean;
 }
+
+export interface CreateProductInput {
+  name: string;
+  description?: string;
+  priceInPesewas: number;
+  comparePriceInPesewas?: number;
+  costInPesewas?: number;
+  categoryId: string;
+  sellerId?: string;
+  stockQuantity?: number;
+  lowStockThreshold?: number;
+  trackInventory?: boolean;
+  allowBackorder?: boolean;
+  sku?: string;
+  barcode?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  weightInGrams?: number;
+}
+
+export interface UpdateProductInput extends Partial<CreateProductInput> {}

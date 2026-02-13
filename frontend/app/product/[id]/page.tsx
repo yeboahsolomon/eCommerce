@@ -165,11 +165,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     return (
       <button 
         onClick={handleAddToCart}
-        disabled={!product.inStock}
+        disabled={!product.inStock || !product.isActive}
         className={`bg-blue-600 text-white h-14 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2 active:scale-[0.98] text-lg disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
         <ShoppingCart className="h-5 w-5" />
-        {product.inStock ? "Add to Cart" : "Out of Stock"}
+        {!product.isActive ? "Not Available" : product.inStock ? "Add to Cart" : "Out of Stock"}
       </button>
     );
   };
@@ -184,6 +184,15 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
         <span className="text-slate-900 font-medium truncate max-w-[200px] sm:max-w-md">{product.name}</span>
       </div>
+
+      {!product.isActive && (
+        <div className="max-w-7xl mx-auto px-4 mb-6">
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5" />
+            <span className="font-medium">This product is currently inactive and cannot be purchased.</span>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
