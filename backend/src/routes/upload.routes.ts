@@ -1,283 +1,264 @@
-import { Router, Request, Response } from 'express';
-import path from 'path';
-import fs from 'fs';
-import { authMiddleware } from '../middleware/auth.middleware.js';
-import { requireSellerOrAdmin } from '../middleware/auth.middleware.js';
-import { uploadLimiter } from '../middleware/rate-limit.middleware.js';
-import {
-  uploadSingleImage,
-  uploadMultipleImages,
-  handleUploadError,
-  deleteUploadedFile,
-  getImageUrl,
-} from '../middleware/multer.middleware.js';
+
+import { Router, Request, Response, NextFunction } from 'express';
+import { authenticate, requireSellerOrAdmin } from '../middleware/auth.middleware.js';
 import { prisma } from '../config/database.js';
+import { r2Service } from '../services/r2.service.js';
+import { v4 as uuidv4 } from 'uuid';
+import { ApiError } from '../middleware/error.middleware.js';
 
 const router = Router();
 
-// Get base URL for images
-const getBaseUrl = (req: Request): string => {
-  const protocol = req.protocol;
-  const host = req.get('host');
-  return `${protocol}://${host}`;
-};
+// ==================== R2 ROUTES ====================
 
-// ==================== ROUTES ====================
-
-// Upload single image
+/**
+ * POST /api/upload/url
+ * Generate pre-signed URL for client-side upload
+ */
 router.post(
-  '/image',
-  authMiddleware,
+  '/url',
+  authenticate,
   requireSellerOrAdmin,
-  uploadLimiter,
-  (req, res, next) => {
-    uploadSingleImage(req, res, (err) => {
-      handleUploadError(err, req, res, next);
-    });
-  },
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'No image file provided',
-        });
+      const { fileName, fileType, productId } = req.body;
+
+      if (!fileName || !fileType || !productId) {
+        throw new ApiError(400, 'Missing required fields: fileName, fileType, productId');
       }
 
-      const baseUrl = getBaseUrl(req);
-      const imageUrl = getImageUrl(req.file.filename, baseUrl);
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(fileType)) {
+        throw new ApiError(400, 'Invalid file type. Only JPG, PNG, WEBP, and GIF are allowed.');
+      }
+
+      // Verify product ownership
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+      });
+
+      if (!product) {
+        throw new ApiError(404, 'Product not found');
+      }
+
+      // Check ownership if SELLER
+      if (req.user?.role === 'SELLER') {
+          if (!req.user.sellerProfile) {
+              throw new ApiError(403, 'Seller profile not found');
+          }
+           // Allow if owner OR if product has no seller (admin created?) - strictly enforce owner for now
+          if (product.sellerId !== req.user.sellerProfile.id) {
+            throw new ApiError(403, 'You can only upload images for your own products');
+          }
+      }
+
+
+      const extension = fileName.split('.').pop();
+      const uuid = uuidv4();
+      // Structure: products/{sellerId}/{productId}/{uuid}.{ext}
+      // If sellerId is null (admin), use 'admin'
+      const sellerFolder = product.sellerId || 'admin';
+      const key = `products/${sellerFolder}/${productId}/${uuid}.${extension}`;
+
+      const uploadUrl = await r2Service.generateUploadUrl(key, fileType);
 
       res.json({
         success: true,
-        message: 'Image uploaded successfully',
         data: {
-          filename: req.file.filename,
-          url: imageUrl,
-          size: req.file.size,
-          mimetype: req.file.mimetype,
+          uploadUrl,
+          storageKey: key,
+          publicUrl: r2Service.getPublicUrl(key), // Frontend can use this for preview after upload? No, mostly for saving.
         },
       });
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to upload image',
-      });
+    } catch (error) {
+      next(error);
     }
   }
 );
 
-// Upload multiple images
+/**
+ * POST /api/upload/persist
+ * Save uploaded image metadata to database
+ */
 router.post(
-  '/images',
-  authMiddleware,
+  '/persist',
+  authenticate,
   requireSellerOrAdmin,
-  uploadLimiter,
-  (req, res, next) => {
-    uploadMultipleImages(req, res, (err) => {
-      handleUploadError(err, req, res, next);
-    });
-  },
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const files = req.files as Express.Multer.File[];
-      
-      if (!files || files.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'No image files provided',
+      const { productId, storageKey, fileSize, mimeType, isPrimary } = req.body;
+
+      if (!productId || !storageKey) {
+        throw new ApiError(400, 'Missing required fields');
+      }
+
+       // Verify product ownership again (security)
+       const product = await prisma.product.findUnique({
+        where: { id: productId },
+        include: { images: true }
+      });
+
+      if (!product) {
+        throw new ApiError(404, 'Product not found');
+      }
+
+      if (req.user?.role === 'SELLER') {
+          if (product.sellerId !== req.user.sellerProfile?.id) {
+            throw new ApiError(403, 'Unauthorized');
+          }
+      }
+
+      // Construct Public URL
+      const publicUrl = r2Service.getPublicUrl(storageKey);
+
+      // Manage Primary Image Logic
+      let shouldBePrimary = isPrimary;
+      if (product.images.length === 0) {
+        shouldBePrimary = true;
+      }
+
+      if (shouldBePrimary) {
+        // Unset other primaries
+        await prisma.productImage.updateMany({
+            where: { productId, isPrimary: true },
+            data: { isPrimary: false }
         });
       }
 
-      const baseUrl = getBaseUrl(req);
-      const images = files.map((file) => ({
-        filename: file.filename,
-        url: getImageUrl(file.filename, baseUrl),
-        size: file.size,
-        mimetype: file.mimetype,
-      }));
+      const image = await prisma.productImage.create({
+        data: {
+          productId,
+          url: publicUrl,
+          storageKey,
+          fileSize: fileSize || 0,
+          mimeType: mimeType || 'application/octet-stream',
+          isPrimary: shouldBePrimary || false,
+          sortOrder: product.images.length,
+        },
+      });
 
-      res.json({
+      res.status(201).json({
         success: true,
-        message: `${images.length} image(s) uploaded successfully`,
-        data: { images },
+        data: { image },
       });
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to upload images',
-      });
+
+    } catch (error) {
+      next(error);
     }
   }
 );
 
-// Delete an uploaded image
+/**
+ * DELETE /api/upload/:imageId
+ * Delete image from DB and R2
+ */
 router.delete(
-  '/:filename',
-  authMiddleware,
+  '/:imageId',
+  authenticate,
   requireSellerOrAdmin,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { filename } = req.params;
+      const { imageId } = req.params;
 
-      // Validate filename (prevent directory traversal)
-      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid filename',
-        });
+      const image = await prisma.productImage.findUnique({
+        where: { id: imageId },
+        include: { product: true }
+      });
+
+      if (!image) {
+        throw new ApiError(404, 'Image not found');
       }
 
-      await deleteUploadedFile(filename);
+      // Verify ownership
+      if (req.user?.role === 'SELLER') {
+          if (image.product.sellerId !== req.user.sellerProfile?.id) {
+            throw new ApiError(403, 'Unauthorized');
+          }
+      }
+
+      // Delete from R2 if storageKey exists
+      if (image.storageKey) {
+          try {
+            await r2Service.deleteFile(image.storageKey);
+          } catch (e) {
+              console.error("Failed to delete from R2:", e);
+              // Continue to delete from DB even if R2 fails (avoid orphaned DB records)
+          }
+      }
+
+      // Delete from DB
+      await prisma.productImage.delete({
+        where: { id: imageId },
+      });
+
+      // If deleted was primary, set new primary
+      if (image.isPrimary) {
+          const firstImage = await prisma.productImage.findFirst({
+              where: { productId: image.productId },
+              orderBy: { sortOrder: 'asc' }
+          });
+          if (firstImage) {
+              await prisma.productImage.update({
+                  where: { id: firstImage.id },
+                  data: { isPrimary: true }
+              });
+          }
+      }
 
       res.json({
         success: true,
         message: 'Image deleted successfully',
       });
-    } catch (error: any) {
-      console.error('Delete error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to delete image',
-      });
+
+    } catch (error) {
+      next(error);
     }
   }
 );
 
-// Add image to a product
-router.post(
-  '/product/:productId',
-  authMiddleware,
-  requireSellerOrAdmin,
-  uploadLimiter,
-  (req, res, next) => {
-    uploadSingleImage(req, res, (err) => {
-      handleUploadError(err, req, res, next);
-    });
-  },
-  async (req: Request, res: Response) => {
-    try {
-      const { productId } = req.params;
-      const { isPrimary } = req.body;
+/**
+ * PUT /api/upload/reorder
+ * Reorder images
+ */
+router.put(
+    '/reorder',
+    authenticate,
+    requireSellerOrAdmin,
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { productId, imageIds } = req.body; // Array of IDs in order
 
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'No image file provided',
-        });
-      }
+            if (!Array.isArray(imageIds)) {
+                throw new ApiError(400, "Invalid imageIds format");
+            }
 
-      // Verify product exists
-      const product = await prisma.product.findUnique({
-        where: { id: productId },
-        include: { images: true },
-      });
+            // Verify ownership
+            const product = await prisma.product.findUnique({ where: { id: productId }});
+             if (!product) throw new ApiError(404, "Product not found");
+             
+             if (req.user?.role === 'SELLER') {
+                 if (product.sellerId !== req.user.sellerProfile?.id) {
+                     throw new ApiError(403, "Unauthorized");
+                 }
+             }
 
-      if (!product) {
-        // Delete the uploaded file since product doesn't exist
-        await deleteUploadedFile(req.file.filename);
-        return res.status(404).json({
-          success: false,
-          message: 'Product not found',
-        });
-      }
+            // Update sortOrders
+            // Transaction?
+            await prisma.$transaction(
+                imageIds.map((id, index) => 
+                    prisma.productImage.update({
+                        where: { id },
+                        data: { sortOrder: index }
+                    })
+                )
+            );
 
-      const baseUrl = getBaseUrl(req);
-      const imageUrl = getImageUrl(req.file.filename, baseUrl);
-      const shouldBePrimary = isPrimary === 'true' || product.images.length === 0;
+            res.json({ success: true, message: "Images reordered" });
 
-      // If this is being set as primary, unset other primary images
-      if (shouldBePrimary) {
-        await prisma.productImage.updateMany({
-          where: { productId, isPrimary: true },
-          data: { isPrimary: false },
-        });
-      }
-
-      // Create product image record
-      const productImage = await prisma.productImage.create({
-        data: {
-          productId,
-          url: imageUrl,
-          isPrimary: shouldBePrimary,
-          sortOrder: product.images.length,
-        },
-      });
-
-      res.json({
-        success: true,
-        message: 'Product image added successfully',
-        data: productImage,
-      });
-    } catch (error: any) {
-      console.error('Product image upload error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to add product image',
-      });
-    }
-  }
-);
-
-// Delete a product image
-router.delete(
-  '/product/:productId/:imageId',
-  authMiddleware,
-  requireSellerOrAdmin,
-  async (req: Request, res: Response) => {
-    try {
-      const { productId, imageId } = req.params;
-
-      const image = await prisma.productImage.findFirst({
-        where: { id: imageId, productId },
-      });
-
-      if (!image) {
-        return res.status(404).json({
-          success: false,
-          message: 'Image not found',
-        });
-      }
-
-      // Extract filename from URL
-      const filename = path.basename(image.url);
-
-      // Delete from filesystem
-      await deleteUploadedFile(filename);
-
-      // Delete from database
-      await prisma.productImage.delete({
-        where: { id: imageId },
-      });
-
-      // If this was primary, set another image as primary
-      if (image.isPrimary) {
-        const nextImage = await prisma.productImage.findFirst({
-          where: { productId },
-          orderBy: { sortOrder: 'asc' },
-        });
-
-        if (nextImage) {
-          await prisma.productImage.update({
-            where: { id: nextImage.id },
-            data: { isPrimary: true },
-          });
+        } catch (error) {
+            next(error);
         }
-      }
-
-      res.json({
-        success: true,
-        message: 'Product image deleted successfully',
-      });
-    } catch (error: any) {
-      console.error('Delete product image error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to delete product image',
-      });
     }
-  }
-);
+)
 
 export default router;
