@@ -47,39 +47,43 @@ export const sellerApi = {
       .then(res => res.data);
   },
 
-  async uploadImage(file: File) {
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('type', 'product');
+  // Image Management (R2)
+  getUploadUrl: async (productId: string, fileName: string, fileType: string) => {
+    const res = await axiosInstance.post('/upload/url', { productId, fileName, fileType });
+    return res.data.data; // { uploadUrl, storageKey, publicUrl }
+  },
 
-    return axiosInstance.post<
-      ApiResponse<{ 
-        filename: string; 
-        url: string; 
-        size: number; 
-        mimetype: string 
-      }>
-    >('/upload/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }).then(res => res.data);
+  saveImageMetadata: async (productId: string, data: { storageKey: string, fileSize: number, mimeType: string, isPrimary: boolean }) => {
+    const res = await axiosInstance.post('/upload/persist', { productId, ...data });
+    return res.data.data.image;
+  },
+
+  uploadFileToR2: async (productId: string, file: File, isPrimary: boolean) => {
+      // 1. Get Presigned URL
+      const { uploadUrl, storageKey } = await sellerApi.getUploadUrl(productId, file.name, file.type);
+      
+      // 2. Upload to R2
+      await fetch(uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: {
+              'Content-Type': file.type,
+          },
+      });
+
+      // 3. Save Metadata
+      return await sellerApi.saveImageMetadata(productId, {
+          storageKey,
+          fileSize: file.size,
+          mimeType: file.type,
+          isPrimary
+      });
+  },
+
+  deleteProductImage: async (imageId: string) => {
+    return axiosInstance.delete<ApiResponse<void>>(`/upload/${imageId}`)
+      .then(res => res.data);
   },
   
-  async addProductImage(productId: string, file: File, isPrimary: boolean = false) {
-     const formData = new FormData();
-    formData.append('image', file);
-    formData.append('isPrimary', String(isPrimary));
-    
-    return axiosInstance.post<ApiResponse<any>>(`/upload/product/${productId}`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        }
-    }).then(res => res.data);
-  },
 
-  async deleteProductImage(productId: string, imageId: string) {
-    return axiosInstance.delete<ApiResponse<void>>(`/upload/product/${productId}/${imageId}`)
-      .then(res => res.data);
-  }
 };
