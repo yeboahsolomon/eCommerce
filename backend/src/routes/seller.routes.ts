@@ -142,6 +142,39 @@ router.get(
 );
 
 /**
+ * GET /api/seller/products
+ * Get seller's own products
+ */
+router.get(
+  '/products',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const search = req.query.search as string;
+      const status = req.query.status as string; // 'active', 'inactive', 'out_of_stock'
+
+      if (!req.user!.sellerProfile) {
+         return res.status(400).json({ success: false, message: 'Seller profile not found' });
+      }
+
+      // We need to implement getSellerProducts in SellerService or use Prisma directly here.
+      // Since SellerService is imported, let's see if it has this method. 
+      // I suspect it doesn't. I'll use sellerService.getSellerProducts if I add it, or just use Prisma here for speed if service is not easily modifiable.
+      // But best practice is service. 
+      // I'll call a new method on sellerService and then I'll have to update SellerService.
+      // Wait, let's check `backend/src/services/seller.service.ts` first.
+      
+      const result = await sellerService.getSellerProducts(req.user!.sellerProfile.id, { page, limit, search, status });
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * PATCH /api/seller/orders/:id/status
  * Update seller order status
  */
