@@ -35,15 +35,23 @@ export default function Home() {
       try {
         // Fetch products and categories in parallel
         const [productsRes, categoriesRes] = await Promise.allSettled([
-          api.getFeaturedProducts(8),
+          api.getProducts({ limit: 8, sortBy: 'createdAt', order: 'desc' }),
           api.getCategories(),
         ]);
 
         // Products
-        if (productsRes.status === "fulfilled" && productsRes.value.success && productsRes.value.data?.products) {
-          setProducts(productsRes.value.data.products as Product[]);
+        if (productsRes.status === "fulfilled") {
+           console.log("Homepage: Products API Result:", productsRes.value);
+           if (productsRes.value.success && productsRes.value.data?.products) {
+             console.log("Homepage: Setting Real Products", productsRes.value.data.products);
+             setProducts(productsRes.value.data.products as Product[]);
+           } else {
+             console.warn("Homepage: API success false or no data, using fallback");
+             setProducts(PRODUCTS.filter(p => p.isFeatured).slice(0, 8));
+           }
         } else {
-          setProducts(PRODUCTS.filter(p => p.isFeatured).slice(0, 8));
+           console.error("Homepage: Products API request failed", productsRes.reason);
+           setProducts(PRODUCTS.filter(p => p.isFeatured).slice(0, 8));
         }
 
         // Categories
@@ -52,7 +60,8 @@ export default function Home() {
         } else {
           setCategories(FALLBACK_CATEGORIES as unknown as Category[]);
         }
-      } catch {
+      } catch (err) {
+        console.error("Homepage: Fetch error", err);
         setProducts(PRODUCTS.filter(p => p.isFeatured).slice(0, 8));
         setCategories(FALLBACK_CATEGORIES as unknown as Category[]);
       } finally {
@@ -204,8 +213,8 @@ export default function Home() {
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Best Sellers This Week</h2>
-            <p className="text-slate-500 text-sm mt-1">Most popular products from top sellers</p>
+            <h2 className="text-2xl font-bold text-slate-900">Fresh from the Market</h2>
+            <p className="text-slate-500 text-sm mt-1">Newest arrivals from our sellers</p>
           </div>
           <Link 
             href="/products" 

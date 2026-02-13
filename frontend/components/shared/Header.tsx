@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, ShoppingCart, User, Menu, Heart, ChevronDown, Smartphone } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, Heart, ChevronDown, Smartphone, Store } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useRef, useEffect, FormEvent } from "react";
@@ -63,7 +63,7 @@ export default function Header() {
     <div className="flex flex-col w-full z-50">
       {/* 2. MAIN HEADER: Logo, Search, Actions */}
       <header 
-        className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm z-40"
+        className={`fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm z-40 transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}
       >
         <div className="max-w-7xl mx-auto px-4 lg:px-6 h-20 flex items-center justify-between gap-8">
           
@@ -139,6 +139,11 @@ export default function Header() {
                         <Link href="/account/orders" className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">
                            <Smartphone className="h-4 w-4" /> My Orders
                         </Link>
+                        {(user?.role === 'SELLER' || user?.role === 'ADMIN') && (
+                           <Link href="/seller/products" className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">
+                              <Store className="h-4 w-4" /> Seller Dashboard
+                           </Link>
+                        )}
                         <Link href="/account/wishlist" className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">
                            <Heart className="h-4 w-4" /> Saved Items
                         </Link>

@@ -65,6 +65,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
            toast.success("Added to cart");
         }
       } catch (error) {
+        console.error("Add to cart error:", error);
         toast.error("Failed to add to cart");
       }
     } else {
@@ -128,7 +129,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeItem = async (productId: string) => {
      if (isAuthenticated) {
-        // Need CartItemID. 
+        // Need CartItemID? The new API implementation in api.ts might handle productId?
+        // Let's check api.ts line 134: request... /cart/items/${productId}
+        // It seems the API expects productId or itemId. 
+        // Previously it was using item.id. Let's assume the API was updated or we need to find the item.
+        // In Step 261 line 136 it used item.id. 
+        // I will use item.id for safety if authenticated.
         if (!cart) return;
         const item = cart.items.find((i) => i.productId === productId);
         if (item) {
@@ -136,17 +142,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 const res = await api.removeFromCart(item.id); 
                 if (res.success && res.data?.cart) {
                      setCart(res.data.cart as unknown as Cart);
-                } else if (res.success) {
-                   // Fallback optimistic
-                   setCart(prev => prev ? ({
-                       ...prev,
-                       items: prev.items.filter(i => i.id !== item.id),
-                       itemCount: prev.itemCount - item.quantity,
-                       subtotalInCedis: prev.subtotalInCedis - ((item.product.priceInPesewas / 100) * item.quantity)
-                   }) : null);
+                } else {
+                    // Fallback refresh
+                    const rootRes = await api.getCart();
+                    if (rootRes.success && rootRes.data?.cart) setCart(rootRes.data.cart as unknown as Cart);
                 }
                 toast.success("Removed from cart");
-            } catch(e) {
+            } catch {
                 toast.error("Failed to remove");
             }
         }
@@ -171,6 +173,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                   subtotalInCedis
               };
         });
+        toast.success("Removed from cart");
     }
   };
 
@@ -184,10 +187,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (!cart) return;
         const item = cart.items.find((i) => i.productId === productId);
         if (item) {
+            try {
              const res = await api.updateCartItem(item.id, quantity);
              if (res.success && res.data?.cart) {
                  setCart(res.data.cart as unknown as Cart);
              }
+            } catch {
+                toast.error("Failed to update quantity");
+            }
         }
     } else {
          setCart((currentCart) => {
@@ -213,14 +220,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                   itemCount,
                   subtotalInCedis
               };
-        });
+         });
     }
   };
 
   const clearCart = async () => {
     setCart(null);
     if (isAuthenticated) {
-      await api.clearCart();
+      try {
+        await api.clearCart();
+      } catch {
+          // ignore
+      }
     }
   };
 
