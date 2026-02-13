@@ -12,6 +12,10 @@ import {
   RotateCcw, Zap, ChevronRight, Store, Flame
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import HeroCarousel from "@/components/shared/hero/HeroCarousel";
+import Greeting from "@/components/shared/hero/Greeting";
+import TrustBadges from "@/components/shared/hero/TrustBadges";
+import DealOfTheDay from "@/components/shared/hero/DealOfTheDay";
 
 // Fallback categories for when the API is unavailable
 const FALLBACK_CATEGORIES = [
@@ -78,67 +82,26 @@ export default function Home() {
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* HERO SECTION                                               */}
       {/* ═══════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-8 sm:p-12 lg:p-16">
-        {/* Animated Background Orbs */}
-        <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-violet-500/15 blur-3xl"></div>
-        <div className="absolute top-1/2 right-1/4 h-40 w-40 rounded-full bg-amber-500/10 blur-3xl"></div>
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* NEW HERO SECTION                                           */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <section className="space-y-4 md:space-y-6">
+        <Greeting />
         
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-          <div className="max-w-xl">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-amber-300 text-xs font-bold px-4 py-2 rounded-full mb-6 border border-white/10">
-              <Zap className="h-3.5 w-3.5" />
-              <span>GHANA&apos;S #1 ONLINE MARKETPLACE</span>
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-[1.1] mb-5 tracking-tight">
-              Shop Ghana.
-              <br />
-              <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-                Shop Smart.
-              </span>
-            </h1>
-
-            <p className="text-lg text-slate-300 mb-8 leading-relaxed max-w-md">
-              From the latest electronics to fresh food — buy and sell anything on 
-              GhanaMarket. Fast delivery across all 16 regions.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <Link 
-                href="/products" 
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-xl shadow-blue-600/25 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:scale-[0.98]"
-              >
-                Shop Now <ArrowRight className="h-5 w-5" />
-              </Link>
-              <Link 
-                href="/seller/register" 
-                className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white/20 transition-all"
-              >
-                <Store className="h-5 w-5" /> Sell on GhanaMarket
-              </Link>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Carousel - 12 cols on mobile, 8 or 9 on desktop */}
+          <div className="lg:col-span-8 xl:col-span-9">
+            <HeroCarousel />
           </div>
-
-          {/* Hero Stats */}
-          <div className="hidden lg:grid grid-cols-2 gap-4">
-            {[
-              { value: "10K+", label: "Products", icon: "📦" },
-              { value: "5K+", label: "Sellers", icon: "🏪" },
-              { value: "16", label: "Regions", icon: "🇬🇭" },
-              { value: "24/7", label: "Support", icon: "💬" },
-            ].map((stat) => (
-              <div 
-                key={stat.label} 
-                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 text-center hover:bg-white/10 transition-colors"
-              >
-                <span className="text-3xl mb-2 block">{stat.icon}</span>
-                <p className="text-2xl font-extrabold text-white">{stat.value}</p>
-                <p className="text-sm text-slate-400">{stat.label}</p>
-              </div>
-            ))}
+          
+          {/* Desktop Side Banner */}
+          <div className="hidden lg:flex lg:col-span-4 xl:col-span-3 flex-col gap-4">
+             <DealOfTheDay />
           </div>
+        </div>
+
+        <div className="space-y-6">
+          <TrustBadges />
         </div>
       </section>
 
