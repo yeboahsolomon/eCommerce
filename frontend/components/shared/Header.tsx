@@ -5,6 +5,13 @@ import { Search, ShoppingCart, User, Menu, Heart, ChevronDown, Smartphone, Store
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useState, useRef, useEffect, FormEvent } from "react";
+import { axiosInstance } from "@/lib/axios";
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 export default function Header() {
   const router = useRouter();
@@ -12,7 +19,23 @@ export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const [categories, setCategories] = useState<Category[]>([]);
   const profileRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axiosInstance.get('/categories');
+        if (res.data.success) {
+           setCategories(res.data.data.categories);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories", error);
+      }
+    };
+    fetchCategories();
+  }, []);
   
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -192,14 +215,19 @@ export default function Header() {
               <button className="flex items-center gap-2 text-sm font-extrabold text-slate-900 hover:text-blue-600 uppercase tracking-wide">
                  <Menu className="h-4 w-4" /> All Categories
               </button>
-              <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
+               <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
                  <Link href="/shop" className="hover:text-blue-600 transition-colors">Best Sellers</Link>
-                 <Link href="/categories/electronics" className="hover:text-blue-600 transition-colors">Electronics</Link>
-                 <Link href="/categories/fashion" className="hover:text-blue-600 transition-colors">Fashion</Link>
-                 <Link href="/categories/food" className="hover:text-blue-600 transition-colors">Food & Groceries</Link>
-                 <Link href="/categories/home" className="hover:text-blue-600 transition-colors">Home & Kitchen</Link>
+                 {categories.slice(0, 5).map((category) => (
+                    <Link 
+                      key={category.id} 
+                      href={`/categories/${category.slug}`} 
+                      className="hover:text-blue-600 transition-colors capitalize"
+                    >
+                      {category.name}
+                    </Link>
+                 ))}
                  <Link href="/deals" className="text-red-500 font-bold hover:text-red-600 transition-colors">Today's Deals</Link>
-              </nav>
+               </nav>
            </div>
         </div>
       </header>
