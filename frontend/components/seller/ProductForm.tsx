@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/Textarea';
 // import { Select } from '@/components/ui/SelectNative'; // Using native select directly for simplicity with react-hook-form register
 import { sellerApi } from '@/lib/seller-api';
 import { Category, Product } from '@/types';
+import ImageUpload from './ImageUpload';
 
 // Zod schema for form validation
 const productSchema = z.object({
@@ -67,40 +68,11 @@ export default function ProductForm({ initialData, categories }: ProductFormProp
   // Watch for conditional rendering if needed
   // const trackInventory = watch('trackInventory');
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      const previewUrl = URL.createObjectURL(file);
-      
-      setImages(prev => [...prev, { file, url: previewUrl, isPrimary: prev.length === 0 }]);
-    }
-  };
 
-  const removeImage = async (index: number) => {
-    const imageToRemove = images[index];
-    
-    if (imageToRemove.id && initialData) {
-        try {
-            await sellerApi.deleteProductImage(initialData.id, imageToRemove.id);
-            toast.success("Image removed");
-        } catch (error) {
-            toast.error("Failed to remove image");
-            return;
-        }
-    }
 
-    setImages(prev => {
-        const newImages = prev.filter((_, i) => i !== index);
-        if (imageToRemove.isPrimary && newImages.length > 0) {
-            newImages[0].isPrimary = true;
-        }
-        return newImages;
-    });
-  };
 
-  const setPrimary = (index: number) => {
-    setImages(prev => prev.map((img, i) => ({ ...img, isPrimary: i === index })));
-  };
+
+
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
@@ -132,7 +104,7 @@ export default function ProductForm({ initialData, categories }: ProductFormProp
         const newImages = images.filter(img => img.file);
         for (const img of newImages) {
             if (img.file) {
-                await sellerApi.addProductImage(productId, img.file, img.isPrimary);
+                await sellerApi.uploadFileToR2(productId, img.file, img.isPrimary);
             }
         }
       }
@@ -217,44 +189,15 @@ export default function ProductForm({ initialData, categories }: ProductFormProp
         {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
       </div>
 
-      {/* Image Upload Section */}
-      <div className="space-y-4">
-        <label className="text-sm font-medium">Product Images</label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {images.map((img, index) => (
-            <div key={index} className="relative aspect-square border rounded-md overflow-hidden group bg-gray-50">
-              <Image src={img.url} alt="Preview" fill className="object-cover" />
-              <button
-                type="button"
-                onClick={() => removeImage(index)}
-                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Trash className="h-3 w-3" />
-              </button>
-              {img.isPrimary && (
-                  <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-2 py-0.5 rounded">Primary</div>
-              )}
-              {!img.isPrimary && (
-                  <button
-                      type="button" 
-                      onClick={() => setPrimary(index)}
-                      className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100"
-                  >
-                      Make Primary
-                  </button>
-              )}
-            </div>
-          ))}
-          
-          <div className="border-2 border-dashed border-gray-300 rounded-md flex flex-col items-center justify-center aspect-square cursor-pointer hover:bg-gray-50 transition-colors">
-            <label className="cursor-pointer flex flex-col items-center w-full h-full justify-center">
-              <Upload className="h-8 w-8 text-gray-400 mb-2" />
-              <span className="text-sm text-gray-500">Upload</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-            </label>
-          </div>
+        {/* Image Upload Section */}
+        <div className="space-y-4">
+          <label className="text-sm font-medium">Product Images</label>
+          <ImageUpload 
+            productId={initialData?.id} 
+            images={images} 
+            onChange={setImages} 
+          />
         </div>
-      </div>
 
       <Button type="submit" disabled={loading} className="w-full">
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
