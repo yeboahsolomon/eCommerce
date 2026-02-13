@@ -362,7 +362,10 @@ model ProductImage {
   productId String
 
   url       String
+  storageKey String? @unique // Nullable for existing local images
   altText   String?
+  fileSize  Int?
+  mimeType  String?
   sortOrder Int     @default(0)
   isPrimary Boolean @default(false)
 
