@@ -1,0 +1,204 @@
+﻿
+> marketplace@0.1.0 lint
+> eslint
+
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\account\addresses\page.tsx
+  56:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  71:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\account\orders\[id]\page.tsx
+  8:10  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\account\page.tsx
+  106:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\account\wishlist\page.tsx
+  52:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\admin\login\page.tsx
+  46:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\admin\orders\page.tsx
+  61:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\admin\page.tsx
+   8:29  warning  'Box' is defined but never used           @typescript-eslint/no-unused-vars
+  21:52  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\admin\products\page.tsx
+  30:16  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  48:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\admin\register\page.tsx
+  65:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\category\[slug]\page.tsx
+  13:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\checkout\page.tsx
+   39:9   warning  The 'items' logical expression could make the dependencies of useEffect Hook (at line 49) change on every render. To fix this, wrap the initialization of 'items' in its own useMemo() Hook                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      react-hooks/exhaustive-deps
+   67:27  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\checkout\page.tsx:67:27
+  65 |   });
+  66 |
+> 67 |   const selectedPayment = watch("paymentMethod");
+     |                           ^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  68 |
+  69 |   // Delivery fee calculation
+  70 |   const deliveryFee = totalPrice >= 200 ? 0 : 15;  react-hooks/incompatible-library
+  217:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                          @next/next/no-img-element
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\order-success\[id]\page.tsx
+  101:49  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\page.tsx
+  168:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\product\[id]\page.tsx
+  33:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  34:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\products\page.tsx
+  27:16  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\search\page.tsx
+  14:44  error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  49:76  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  49:84  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  72:22  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  72:52  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  72:60  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\seller\products\[id]\edit\page.tsx
+   4:10  warning  'useRouter' is defined but never used  @typescript-eslint/no-unused-vars
+  40:16  warning  'error' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\seller\products\add\page.tsx
+   4:10  warning  'useRouter' is defined but never used  @typescript-eslint/no-unused-vars
+  25:16  warning  'error' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\seller\products\page.tsx
+  27:9   warning  'router' is assigned a value but never used                                                                       @typescript-eslint/no-unused-vars
+  49:14  warning  'error' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  58:6   warning  React Hook useEffect has a missing dependency: 'fetchProducts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  78:14  warning  'error' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\app\seller\register\page.tsx
+  8:10  warning  'TrendingUp' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\checkout\PaymentMethodSelector.tsx
+  22:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\seller\ImageUpload.tsx
+    6:30  warning  'GripVertical' is defined but never used        @typescript-eslint/no-unused-vars
+    9:10  warning  'Button' is defined but never used              @typescript-eslint/no-unused-vars
+   71:48  warning  'publicUrl' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  141:20  warning  'error' is defined but never used               @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\seller\ProductForm.tsx
+    8:19  warning  'Upload' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+    8:27  warning  'Trash' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+    9:8   warning  'Image' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+   51:5   warning  'setValue' is assigned a value but never used                                                                        @typescript-eslint/no-unused-vars
+   52:5   warning  'watch' is assigned a value but never used                                                                           @typescript-eslint/no-unused-vars
+   54:45  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+   81:22  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+   97:9   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  114:21  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\shared\Header.tsx
+   78:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\shared\Header.tsx:78:7
+  76 |   // Close menus on route change
+  77 |   useEffect(() => {
+> 78 |       setIsMegaMenuOpen(false);
+     |       ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  79 |       setIsMobileMenuOpen(false);
+  80 |       setIsMiniCartOpen(false);
+  81 |   }, [pathname]);  react-hooks/set-state-in-effect
+  181:32  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  213:26  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\shared\header\AccountDropdown.tsx
+  4:16  warning  'Smartphone' is defined but never used  @typescript-eslint/no-unused-vars
+  4:69  warning  'CreditCard' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\shared\header\MegaMenu.tsx
+  76:132  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\shared\header\MiniCart.tsx
+  86:88  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\shared\header\Search.tsx
+    8:8   warning  'Image' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   40:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\shared\header\Search.tsx:40:9
+  38 |     if (saved) {
+  39 |       try {
+> 40 |         setRecentSearches(JSON.parse(saved).slice(0, 5));
+     |         ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  41 |       } catch (e) {
+  42 |         console.error("Failed to parse recent searches", e);
+  43 |       }  react-hooks/set-state-in-effect
+  188:47  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+  188:55  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\ui\Button.tsx
+  12:56  warning  'asChild' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\ui\ConfirmDialog.tsx
+  35:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Hp\Desktop\eCommerce\frontend\components\ui\ConfirmDialog.tsx:35:7
+  33 |   useEffect(() => {
+  34 |     if (isOpen) {
+> 35 |       setIsVisible(true);
+     |       ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  36 |       document.body.style.overflow = "hidden";
+  37 |     } else {
+  38 |       const timer = setTimeout(() => setIsVisible(false), 300); // Wait for animation  react-hooks/set-state-in-effect
+
+C:\Users\Hp\Desktop\eCommerce\frontend\context\CartContext.tsx
+  79:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  80:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\lib\api.ts
+   40:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   52:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  197:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  243:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\lib\seller-api.ts
+   2:23  warning  'PaginatedResponse' is defined but never used  @typescript-eslint/no-unused-vars
+  31:77  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+C:\Users\Hp\Desktop\eCommerce\frontend\types\index.ts
+  355:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+Γ£û 73 problems (33 errors, 40 warnings)
+
