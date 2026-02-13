@@ -15,33 +15,53 @@ interface TimeLeft {
 }
 
 export default function CountdownTimer({ targetDate, hoursFromNow = 12 }: CountdownTimerProps) {
-  const getTarget = useCallback(() => {
-    if (targetDate) return new Date(targetDate).getTime();
-    
-    // Default: end of day or hoursFromNow
-    const now = new Date();
-    return now.getTime() + hoursFromNow * 60 * 60 * 1000;
-  }, [targetDate, hoursFromNow]);
-
-  const [target] = useState(getTarget);
-
-  const calculateTimeLeft = useCallback((): TimeLeft => {
-    const diff = Math.max(0, target - Date.now());
-    return {
-      hours: Math.floor(diff / (1000 * 60 * 60)),
-      minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-      seconds: Math.floor((diff % (1000 * 60)) / 1000),
-    };
-  }, [target]);
-
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft);
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ hours: 0, minutes: 0, seconds: 0 });
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    
+    let targetTime: number;
+    if (targetDate) {
+      targetTime = new Date(targetDate).getTime();
+    } else {
+      // Set target based on client time to avoid hydration mismatch
+      const now = new Date();
+      targetTime = now.getTime() + hoursFromNow * 60 * 60 * 1000;
+    }
+
+    const calculate = () => {
+      const diff = Math.max(0, targetTime - Date.now());
+      return {
+        hours: Math.floor(diff / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+      };
+    };
+
+    setTimeLeft(calculate()); // Initial set
+
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+      setTimeLeft(calculate());
     }, 1000);
+
     return () => clearInterval(timer);
-  }, [calculateTimeLeft]);
+  }, [targetDate, hoursFromNow]);
+
+  if (!isMounted) {
+    // Return a stable initial render (e.g., zeroes) to match server if needed, 
+    // or nothing if layout shift is acceptable. 
+    // Matching the structure but with placeholders is best for CLS.
+    return (
+      <div className="flex items-center gap-1 opacity-0">
+        <TimeBlock value="00" label="Hrs" />
+        <span className="text-white font-bold text-lg">:</span>
+        <TimeBlock value="00" label="Min" />
+        <span className="text-white font-bold text-lg">:</span>
+        <TimeBlock value="00" label="Sec" />
+      </div>
+    );
+  }
 
   const pad = (n: number) => n.toString().padStart(2, "0");
 
