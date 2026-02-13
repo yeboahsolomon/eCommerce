@@ -17,8 +17,8 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: config.nodeEnv === 'production',
-    sameSite: 'strict',
-    maxAge: 15 * 60 * 1000, 
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours for dev convenience 
   });
 
   // Refresh Token: Long lived (7d)

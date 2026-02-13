@@ -118,6 +118,7 @@ router.get(
         priceInCedis: product.priceInPesewas / 100,
         comparePriceInCedis: product.comparePriceInPesewas ? product.comparePriceInPesewas / 100 : null,
         inStock: !product.trackInventory || product.stockQuantity > 0 || product.allowBackorder,
+        image: product.images[0]?.url || null,
       }));
       
       res.json({
@@ -144,9 +145,11 @@ router.get(
  */
 router.get(
   '/:id',
+  optionalAuth, // Add optional auth to check if user is seller/admin
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
+      const user = (req as any).user;
       
       const product = await prisma.product.findFirst({
         where: {
@@ -155,7 +158,8 @@ router.get(
             { slug: id },
             { sku: id },
           ],
-          isActive: true,
+          // Allow inactive if user is admin or owner
+          // specific check below
         },
         include: {
           category: true,
@@ -178,6 +182,16 @@ router.get(
       if (!product) {
         throw new ApiError(404, 'Product not found.');
       }
+
+      // Check visibility
+      if (!product.isActive) {
+        const isOwner = user?.role === 'SELLER' && user?.sellerProfile?.id === product.sellerId;
+        const isAdmin = user?.role === 'ADMIN';
+        
+        if (!isOwner && !isAdmin) {
+             throw new ApiError(404, 'Product not found.');
+        }
+      }
       
       res.json({
         success: true,
@@ -187,6 +201,7 @@ router.get(
             priceInCedis: product.priceInPesewas / 100,
             comparePriceInCedis: product.comparePriceInPesewas ? product.comparePriceInPesewas / 100 : null,
             inStock: !product.trackInventory || product.stockQuantity > 0 || product.allowBackorder,
+            image: product.images[0]?.url || null,
           },
         },
       });
@@ -267,12 +282,12 @@ router.post(
 
 /**
  * PUT /api/products/:id
- * Update product (Admin/Seller only)
+ * Update product (Admin/Seller own products)
  */
 router.put(
   '/:id',
   authenticate,
-  requireAdmin,
+  requireSellerOrAdmin,
   validate(updateProductSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -283,6 +298,16 @@ router.put(
       const existingProduct = await prisma.product.findUnique({ where: { id } });
       if (!existingProduct) {
         throw new ApiError(404, 'Product not found.');
+      }
+
+      // Check ownership if SELLER
+      if (req.user?.role === 'SELLER') {
+        if (!req.user.sellerProfile) {
+           throw new ApiError(403, 'Seller profile not found.');
+        }
+        if (existingProduct.sellerId !== req.user.sellerProfile.id) {
+          throw new ApiError(403, 'You can only update your own products.');
+        }
       }
       
       // If updating name, update slug too
@@ -298,6 +323,24 @@ router.put(
         if (existingSku) {
           throw new ApiError(409, 'A product with this SKU already exists.');
         }
+      }
+
+      // Handle Inventory Logging if stock changes
+      if (updateData.stockQuantity !== undefined && updateData.stockQuantity !== existingProduct.stockQuantity) {
+        const quantityChange = updateData.stockQuantity - existingProduct.stockQuantity;
+        const action = quantityChange > 0 ? 'RESTOCK' : 'ADJUSTMENT'; // Or SALE/RETURN if implemented elsewhere
+
+        await prisma.inventoryLog.create({
+          data: {
+            productId: id,
+            action,
+            quantityChange,
+            previousQuantity: existingProduct.stockQuantity,
+            newQuantity: updateData.stockQuantity,
+            userId: req.user?.id,
+            notes: 'Manual update via Product Edit',
+          },
+        });
       }
       
       const product = await prisma.product.update({
@@ -324,12 +367,12 @@ router.put(
 
 /**
  * DELETE /api/products/:id
- * Delete product (Admin only) - Soft delete by setting isActive to false
+ * Delete product (Admin/Seller own products) - Soft delete by setting isActive to false
  */
 router.delete(
   '/:id',
   authenticate,
-  requireAdmin,
+  requireSellerOrAdmin,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -337,6 +380,16 @@ router.delete(
       const product = await prisma.product.findUnique({ where: { id } });
       if (!product) {
         throw new ApiError(404, 'Product not found.');
+      }
+
+      // Check ownership if SELLER
+      if (req.user?.role === 'SELLER') {
+        if (!req.user.sellerProfile) {
+           throw new ApiError(403, 'Seller profile not found.');
+        }
+        if (product.sellerId !== req.user.sellerProfile.id) {
+          throw new ApiError(403, 'You can only delete your own products.');
+        }
       }
       
       // Check if product has order history

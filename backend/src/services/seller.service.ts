@@ -1,4 +1,4 @@
-import { prisma } from '../lib/prisma.js';
+import prisma from '../config/database.js';
 import { CreateSellerProfileInput, UpdateSellerProfileInput } from '../utils/validators.js';
 import { ApiError } from '../middleware/error.middleware.js';
 
@@ -134,10 +134,10 @@ export class SellerService {
         where: { sellerId, createdAt: { gte: startOfToday } } 
       }),
       prisma.sellerOrder.aggregate({
-        where: { sellerId, status: { in: ['CONFIRMED', 'SHIPPED', 'DELIVERED'] } },
+        where: { sellerId, status: { in: ['PROCESSING', 'SHIPPED', 'DELIVERED'] } },
         _sum: { subtotalInPesewas: true }
       }),
-      prisma.sellerOrder.count({ where: { sellerId, status: { in: ['PENDING', 'PAYMENT_PENDING'] } } }),
+      prisma.sellerOrder.count({ where: { sellerId, status: { in: ['PENDING'] } } }),
       prisma.product.count({
         where: {
           sellerId,
@@ -170,7 +170,7 @@ export class SellerService {
     if (!profile) throw new ApiError(404, 'Seller profile not found');
 
     const where: any = { sellerId: profile.id };
-    if (status) where.status = status;
+    if (status) where.status = status as any;
 
     const [orders, total] = await Promise.all([
       prisma.sellerOrder.findMany({
@@ -228,9 +228,65 @@ export class SellerService {
       throw new ApiError(404, 'Order not found');
     }
 
+    // cast status to any or validate against enum
     return await prisma.sellerOrder.update({
       where: { id: orderId },
-      data: { status },
+      data: { status: status as any },
     });
+  }
+
+  /**
+   * Get Seller Products
+   */
+  async getSellerProducts(sellerId: string, params: { page: number; limit: number; search?: string; status?: string }) {
+    const { page, limit, search, status } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = { sellerId };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (status) {
+      if (status === 'active') where.isActive = true;
+      if (status === 'inactive') where.isActive = false;
+      if (status === 'out_of_stock') {
+        where.OR = [
+            { trackInventory: true, stockQuantity: 0, allowBackorder: false }
+        ]
+      }
+    }
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          category: { select: { name: true } },
+          images: { take: 1, orderBy: { isPrimary: 'desc' } }
+        }
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return {
+      products: products.map(p => ({
+        ...p,
+        priceInCedis: p.priceInPesewas / 100,
+        image: p.images[0]?.url || null,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      }
+    };
   }
 }
