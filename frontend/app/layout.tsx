@@ -29,7 +29,7 @@ export default function RootLayout({
             <Header />
             
             {/* Main Content Area */}
-            <main className="min-h-screen max-w-7xl mx-auto px-4 py-6 pt-36 md:pt-40 mb-20 md:mb-0">
+            <main className="min-h-screen max-w-7xl mx-auto px-4 py-6 mb-20 md:mb-0">
               {children}
             </main>
   

@@ -221,7 +221,7 @@ export default function Header() {
       </header>
       
       {/* Spacers to prevent content jumping */}
-      <div className={cn("transition-all duration-300", isScrolled ? "h-[60px]" : "h-[120px]")} />
+      <div className={cn("transition-all duration-300", isScrolled ? "h-[60px]" : "h-[72px] lg:h-[120px]")} />
 
       {/* Overlays */}
       <MobileMenu 
