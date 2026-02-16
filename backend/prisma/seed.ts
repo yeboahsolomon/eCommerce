@@ -53,6 +53,61 @@ async function main() {
     },
   });
 
+  const beauty = await prisma.category.upsert({
+    where: { slug: 'beauty-personal-care' },
+    update: {},
+    create: { 
+      name: 'Beauty & Personal Care', 
+      slug: 'beauty-personal-care',
+      description: 'Makeup, skincare, and hair products',
+    },
+  });
+
+  const computers = await prisma.category.upsert({
+    where: { slug: 'computers-accessories' },
+    update: {},
+    create: { 
+      name: 'Computers & Accessories', 
+      slug: 'computers-accessories',
+      description: 'Laptops, desktops, and peripherals',
+    },
+  });
+
+  const sports = await prisma.category.upsert({
+    where: { slug: 'sports-outdoors' },
+    update: {},
+    create: { 
+      name: 'Sports & Outdoors', 
+      slug: 'sports-outdoors',
+      description: 'Gym equipment, team sports, and outdoor gear',
+    },
+  });
+
+  const baby = await prisma.category.upsert({
+    where: { slug: 'baby-kids' },
+    update: {},
+    create: { 
+      name: 'Baby & Kids', 
+      slug: 'baby-kids',
+      description: 'Toys, diapers, and baby clothing',
+    },
+  });
+
+  // Remove Test Category if exists
+  try {
+    await prisma.category.deleteMany({
+      where: { 
+        OR: [
+          { name: 'Test Category' },
+          { slug: 'test-category' }
+        ]
+      }
+    });
+    console.log('   ✓ Removed "Test Category" if it existed');
+  } catch (error) {
+    console.log('   ! Could not remove "Test Category" (might not exist or foreign key constraint)');
+  }
+
   // Child categories (hierarchy example)
   const phones = await prisma.category.upsert({
     where: { slug: 'phones' },

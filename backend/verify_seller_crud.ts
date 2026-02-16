@@ -90,17 +90,9 @@ const getCategories = async () => {
             categoryId = res.data.data.categories[0].id;
             console.log(`Category found: ${categoryId}`);
         } else {
-            console.log('No categories found. Creating a test category...');
-            // Create category directly via Prisma since we have access
-            const timestamp = Date.now();
-            const newCat = await prisma.category.create({
-                data: {
-                    name: `Test Category ${timestamp}`,
-                    slug: `test-category-${timestamp}`
-                }
-            });
-            categoryId = newCat.id;
-            console.log(`Test Category created: ${categoryId}`);
+            console.log('No categories found. Please seed the database first.');
+            // Abort if no categories
+            return;
         }
     } catch (error: any) {
         console.error('Fetch categories failed:', error.message);
