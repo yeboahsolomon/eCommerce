@@ -93,93 +93,98 @@ export default function MobileMenu({ isOpen, onClose, categories }: MobileMenuPr
 
           {/* User Section */}
           <div className="p-4 border-b border-slate-100">
-            {isAuthenticated ? (
-               <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                    {user?.firstName?.[0] || 'U'}
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900 leading-none">{user?.firstName} {user?.lastName}</p>
-                    <p className="text-xs text-slate-500 mt-1">{user?.email}</p>
-                  </div>
-               </div>
-            ) : (
-               <Link href="/auth/login" onClick={onClose} className="flex items-center gap-3 p-3 bg-blue-50 text-blue-700 rounded-xl mb-2 font-bold justify-center">
-                  <User className="h-5 w-5" /> Sign In / Register
-               </Link>
-            )}
-            
-            {isAuthenticated && (
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                    <Link href="/account/orders" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                        <ShoppingBag className="h-5 w-5 text-slate-600 mb-1" />
-                        <span className="text-xs font-medium text-slate-600">Orders</span>
-                    </Link>
-                    <Link href="/account/wishlist" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                        <Heart className="h-5 w-5 text-slate-600 mb-1" />
-                        <span className="text-xs font-medium text-slate-600">Wishlist</span>
-                    </Link>
-                    {(user?.role === 'SELLER' || user?.role === 'ADMIN') && (
-                        <Link href="/seller/dashboard" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100">
-                            <Store className="h-5 w-5 text-purple-600 mb-1" />
-                            <span className="text-xs font-bold text-purple-700">Seller Dashboard</span>
-                        </Link>
-                    )}
+             {isAuthenticated ? (
+                <div className="flex items-center gap-3 mb-4">
+                   <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                     {user?.firstName?.[0] || 'U'}
+                   </div>
+                   <div>
+                     <p className="font-bold text-slate-900 leading-none">{user?.firstName} {user?.lastName}</p>
+                     <p className="text-xs text-slate-500 mt-1">{user?.email}</p>
+                   </div>
                 </div>
-            )}
-          </div>
-
-          {/* Categories */}
-          <div className="p-4">
-            <h3 className="font-bold text-slate-900 mb-2 uppercase text-xs tracking-wider">Shop by Category</h3>
-            <ul className="space-y-1">
-              {categories.map((cat) => (
-                <li key={cat.id}>
-                  <Link 
-                    href={`/categories/${cat.slug}`} 
-                    onClick={onClose}
-                    className="flex items-center justify-between py-2 text-slate-600 hover:text-blue-600 transition-colors text-sm"
-                  >
-                    {cat.name}
-                    <ChevronRight className="h-4 w-4 text-slate-300" />
-                  </Link>
-                </li>
-              ))}
-              <li>
-                  <Link href="/categories" onClick={onClose} className="flex items-center gap-2 py-2 text-blue-600 font-semibold text-sm">
-                     View All Categories
-                  </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div className="border-t border-slate-100 p-4">
-            <Link href="/deals" onClick={onClose} className="flex items-center justify-between py-2 text-slate-600 hover:text-red-500 transition-colors font-medium">
-               Deals &amp; Offers <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">HOT</span>
-            </Link>
-
-          </div>
-        </div>
-
-        {/* Footer actions */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50">
-           {!(user?.role === 'SELLER' || user?.role === 'ADMIN') && (
-               <Link href="/sell" onClick={onClose} className="flex items-center gap-3 text-slate-600 hover:text-purple-600 font-medium text-sm mb-4 transition-colors">
-                  <Store className="h-4 w-4" /> Become a Seller
-               </Link>
-           )}
-           
-           <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-              <button className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                 <Globe className="h-3 w-3" /> Ghana (GHS)
-              </button>
-              {isAuthenticated && (
-                  <button onClick={() => { logout(); onClose(); }} className="flex items-center gap-2 text-xs text-red-500 font-medium">
-                     <LogOut className="h-3 w-3" /> Sign Out
-                  </button>
-              )}
+             ) : (
+                <>
+                   <Link href="/auth/login" onClick={onClose} className="flex items-center gap-3 p-3 bg-blue-50 text-blue-700 rounded-xl mb-2 font-bold justify-center">
+                      <User className="h-5 w-5" /> Sign In / Register
+                   </Link>
+                   <Link href="/sell" onClick={onClose} className="flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-purple-600 font-medium py-1 mb-2">
+                      <Store className="h-4 w-4" /> Become a Seller
+                   </Link>
+                </>
+             )}
+             
+             {isAuthenticated && (
+                 <div className="grid grid-cols-2 gap-2 mt-2">
+                     <Link href="/account/orders" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                         <ShoppingBag className="h-5 w-5 text-slate-600 mb-1" />
+                         <span className="text-xs font-medium text-slate-600">Orders</span>
+                     </Link>
+                     <Link href="/account/wishlist" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                         <Heart className="h-5 w-5 text-slate-600 mb-1" />
+                         <span className="text-xs font-medium text-slate-600">Wishlist</span>
+                     </Link>
+                     {(user?.role === 'SELLER' || user?.role === 'ADMIN') ? (
+                         <Link href="/seller/dashboard" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 col-span-2">
+                             <Store className="h-5 w-5 text-purple-600 mb-1" />
+                             <span className="text-xs font-bold text-purple-700">Seller Dashboard</span>
+                         </Link>
+                     ) : (
+                         <Link href="/sell" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 col-span-2">
+                             <Store className="h-5 w-5 text-purple-600 mb-1" />
+                             <span className="text-xs font-bold text-purple-700">Become a Seller</span>
+                         </Link>
+                     )}
+                 </div>
+             )}
            </div>
-        </div>
+
+           {/* Categories */}
+           <div className="p-4">
+             <h3 className="font-bold text-slate-900 mb-2 uppercase text-xs tracking-wider">Shop by Category</h3>
+             <ul className="space-y-1">
+               {categories.map((cat) => (
+                 <li key={cat.id}>
+                   <Link 
+                     href={`/categories/${cat.slug}`} 
+                     onClick={onClose}
+                     className="flex items-center justify-between py-2 text-slate-600 hover:text-blue-600 transition-colors text-sm"
+                   >
+                     {cat.name}
+                     <ChevronRight className="h-4 w-4 text-slate-300" />
+                   </Link>
+                 </li>
+               ))}
+               <li>
+                   <Link href="/categories" onClick={onClose} className="flex items-center gap-2 py-2 text-blue-600 font-semibold text-sm">
+                      View All Categories
+                   </Link>
+               </li>
+             </ul>
+           </div>
+
+           <div className="border-t border-slate-100 p-4">
+             <Link href="/deals" onClick={onClose} className="flex items-center justify-between py-2 text-slate-600 hover:text-red-500 transition-colors font-medium">
+                Deals & Offers <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full">HOT</span>
+             </Link>
+
+           </div>
+         </div>
+
+         {/* Footer actions */}
+         <div className="p-4 border-t border-slate-100 bg-slate-50">
+            
+            <div className="flex items-center justify-between pt-2">
+               <button className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                  <Globe className="h-3 w-3" /> Ghana (GHS)
+               </button>
+               {isAuthenticated && (
+                   <button onClick={() => { logout(); onClose(); }} className="flex items-center gap-2 text-xs text-red-500 font-medium">
+                      <LogOut className="h-3 w-3" /> Sign Out
+                   </button>
+               )}
+            </div>
+         </div>
 
       </div>
     </>
