@@ -31,6 +31,9 @@ export const mockPrisma = {
   user: createMockModel(),
   address: createMockModel(),
   sellerProfile: createMockModel(),
+  sellerWallet: createMockModel(),
+  sellerOrder: { ...createMockModel(), aggregate: vi.fn(), groupBy: vi.fn() },
+  transaction: createMockModel(),
   category: createMockModel(),
   product: createMockModel(),
   productImage: createMockModel(),
@@ -40,7 +43,7 @@ export const mockPrisma = {
   cart: createMockModel(),
   cartItem: createMockModel(),
   order: createMockModel(),
-  orderItem: createMockModel(),
+  orderItem: { ...createMockModel(), groupBy: vi.fn() },
   payment: createMockModel(),
   refund: createMockModel(),
   inventoryLog: createMockModel(),
@@ -93,6 +96,17 @@ export const testAdmin = {
   id: 'cltest000000000000admin1',
   email: 'admin@test.com',
   role: 'ADMIN' as const,
+};
+
+export const testSeller = {
+  ...testUser,
+  id: 'cltest00000000000seller1',
+  email: 'seller@test.com',
+  role: 'SELLER' as const,
+  sellerProfile: {
+    id: 'cltest000000000sellerp1',
+    isActive: true,
+  },
 };
 
 export const testProduct = {
