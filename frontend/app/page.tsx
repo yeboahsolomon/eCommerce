@@ -17,17 +17,7 @@ import Greeting from "@/components/shared/hero/Greeting";
 import TrustBadges from "@/components/shared/hero/TrustBadges";
 import DealOfTheDay from "@/components/shared/hero/DealOfTheDay";
 
-// Fallback categories for when the API is unavailable
-const FALLBACK_CATEGORIES = [
-  { id: "1", name: "Electronics", slug: "electronics", productCount: 124 },
-  { id: "2", name: "Fashion", slug: "fashion", productCount: 89 },
-  { id: "3", name: "Food & Groceries", slug: "food-groceries", productCount: 210 },
-  { id: "4", name: "Home & Kitchen", slug: "home-kitchen", productCount: 67 },
-  { id: "5", name: "Beauty", slug: "beauty", productCount: 56 },
-  { id: "6", name: "Phones & Tablets", slug: "phones-tablets", productCount: 43 },
-  { id: "7", name: "Sports", slug: "sports", productCount: 31 },
-  { id: "8", name: "Baby & Kids", slug: "baby-kids", productCount: 48 },
-];
+
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -58,16 +48,16 @@ export default function Home() {
            setProducts(PRODUCTS.filter(p => p.isFeatured).slice(0, 8));
         }
 
-        // Categories
+          // Categories
         if (categoriesRes.status === "fulfilled" && categoriesRes.value.success && categoriesRes.value.data?.categories) {
           setCategories(categoriesRes.value.data.categories as Category[]);
         } else {
-          setCategories(FALLBACK_CATEGORIES as unknown as Category[]);
+          setCategories([] as Category[]);
         }
       } catch (err) {
         console.error("Homepage: Fetch error", err);
         setProducts(PRODUCTS.filter(p => p.isFeatured).slice(0, 8));
-        setCategories(FALLBACK_CATEGORIES as unknown as Category[]);
+        setCategories([] as Category[]);
       } finally {
         setIsLoading(false);
       }
@@ -123,7 +113,7 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {(categories.length > 0 ? categories : FALLBACK_CATEGORIES).slice(0, 8).map((cat, i) => (
+          {categories.slice(0, 12).map((cat, i) => (
             <CategoryCard 
               key={cat.id} 
               name={cat.name} 
