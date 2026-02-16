@@ -22,6 +22,7 @@ import reviewRoutes from './routes/reviews.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import searchRoutes from './routes/search.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
+import sellerAnalyticsRoutes from './routes/seller-analytics.routes.js';
 
 const app = express();
 
@@ -101,6 +102,9 @@ app.use('/api/search', searchRoutes);
 // Admin routes
 app.use('/api/admin', adminRoutes);
 
+// Seller analytics routes (mounted BEFORE /api/seller to avoid /:slug catch-all)
+app.use('/api/seller/analytics', sellerAnalyticsRoutes);
+
 // Seller routes
 app.use('/api/seller', sellerRoutes);
 
@@ -132,6 +136,7 @@ app.listen(config.port, () => {
 ║   • Wishlist:  /api/wishlist                              ║
 ║   • Reviews:   /api/reviews                               ║
 ║   • Search:    /api/search                                ║
+║   • Analytics: /api/seller/analytics                      ║
 ║   • Admin:     /api/admin                                 ║
 ║   • Upload:    /api/upload                                ║
 ║                                                           ║
