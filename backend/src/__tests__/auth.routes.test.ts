@@ -73,7 +73,7 @@ describe('Auth Routes', () => {
   describe('POST /api/auth/register', () => {
     const validPayload = {
       email: 'newuser@test.com',
-      password: 'password123',
+      password: 'Password123',
       firstName: 'Ama',
       lastName: 'Mensah',
       phone: '0241234567',
@@ -145,7 +145,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ email: testUser.email, password: 'correctpassword' });
+        .send({ email: testUser.email, password: 'CorrectPass1' });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -162,7 +162,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ email: testUser.email, password: 'wrongpassword' });
+        .send({ email: testUser.email, password: 'WrongPass123' });
 
       expect(res.status).toBe(401);
       expect(res.body.message).toContain('Invalid email or password');
@@ -173,7 +173,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ email: 'ghost@test.com', password: 'password' });
+        .send({ email: 'ghost@test.com', password: 'Password1' });
 
       expect(res.status).toBe(401);
     });
@@ -187,7 +187,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ email: testUser.email, password: 'password' });
+        .send({ email: testUser.email, password: 'Password1' });
 
       expect(res.status).toBe(403);
       expect(res.body.message).toContain('suspended');
@@ -291,7 +291,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/reset-password')
-        .send({ token: 'raw_reset_token', newPassword: 'newpassword123' });
+        .send({ token: 'raw_reset_token', newPassword: 'NewPassword123' });
 
       expect(res.status).toBe(200);
       expect(res.body.message).toContain('reset successfully');
@@ -302,7 +302,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/reset-password')
-        .send({ token: 'bad_token', newPassword: 'newpassword123' });
+        .send({ token: 'bad_token', newPassword: 'NewPassword123' });
 
       expect(res.status).toBe(400);
     });
@@ -319,7 +319,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/auth/reset-password')
-        .send({ token: 'used_token', newPassword: 'newpassword123' });
+        .send({ token: 'used_token', newPassword: 'NewPassword123' });
 
       expect(res.status).toBe(400);
       expect(res.body.message).toContain('already been used');
@@ -343,7 +343,7 @@ describe('Auth Routes', () => {
       const res = await request(app)
         .post('/api/auth/change-password')
         .set('Cookie', getAuthCookie(testUser))
-        .send({ currentPassword: 'oldpass', newPassword: 'newpass123' });
+        .send({ currentPassword: 'OldPass123', newPassword: 'NewPass123' });
 
       expect(res.status).toBe(200);
       expect(res.body.message).toContain('changed successfully');
@@ -359,7 +359,7 @@ describe('Auth Routes', () => {
       const res = await request(app)
         .post('/api/auth/change-password')
         .set('Cookie', getAuthCookie(testUser))
-        .send({ currentPassword: 'wrongpass', newPassword: 'newpass123' });
+        .send({ currentPassword: 'WrongPass1', newPassword: 'NewPass123' });
 
       expect(res.status).toBe(401);
       expect(res.body.message).toContain('incorrect');
@@ -368,7 +368,7 @@ describe('Auth Routes', () => {
     it('should return 401 without authentication', async () => {
       const res = await request(app)
         .post('/api/auth/change-password')
-        .send({ currentPassword: 'oldpass', newPassword: 'newpass123' });
+        .send({ currentPassword: 'OldPass123', newPassword: 'NewPass123' });
 
       expect(res.status).toBe(401);
     });

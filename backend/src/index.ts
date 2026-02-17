@@ -8,6 +8,7 @@ import path from 'path';
 import { config } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { generalLimiter, authLimiter } from './middleware/rate-limit.middleware.js';
+import { sanitizeBody } from './middleware/sanitize.middleware.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -37,6 +38,15 @@ if (config.nodeEnv === 'development') {
 // Security headers
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow image loading
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 // Compression for responses
@@ -54,6 +64,9 @@ app.use(cors({
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Sanitize all string inputs (XSS prevention)
+app.use(sanitizeBody);
 
 // Serve static files (uploaded images)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

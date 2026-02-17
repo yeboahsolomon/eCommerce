@@ -12,7 +12,10 @@ export const config = {
   
   // JWT
   jwtSecret: process.env.JWT_SECRET || 'default-secret-change-in-production',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
+
+  // Refresh token expiry (ms)
+  refreshTokenExpiresIn: 7 * 24 * 60 * 60 * 1000, // 7 days
   
   // CORS
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
