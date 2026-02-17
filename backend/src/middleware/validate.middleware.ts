@@ -30,10 +30,10 @@ export function validate<T>(schema: ZodSchema<T>) {
 /**
  * Validate request query parameters
  */
-export function validateQuery<T>(schema: ZodSchema<T>) {
+export function validateQuery(schema: ZodSchema<any>) {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      schema.parse(req.query);
+      schema.parse(req.query as unknown);
       next();
     } catch (error) {
       if (error instanceof ZodError) {

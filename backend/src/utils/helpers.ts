@@ -25,10 +25,14 @@ export async function comparePassword(
 /**
  * Generate JWT token
  */
+/**
+ * Generate JWT token
+ */
 export function generateToken(payload: {
   userId: string;
   email: string;
-  role: string;
+  roles: string[];
+  emailVerified: boolean;
 }): string {
   return jwt.sign(payload, config.jwtSecret, {
     expiresIn: config.jwtExpiresIn as string,
