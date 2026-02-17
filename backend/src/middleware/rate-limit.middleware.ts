@@ -62,3 +62,27 @@ export const uploadLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Password reset rate limit - 3 attempts per 15 minutes
+export const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3,
+  message: {
+    success: false,
+    message: 'Too many password reset requests. Please try again in 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Email verification resend - 3 per 5 minutes
+export const emailVerifyLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 3,
+  message: {
+    success: false,
+    message: 'Too many verification requests. Please try again in a few minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
