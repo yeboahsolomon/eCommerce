@@ -46,12 +46,11 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
 };
 
 // ============================================================
-// POST /api/auth/register
+// POST /api/auth/register  (alias: /signup)
 // Create a new user account + send verification email
 // ============================================================
 
-router.post(
-  '/register',
+const registerHandler = [
   validate(registerSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -137,8 +136,11 @@ router.post(
     } catch (error) {
       next(error);
     }
-  }
-);
+  },
+];
+
+router.post('/register', ...registerHandler);
+router.post('/signup', ...registerHandler);
 
 // ============================================================
 // POST /api/auth/login
@@ -263,6 +265,60 @@ router.post(
       ]);
 
       // Send welcome email (non-blocking)
+      emailService.sendWelcomeEmail(storedToken.user.email, storedToken.user.firstName).catch((err) => {
+        console.error('Failed to send welcome email:', err);
+      });
+
+      return ApiResponseHandler.success(res, null, 'Email verified successfully! 🎉');
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /api/auth/verify-email/:token  (URL-param variant)
+router.post(
+  '/verify-email/:token',
+  async (req: Request, res: Response, next: NextFunction) => {
+    // Inject the URL param into body and forward to the body-based handler
+    req.body = { token: req.params.token };
+    next();
+  },
+  validate(verifyEmailSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token } = req.body as VerifyEmailInput;
+      const tokenHash = hashToken(token);
+
+      const storedToken = await prisma.emailVerificationToken.findUnique({
+        where: { token: tokenHash },
+        include: { user: true },
+      });
+
+      if (!storedToken) {
+        throw new ApiError(400, 'Invalid or expired verification link.');
+      }
+
+      if (new Date() > storedToken.expiresAt) {
+        await prisma.emailVerificationToken.delete({ where: { id: storedToken.id } });
+        throw new ApiError(400, 'Verification link has expired. Please request a new one.');
+      }
+
+      if (storedToken.user.emailVerified) {
+        await prisma.emailVerificationToken.delete({ where: { id: storedToken.id } });
+        return ApiResponseHandler.success(res, null, 'Email is already verified.');
+      }
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: storedToken.userId },
+          data: { emailVerified: true },
+        }),
+        prisma.emailVerificationToken.deleteMany({
+          where: { userId: storedToken.userId },
+        }),
+      ]);
+
       emailService.sendWelcomeEmail(storedToken.user.email, storedToken.user.firstName).catch((err) => {
         console.error('Failed to send welcome email:', err);
       });
@@ -433,6 +489,60 @@ router.post(
   }
 );
 
+// POST /api/auth/reset-password/:token  (URL-param variant)
+router.post(
+  '/reset-password/:token',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const token = req.params.token;
+      const { newPassword } = req.body;
+
+      if (!newPassword || newPassword.length < 6) {
+        throw new ApiError(400, 'New password must be at least 6 characters.');
+      }
+
+      const tokenHash = hashToken(token);
+
+      const storedToken = await prisma.passwordResetToken.findUnique({
+        where: { token: tokenHash },
+      });
+
+      if (!storedToken) {
+        throw new ApiError(400, 'Invalid or expired reset link.');
+      }
+
+      if (storedToken.used) {
+        throw new ApiError(400, 'This reset link has already been used.');
+      }
+
+      if (new Date() > storedToken.expiresAt) {
+        await prisma.passwordResetToken.delete({ where: { id: storedToken.id } });
+        throw new ApiError(400, 'Reset link has expired. Please request a new one.');
+      }
+
+      const hashedPassword = await hashPassword(newPassword);
+
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: storedToken.userId },
+          data: { password: hashedPassword },
+        }),
+        prisma.passwordResetToken.update({
+          where: { id: storedToken.id },
+          data: { used: true },
+        }),
+        prisma.refreshToken.deleteMany({
+          where: { userId: storedToken.userId },
+        }),
+      ]);
+
+      return ApiResponseHandler.success(res, null, 'Password reset successfully. Please login with your new password.');
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // ============================================================
 // POST /api/auth/change-password
 // Change password while authenticated (requires current password)
@@ -512,13 +622,11 @@ router.post(
 );
 
 // ============================================================
-// POST /api/auth/refresh
+// POST /api/auth/refresh  (alias: /refresh-token)
 // Refresh Access Token using Refresh Token cookie
 // ============================================================
 
-router.post(
-  '/refresh',
-  async (req: Request, res: Response, next: NextFunction) => {
+const refreshHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const refreshToken = req.cookies.refreshToken;
       
@@ -582,8 +690,10 @@ router.post(
     } catch (error) {
       next(error);
     }
-  }
-);
+  };
+
+router.post('/refresh', refreshHandler);
+router.post('/refresh-token', refreshHandler);
 
 // ============================================================
 // POST /api/auth/logout

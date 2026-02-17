@@ -23,6 +23,7 @@ import adminRoutes from './routes/admin.routes.js';
 import searchRoutes from './routes/search.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
 import sellerAnalyticsRoutes from './routes/seller-analytics.routes.js';
+import userRoutes from './routes/user.routes.js';
 
 const app = express();
 
@@ -85,6 +86,7 @@ app.get('/api/health', (req, res) => {
 
 // Auth routes (stricter rate limit)
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/user', authLimiter, userRoutes);
 
 // Core API routes
 app.use('/api/products', productRoutes);
