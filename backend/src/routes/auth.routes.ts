@@ -19,6 +19,7 @@ import {
   generateToken, generateRefreshToken, generateSecureToken,
 } from '../utils/helpers.js';
 import { hashToken } from '../utils/token.helpers.js';
+import { loginLimiter, passwordResetLimiter, emailVerifyLimiter } from '../middleware/rate-limit.middleware.js';
 
 const router = Router();
 
@@ -105,7 +106,7 @@ const registerHandler = [
         data: {
           userId: user.id,
           token: refreshTokenHash,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          expiresAt: new Date(Date.now() + config.refreshTokenExpiresIn),
         },
       });
 
@@ -149,6 +150,7 @@ router.post('/signup', ...registerHandler);
 
 router.post(
   '/login',
+  loginLimiter,
   validate(loginSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -193,7 +195,7 @@ router.post(
         data: {
           userId: user.id,
           token: refreshTokenHash,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          expiresAt: new Date(Date.now() + config.refreshTokenExpiresIn),
         },
       });
 
@@ -337,6 +339,7 @@ router.post(
 
 router.post(
   '/resend-verification',
+  emailVerifyLimiter,
   authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -387,6 +390,7 @@ router.post(
 
 router.post(
   '/forgot-password',
+  passwordResetLimiter,
   validate(forgotPasswordSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -604,7 +608,7 @@ router.post(
         data: {
           userId: req.user!.id,
           token: refreshTokenHash,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          expiresAt: new Date(Date.now() + config.refreshTokenExpiresIn),
         },
       });
 
@@ -673,7 +677,7 @@ const refreshHandler = async (req: Request, res: Response, next: NextFunction) =
         data: {
           userId: storedToken.userId,
           token: newRefreshTokenHash,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          expiresAt: new Date(Date.now() + config.refreshTokenExpiresIn),
         },
       });
 

@@ -14,13 +14,25 @@ export const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Authentication rate limit - 5 attempts per minute (brute force protection)
+// Authentication rate limit - 30 requests per 15 minutes (general auth operations)
 export const authLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Login-specific rate limit - 5 attempts per 15 minutes (brute force protection)
+export const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5,
   message: {
     success: false,
-    message: 'Too many login attempts, please try again after a minute.',
+    message: 'Too many login attempts. Please try again in 15 minutes.',
   },
   standardHeaders: true,
   legacyHeaders: false,
