@@ -35,7 +35,7 @@ export default function OrdersPage() {
       try {
         const res = await api.getOrders();
         if (res.success && res.data?.orders) {
-          setOrders(res.data.orders as Order[]);
+          setOrders(res.data.orders as unknown as Order[]);
         }
       } catch (err) {
         console.error("Failed to fetch orders:", err);

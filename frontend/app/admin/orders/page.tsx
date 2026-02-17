@@ -40,7 +40,7 @@ export default function AdminOrdersPage() {
       try {
         const res = await api.getAdminOrders();
         if (res.success && res.data?.orders) {
-          setOrders(res.data.orders as Order[]);
+          setOrders(res.data.orders as unknown as Order[]);
         }
       } catch (err) {
         console.error("Failed to fetch orders:", err);

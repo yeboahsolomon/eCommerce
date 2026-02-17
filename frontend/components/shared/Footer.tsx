@@ -5,6 +5,7 @@ import {
   Youtube, ShieldCheck, Truck, CreditCard, Smartphone,
   CheckCircle2, ArrowRight
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const FOOTER_LINKS = {
   shop: [
@@ -37,6 +38,12 @@ const PAYMENT_METHODS = [
 ];
 
 export default function Footer() {
+  const { isAuthenticated } = useAuth();
+
+  const shopLinks = isAuthenticated 
+    ? FOOTER_LINKS.shop 
+    : FOOTER_LINKS.shop.filter(link => link.label !== "Become a Seller");
+
   return (
     <footer className="bg-gradient-to-br from-slate-900 to-blue-950 text-white mt-auto relative overflow-hidden">
       
@@ -93,7 +100,7 @@ export default function Footer() {
               Quick Links
             </h4>
             <ul className="space-y-3">
-              {[...FOOTER_LINKS.shop, ...FOOTER_LINKS.support.slice(0, 2)].map((link) => (
+              {[...shopLinks, ...FOOTER_LINKS.support.slice(0, 2)].map((link) => (
                 <li key={link.href}>
                   <Link 
                     href={link.href} 

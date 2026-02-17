@@ -29,7 +29,7 @@ export default function WishlistPage() {
       try {
         const res = await api.getWishlist();
         if (res.success && res.data?.items) {
-          setItems(res.data.items as WishlistItem[]);
+          setItems(res.data.items as unknown as WishlistItem[]);
         }
       } catch (err) {
         console.error("Failed to fetch wishlist:", err);

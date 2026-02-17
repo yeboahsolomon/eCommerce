@@ -254,6 +254,8 @@ export interface RegisterData {
   firstName: string;
   lastName: string;
   phone?: string;
+  role?: string;
+  adminCode?: string;
 }
 
 export interface CartContextType {
