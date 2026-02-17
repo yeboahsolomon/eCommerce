@@ -48,6 +48,9 @@ export const mockPrisma = {
   refund: createMockModel(),
   inventoryLog: createMockModel(),
   coupon: createMockModel(),
+  refreshToken: createMockModel(),
+  emailVerificationToken: createMockModel(),
+  passwordResetToken: createMockModel(),
   $transaction: vi.fn(),
 };
 

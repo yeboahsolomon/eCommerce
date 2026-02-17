@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { config } from '../config/env.js';
 
 const SALT_ROUNDS = 12;
@@ -30,38 +31,27 @@ export function generateToken(payload: {
   role: string;
 }): string {
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
-  });
+    expiresIn: config.jwtExpiresIn as string,
+  } as jwt.SignOptions);
 }
 
 /**
- * Generate Refresh Token (long lived)
+ * Generate cryptographically secure refresh token (opaque string)
  */
-export function generateRefreshToken(payload: {
+export function generateRefreshToken(_payload: {
   userId: string;
 }): string {
-  // Use a separate secret for refresh tokens ideally, but for now reuse or derived
-  // Better to use a random string and store hash in DB
-  // But to be stateless-ish, we can sign it.
-  // Strategy: Random 40-byte hex string. 
-  // We will hash this string and store in DB. 
-  // We send the plain string to user.
-  
-  // Implementation:
-  // We need crypto.
-  // But importing crypto might be an issue if not in types? 'crypto' is standard node.
-  // Let's use simple random string for now or jwt with longer expiry.
-  // Using JWT for refresh token is fine too, but opaque string is safer against "forever access" if secret leaks.
-  
-  // Let's use crypto.randomBytes if available, or just a long random string.
-  // We'll use a simple random generator for compatibility if strict.
-  
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 64; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
+  return crypto.randomBytes(48).toString('hex'); // 96-char hex string
+}
+
+/**
+ * Generate a secure token + its SHA-256 hash (for email verification / password reset)
+ * Returns { token, hash } — send `token` to user, store `hash` in DB
+ */
+export function generateSecureToken(): { token: string; hash: string } {
+  const token = crypto.randomBytes(32).toString('hex'); // 64-char hex
+  const hash = crypto.createHash('sha256').update(token).digest('hex');
+  return { token, hash };
 }
 
 /**

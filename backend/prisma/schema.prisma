@@ -49,7 +49,9 @@ model User {
   reviews       Review[]
   wishlist      Wishlist?
   sellerProfile SellerProfile?
-  refreshTokens RefreshToken[]
+  refreshTokens          RefreshToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
 
   // Timestamps
   createdAt    DateTime       @default(now())
@@ -74,6 +76,35 @@ model RefreshToken {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  @@index([userId])
+  @@index([token])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  token     String   @unique // SHA-256 hash of the actual token
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  token     String   @unique // SHA-256 hash
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
   @@index([userId])
   @@index([token])
 }
