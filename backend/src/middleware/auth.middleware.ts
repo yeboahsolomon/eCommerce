@@ -12,6 +12,7 @@ declare global {
         id: string;
         email: string;
         role: string;
+        emailVerified: boolean;
         sellerProfile?: {
           id: string;
           isActive: boolean;
@@ -24,7 +25,8 @@ declare global {
 interface JwtPayload {
   userId: string;
   email: string;
-  role: string;
+  roles: string[];
+  emailVerified: boolean;
 }
 
 /**
@@ -58,6 +60,7 @@ export async function authenticate(
         id: true, 
         email: true, 
         role: true,
+        emailVerified: true,
         sellerProfile: { select: { id: true, isActive: true } }
       }
     });
@@ -71,6 +74,7 @@ export async function authenticate(
       id: user.id,
       email: user.email,
       role: user.role,
+      emailVerified: user.emailVerified,
       sellerProfile: user.sellerProfile,
     };
     
@@ -155,6 +159,7 @@ export async function optionalAuth(
         id: true, 
         email: true, 
         role: true,
+        emailVerified: true,
         sellerProfile: { select: { id: true, isActive: true } }
       }
     });
@@ -164,6 +169,7 @@ export async function optionalAuth(
         id: user.id,
         email: user.email,
         role: user.role,
+        emailVerified: user.emailVerified,
         sellerProfile: user.sellerProfile,
       };
     }

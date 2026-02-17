@@ -95,7 +95,8 @@ const registerHandler = [
       const accessToken = generateToken({
         userId: user.id,
         email: user.email,
-        role: user.role,
+        roles: [user.role],
+        emailVerified: user.emailVerified,
       });
       
       const refreshToken = generateRefreshToken({ userId: user.id });
@@ -184,7 +185,8 @@ router.post(
       const accessToken = generateToken({
         userId: user.id,
         email: user.email,
-        role: user.role,
+        roles: [user.role],
+        emailVerified: user.emailVerified,
       });
 
       const refreshToken = generateRefreshToken({ userId: user.id });
@@ -596,10 +598,12 @@ router.post(
       ]);
 
       // Generate new tokens for current session
+      // Generate new tokens for current session
       const accessToken = generateToken({
         userId: req.user!.id,
         email: req.user!.email,
-        role: req.user!.role,
+        roles: [req.user!.role],
+        emailVerified: req.user!.emailVerified,
       });
       const refreshToken = generateRefreshToken({ userId: req.user!.id });
       const refreshTokenHash = hashToken(refreshToken);
@@ -682,10 +686,12 @@ const refreshHandler = async (req: Request, res: Response, next: NextFunction) =
       });
 
       // New access token
+      // New access token
       const newAccessToken = generateToken({
         userId: storedToken.user.id,
         email: storedToken.user.email,
-        role: storedToken.user.role,
+        roles: [storedToken.user.role],
+        emailVerified: storedToken.user.emailVerified,
       });
 
       setAuthCookies(res, newAccessToken, newRefreshToken);

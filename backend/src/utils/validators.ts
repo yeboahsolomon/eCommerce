@@ -17,7 +17,7 @@ export const registerSchema = z.object({
   password: passwordSchema,
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  phone: z.string().regex(/^0(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number').optional(),
+  phone: z.string().regex(/^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number').optional(),
 });
 
 export const loginSchema = z.object({
@@ -49,7 +49,7 @@ export const createAddressSchema = z.object({
   label: z.string().min(1, 'Label is required'),
   type: z.enum(['HOME', 'WORK', 'OTHER']).optional().default('HOME'),
   fullName: z.string().min(2, 'Full name is required'),
-  phone: z.string().regex(/^0(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
+  phone: z.string().regex(/^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
   region: z.string().min(1, 'Region is required'),
   city: z.string().min(2, 'City is required'),
   area: z.string().optional(),
@@ -63,7 +63,7 @@ export const createAddressSchema = z.object({
 export const createSellerProfileSchema = z.object({
   businessName: z.string().min(2, 'Business name must be at least 2 characters'),
   slug: z.string().min(2, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase alphanumeric with dashes'),
-  businessPhone: z.string().regex(/^0(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
+  businessPhone: z.string().regex(/^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
   businessEmail: z.string().email('Invalid business email').optional(),
   description: z.string().optional(),
   logoUrl: z.string().url().optional(),
@@ -135,7 +135,7 @@ export const updateCartItemSchema = z.object({
 export const createOrderSchema = z.object({
   // Shipping Address
   shippingFullName: z.string().min(2, 'Name is too short'),
-  shippingPhone: z.string().regex(/^0(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
+  shippingPhone: z.string().regex(/^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
   shippingRegion: z.string().min(1, 'Please select a region'),
   shippingCity: z.string().min(2, 'City is required'),
   shippingArea: z.string().optional(),
@@ -144,7 +144,7 @@ export const createOrderSchema = z.object({
   
   // Contact
   customerEmail: z.string().email('Invalid email address'),
-  customerPhone: z.string().regex(/^0(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
+  customerPhone: z.string().regex(/^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
   
   // Payment
   paymentMethod: z.enum(['MOMO_MTN', 'MOMO_VODAFONE', 'MOMO_AIRTELTIGO', 'CARD', 'BANK_TRANSFER', 'CASH_ON_DELIVERY']),

@@ -199,7 +199,7 @@ router.get('/paystack/verify/:reference', authMiddleware, async (req: Request, r
 
     if (paystackResponse.data.status === 'success') {
       await prisma.$transaction([
-        prisma.payment.update({ where: { id: payment.id }, data: { status: 'SUCCESS', confirmedAt: new Date(), method: paystackResponse.data.channel === 'mobile_money' ? 'MOMO_OTHER' : 'CARD' } }),
+        prisma.payment.update({ where: { id: payment.id }, data: { status: 'SUCCESS', confirmedAt: new Date(), method: paystackResponse.data.channel === 'mobile_money' ? 'MOMO_MTN' : 'CARD' } }),
         prisma.order.update({ where: { id: payment.order.id }, data: { status: 'CONFIRMED', confirmedAt: new Date() } }),
       ]);
       return res.json({ success: true, data: { status: 'SUCCESS', orderNumber: payment.order.orderNumber, channel: paystackResponse.data.channel } });

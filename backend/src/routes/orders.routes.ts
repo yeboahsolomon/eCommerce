@@ -148,8 +148,8 @@ router.post(
             customerPhone: orderData.customerPhone,
             
             // Delivery
-            deliveryMethod: orderData.deliveryMethod,
-            deliveryNotes: orderData.deliveryNotes,
+            // Notes
+            notes: `Delivery Method: ${orderData.deliveryMethod || 'Standard'}${orderData.deliveryNotes ? `\nNotes: ${orderData.deliveryNotes}` : ''}`,
 
             // Payment
             payment: {
