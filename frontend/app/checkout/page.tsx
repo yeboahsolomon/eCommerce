@@ -7,6 +7,7 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/Input";
 import { checkoutSchema, CheckoutFormValues } from "@/lib/validators";
+import { CreateOrderInput } from "@/types";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import { api } from "@/lib/api";
 import { useEffect, useState } from "react";
@@ -75,18 +76,22 @@ export default function CheckoutPage() {
 
     try {
       // Build order payload matching the backend
+      // Build order payload matching the backend
       const orderPayload = {
-        shippingAddress: {
-          fullName: data.fullName,
-          phone: data.phone,
-          region: data.region,
-          city: data.city,
-          streetAddress: data.address,
-          gpsAddress: data.gpsAddress || undefined,
-        },
-        contactEmail: data.email,
-        paymentMethod: data.paymentMethod,
-        notes: "",
+        shippingFullName: data.fullName,
+        shippingPhone: data.phone,
+        shippingRegion: data.region,
+        shippingCity: data.city,
+        shippingStreetAddress: data.address,
+        shippingGpsAddress: data.gpsAddress || undefined,
+        
+        customerEmail: data.email,
+        customerPhone: data.phone,
+
+        paymentMethod: (data.paymentMethod === 'MOMO' ? 'MOMO_MTN' : 
+                      data.paymentMethod === 'CASH' ? 'CASH_ON_DELIVERY' : 
+                      'CARD') as CreateOrderInput['paymentMethod'],
+        deliveryNotes: "",
       };
 
       const res = await api.createOrder(orderPayload);

@@ -108,9 +108,6 @@ export default function MobileMenu({ isOpen, onClose, categories }: MobileMenuPr
                    <Link href="/auth/login" onClick={onClose} className="flex items-center gap-3 p-3 bg-blue-50 text-blue-700 rounded-xl mb-2 font-bold justify-center">
                       <User className="h-5 w-5" /> Sign In / Register
                    </Link>
-                   <Link href="/sell" onClick={onClose} className="flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-purple-600 font-medium py-1 mb-2">
-                      <Store className="h-4 w-4" /> Become a Seller
-                   </Link>
                 </>
              )}
              

@@ -53,7 +53,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       try {
         const res = await api.getOrder(params.id);
         if (res.success && res.data?.order) {
-          setOrder(res.data.order as OrderDetail);
+          setOrder(res.data.order as unknown as OrderDetail);
         }
       } catch (err) {
         console.error("Failed to fetch order:", err);

@@ -29,7 +29,7 @@ export default function AdminDashboard() {
         ]);
 
         if (dashboardRes.success && dashboardRes.data) {
-          setStats(dashboardRes.data as DashboardStats);
+          setStats(dashboardRes.data as unknown as DashboardStats);
         }
         if (ordersRes.success && ordersRes.data?.orders) {
           setRecentOrders(ordersRes.data.orders);

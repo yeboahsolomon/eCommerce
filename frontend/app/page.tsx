@@ -4,6 +4,7 @@ import ProductCard from "@/components/ui/ProductCard";
 import CategoryCard from "@/components/ui/CategoryCard";
 import CountdownTimer from "@/components/ui/CountdownTimer";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { PRODUCTS } from "@/lib/dummy-data";
 import { Product, Category } from "@/types";
 import Link from "next/link";
@@ -20,6 +21,7 @@ import DealOfTheDay from "@/components/shared/hero/DealOfTheDay";
 
 
 export default function Home() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -249,8 +251,8 @@ export default function Home() {
         <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl"></div>
         
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="max-w-lg">
+        <div className={`relative z-10 flex flex-col items-center gap-8 ${isAuthenticated && !authLoading ? 'md:flex-row md:justify-between md:text-left' : 'justify-center text-center'}`}>
+          <div className={`${isAuthenticated && !authLoading ? 'max-w-lg' : 'max-w-3xl'}`}>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4 leading-tight">
               Start Selling on GhanaMarket Today
             </h2>
@@ -258,7 +260,7 @@ export default function Home() {
               Join thousands of sellers reaching customers across Ghana. 
               From food to electronics — sell anything, anywhere.
             </p>
-            <div className="flex flex-wrap gap-6 text-sm">
+            <div className={`flex flex-wrap gap-x-6 gap-y-3 text-sm ${isAuthenticated && !authLoading ? '' : 'justify-center'}`}>
               {["No listing fees", "Instant MoMo payouts", "Free seller dashboard"].map((perk) => (
                 <div key={perk} className="flex items-center gap-2 text-emerald-400">
                   <ShieldCheck className="h-4 w-4" />
@@ -267,15 +269,16 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <Link 
-            href="/seller/register"
-            className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-slate-100 transition-all shadow-xl flex-shrink-0 active:scale-[0.98]"
-          >
-            Become a Seller
-          </Link>
+          {isAuthenticated && !authLoading && (
+            <Link 
+              href="/seller/register"
+              className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-slate-100 transition-all shadow-xl flex-shrink-0 active:scale-[0.98]"
+            >
+              Become a Seller
+            </Link>
+          )}
         </div>
       </section>
-
     </div>
   );
 }

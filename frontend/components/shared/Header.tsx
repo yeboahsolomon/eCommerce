@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ShoppingBag, Menu, Heart } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { axiosInstance } from "@/lib/axios";
 import { Category } from "@/types";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ import MobileMenu from "@/components/shared/header/MobileMenu";
 
 export default function Header() {
   const { itemCount, subtotal } = useCart();
+  const { isAuthenticated, isLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   
   // UI States
@@ -212,9 +214,16 @@ export default function Header() {
                  <Link href="/deals" className="text-red-500 font-bold hover:text-red-600 transition-colors flex items-center gap-1">
                     Today&apos;s Deals
                  </Link>
+                 
+                 {/* Links Separator */}
                  <div className="h-4 w-px bg-slate-300 mx-2" />
 
-                 <Link href="/sell" className="hover:text-purple-600 transition-colors font-semibold">Become a Seller</Link>
+                 {/* Become a Seller - Auth Only */}
+                 {!isLoading && isAuthenticated && (
+                    <Link href="/sell" className="hover:text-purple-600 transition-colors font-semibold">
+                       Become a Seller
+                    </Link>
+                 )}
                </nav>
            </div>
         </div>
