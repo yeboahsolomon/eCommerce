@@ -2,13 +2,13 @@ import { z } from 'zod';
 
 // ==================== SHARED SCHEMAS ====================
 
+// Simplified for development ease - re-enable strict rules for production
 const passwordSchema = z
   .string()
-  .min(8, 'Password must be at least 8 characters')
-  .max(128, 'Password must not exceed 128 characters')
-  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  .regex(/[0-9]/, 'Password must contain at least one number');
+  .min(6, 'Password must be at least 6 characters');
+  // .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  // .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  // .regex(/[0-9]/, 'Password must contain at least one number');
 
 // ==================== AUTH SCHEMAS ====================
 
