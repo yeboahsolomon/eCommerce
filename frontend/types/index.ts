@@ -38,6 +38,9 @@ export interface Product {
   seller?: {
     id: string;
     businessName: string;
+    ghanaRegion?: string;
+    businessAddress?: string;
+    logoUrl?: string;
   };
 }
 
