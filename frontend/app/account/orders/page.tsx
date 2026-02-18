@@ -28,12 +28,27 @@ export default function OrdersPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
+
+  const tabs = [
+    { id: 'ALL', label: 'All Orders' },
+    { id: 'PENDING', label: 'Pending' },
+    { id: 'COMPLETED', label: 'Completed' },
+  ] as const;
 
   useEffect(() => {
     const fetchOrders = async () => {
       if (!isAuthenticated) return;
+      setIsLoading(true);
       try {
-        const res = await api.getOrders();
+        let statusParam = undefined;
+        if (activeTab === 'PENDING') {
+          statusParam = 'PENDING,PAYMENT_PENDING,CONFIRMED,PROCESSING,SHIPPED,OUT_FOR_DELIVERY';
+        } else if (activeTab === 'COMPLETED') {
+          statusParam = 'DELIVERED,CANCELLED';
+        }
+
+        const res = await api.getOrders({ status: statusParam });
         if (res.success && res.data?.orders) {
           setOrders(res.data.orders as unknown as Order[]);
         }
@@ -47,9 +62,9 @@ export default function OrdersPage() {
     if (!authLoading) {
       fetchOrders();
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, activeTab]);
 
-  if (authLoading || isLoading) {
+  if (authLoading) {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -69,23 +84,46 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
       <div className="flex items-center text-sm text-slate-500 gap-2 mb-6">
-        <Link href="/" className="hover:text-blue-600">Home</Link>
-        <ChevronRight className="h-4 w-4" />
         <Link href="/account" className="hover:text-blue-600">Account</Link>
         <ChevronRight className="h-4 w-4" />
         <span className="text-slate-900 font-medium">Orders</span>
       </div>
 
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">My Orders</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">My Orders</h1>
+      </div>
 
-      {orders.length === 0 ? (
+      {/* Tabs */}
+      <div className="border-b border-slate-200 mb-6 overflow-x-auto">
+        <div className="flex gap-6 min-w-max">
+           {tabs.map((tab) => (
+             <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`pb-3 text-sm font-medium border-b-2 transition ${
+                  activeTab === tab.id
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-slate-500 hover:text-slate-700"
+                }`}
+             >
+                {tab.label}
+             </button>
+           ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      ) : orders.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
           <ShoppingBag className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-          <h2 className="text-lg font-medium text-slate-900 mb-2">No orders yet</h2>
-          <p className="text-slate-500 mb-6">Start shopping to see your orders here</p>
+          <h2 className="text-lg font-medium text-slate-900 mb-2">No orders found</h2>
+          <p className="text-slate-500 mb-6">There are no orders in this category</p>
           <Link href="/products" className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full font-medium hover:bg-blue-700 transition">
             Browse Products
           </Link>

@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { cn } from "@/lib/utils";
 
 // Define the Validation Schema
 const registerSchema = z
@@ -17,7 +19,10 @@ const registerSchema = z
     firstName: z.string().min(2, "First name must be at least 2 characters"),
     lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: z.string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[0-9]/, "Password must contain at least one number"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -35,10 +40,19 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
   });
+
+  const password = watch("password", "");
+
+  const passwordChecks = [
+    { label: "At least 8 characters", valid: password.length >= 8 },
+    { label: "At least 1 uppercase letter", valid: /[A-Z]/.test(password) },
+    { label: "At least 1 number", valid: /[0-9]/.test(password) },
+  ];
 
   async function onSubmit(data: RegisterFormValues) {
     setIsLoading(true);
@@ -106,13 +120,33 @@ export default function RegisterPage() {
           error={errors.email?.message}
         />
         
-        <Input
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          {...register("password")}
-          error={errors.password?.message}
-        />
+        <div className="space-y-2">
+          <PasswordInput
+            label="Password"
+            placeholder="••••••••"
+            {...register("password")}
+            error={errors.password?.message}
+          />
+          {/* Real-time Password Strength Feedback */}
+          <div className="space-y-1 p-3 bg-slate-50 rounded-md border border-slate-100">
+            <p className="text-xs font-semibold text-slate-500 mb-2">Password must contain:</p>
+            {passwordChecks.map((check, index) => (
+              <div key={index} className="flex items-center space-x-2 text-xs">
+                {check.valid ? (
+                  <Check className="h-3 w-3 text-green-500" />
+                ) : (
+                  <X className="h-3 w-3 text-slate-300" />
+                )}
+                <span className={cn(
+                  "transition-colors",
+                  check.valid ? "text-green-600 font-medium" : "text-slate-500"
+                )}>
+                  {check.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <Input
           label="Confirm Password"

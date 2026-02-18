@@ -26,7 +26,8 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.1",
     "use-debounce": "^10.1.0",
-    "zod": "^4.3.5"
+    "zod": "^4.3.5",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

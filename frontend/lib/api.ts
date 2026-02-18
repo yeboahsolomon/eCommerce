@@ -77,12 +77,16 @@ export const api = {
     return request<{ user: User; token: string }>('POST', '/auth/register', data);
   },
 
-  async login(email: string, password: string) {
-    return request<{ user: User; token: string }>('POST', '/auth/login', { email, password });
+  async login(email: string, password: string, rememberMe?: boolean) {
+    return request<{ user: User; token: string }>('POST', '/auth/login', { email, password, rememberMe });
   },
 
   async logout() {
     return request<null>('POST', '/auth/logout');
+  },
+
+  async resendVerification() {
+    return request<null>('POST', '/auth/resend-verification');
   },
 
   async getProfile() {
@@ -167,12 +171,16 @@ export const api = {
     return request<{ order: Order }>('POST', '/orders', data);
   },
 
-  async getOrders(params?: { page?: number; limit?: number }) {
+  async getOrders(params?: { page?: number; limit?: number; status?: string }) {
     return request<{ orders: Order[]; pagination: Pagination }>('GET', '/orders', undefined, { params });
   },
 
   async getOrder(id: string) {
     return request<{ order: Order }>('GET', `/orders/${id}`);
+  },
+
+  async cancelOrder(id: string) {
+    return request<{ order: Order }>('POST', `/orders/${id}/cancel`);
   },
 
   // ==================== PAYMENTS ====================
