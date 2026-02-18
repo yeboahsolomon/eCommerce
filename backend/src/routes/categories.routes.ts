@@ -5,8 +5,10 @@ import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { createCategorySchema, CreateCategoryInput } from '../utils/validators.js';
 import { generateSlug } from '../utils/helpers.js';
+import { redisService } from '../services/redis.service.js';
 
 const router = Router();
+const CACHE_TTL = 3600; // 1 hour
 
 /**
  * GET /api/categories
@@ -18,6 +20,10 @@ router.get(
     try {
       const { tree = 'false' } = req.query;
       
+      const cacheKey = `categories:${tree}`;
+      const cached = await redisService.get(cacheKey);
+      if (cached) return res.json(cached);
+
       if (tree === 'true') {
         // Return hierarchical structure
         const rootCategories = await prisma.category.findMany({
@@ -37,6 +43,10 @@ router.get(
           },
           orderBy: { sortOrder: 'asc' },
         });
+        
+        // No extra brace here
+
+        await redisService.set(cacheKey, { success: true, data: { categories: rootCategories } }, CACHE_TTL);
         
         res.json({
           success: true,
@@ -59,6 +69,10 @@ router.get(
           ],
         });
         
+        // No extra brace here
+        
+        await redisService.set(cacheKey, { success: true, data: { categories } }, CACHE_TTL);
+
         res.json({
           success: true,
           data: { categories },
