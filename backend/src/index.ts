@@ -15,6 +15,7 @@ import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/products.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import cartRoutes from './routes/cart.routes.js';
+import checkoutRoutes from './routes/checkout.routes.js';
 import orderRoutes from './routes/orders.routes.js';
 import paymentRoutes from './routes/payments.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
@@ -25,6 +26,7 @@ import searchRoutes from './routes/search.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
 import sellerAnalyticsRoutes from './routes/seller-analytics.routes.js';
 import userRoutes from './routes/user.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
 
 const app = express();
 
@@ -105,6 +107,7 @@ app.use('/api/user', authLimiter, userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/checkout', checkoutRoutes);
 app.use('/api/orders', orderRoutes);
 
 // New feature routes
@@ -113,6 +116,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/webhook', webhookRoutes);
 
 // Admin routes
 app.use('/api/admin', adminRoutes);
