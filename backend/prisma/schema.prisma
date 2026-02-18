@@ -433,6 +433,10 @@ model Product {
   averageRating Decimal @default(0) @db.Decimal(2, 1)
   reviewCount   Int     @default(0)
 
+  // Stats
+  views         Int     @default(0)
+  salesCount    Int     @default(0)
+
   // Physical properties (for shipping)
   weightInGrams Int?
 
@@ -451,6 +455,7 @@ model Product {
   @@index([isFeatured])
   @@index([slug])
   @@index([sku])
+  @@index([name])
 }
 
 model ProductImage {

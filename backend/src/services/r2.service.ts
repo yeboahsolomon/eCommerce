@@ -1,6 +1,7 @@
 
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import sharp from 'sharp';
 import { config } from '../config/env.js'; // Assuming config is exported from here
 
 export class R2Service {
@@ -66,6 +67,36 @@ export class R2Service {
    * Get the public URL for a file
    * @param key The storage key
    */
+  /**
+   * Resize and upload image to R2
+   * @param fileBuffer The file buffer
+   * @param key The storage key
+   * @param mimeType The mime type
+   */
+  async uploadProcessedImage(fileBuffer: Buffer, key: string, mimeType: string): Promise<string> {
+    try {
+      // Resize to max 800x800, keep aspect ratio, convert to webp for optimization
+      const processedBuffer = await sharp(fileBuffer)
+        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: processedBuffer,
+        ContentType: 'image/webp',
+      });
+
+      await this.s3Client.send(command);
+
+      return this.getPublicUrl(key);
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      throw error;
+    }
+  }
+
   getPublicUrl(key: string): string {
     if (this.publicUrl) {
         // Ensure no double slashes if publicUrl has trailing slash

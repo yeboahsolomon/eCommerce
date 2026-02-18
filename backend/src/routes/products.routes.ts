@@ -11,8 +11,11 @@ import {
   UpdateProductInput 
 } from '../utils/validators.js';
 import { generateSlug } from '../utils/helpers.js';
+import { redisService } from '../services/redis.service.js';
 
 const router = Router();
+
+const CACHE_TTL = 3600; // 1 hour
 
 /**
  * GET /api/products
@@ -34,11 +37,19 @@ router.get(
         sortBy = 'createdAt',
         order = 'desc',
         featured,
+        seller, // Filter by seller slug or ID
       } = req.query;
       
       const pageNum = parseInt(page as string, 10) || 1;
       const limitNum = Math.min(parseInt(limit as string, 10) || 20, 50);
       const skip = (pageNum - 1) * limitNum;
+
+      // Cache key generation
+      const cacheKey = `products:list:${JSON.stringify(req.query)}`;
+      const cachedData = await redisService.get(cacheKey);
+      if (cachedData) {
+        return res.json(cachedData);
+      }
       
       // Build filter
       const where: any = {
@@ -87,6 +98,20 @@ router.get(
       if (featured === 'true') {
         where.isFeatured = true;
       }
+
+      // Seller filter
+      if (seller) {
+        const sellerProfile = await prisma.sellerProfile.findFirst({
+            where: { OR: [{ id: seller as string }, { slug: seller as string }] },
+            select: { id: true }
+        });
+        if (sellerProfile) {
+            where.sellerId = sellerProfile.id;
+        } else {
+            // If seller not found, return empty or ignore? Return empty seems correct.
+            where.sellerId = 'non-existent'; 
+        }
+      }
       
       // Build sort
       const orderBy: any = {};
@@ -133,6 +158,21 @@ router.get(
           },
         },
       });
+
+      // Cache the result
+      await redisService.set(cacheKey, {
+        success: true,
+        data: {
+          products: transformedProducts,
+          pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            totalPages: Math.ceil(total / limitNum),
+          },
+        },
+      }, CACHE_TTL);
+
     } catch (error) {
       next(error);
     }
@@ -150,34 +190,55 @@ router.get(
     try {
       const { id } = req.params;
       const user = (req as any).user;
+
+      // Try cache first (only for public GET, if auth logic is complex might skip cache or key by user role?)
+      // For now, cache public view.
+      const cacheKey = `products:detail:${id}`;
+      // Note: If we cache, we miss view increment? 
+      // Strategy: Cache product data, but increment view async.
       
-      const product = await prisma.product.findFirst({
-        where: {
-          OR: [
-            { id },
-            { slug: id },
-            { sku: id },
-          ],
-          // Allow inactive if user is admin or owner
-          // specific check below
-        },
-        include: {
-          category: true,
-          images: {
-            orderBy: { sortOrder: 'asc' },
+      let product = await redisService.get<any>(cacheKey);
+
+      if (!product) {
+        product = await prisma.product.findFirst({
+          where: {
+            OR: [
+              { id },
+              { slug: id },
+              { sku: id },
+            ],
           },
-          reviews: {
-            where: { isApproved: true },
-            include: {
-              user: {
-                select: { firstName: true, lastName: true },
-              },
+          include: {
+            category: true,
+            seller: {
+                select: {
+                    id: true,
+                    businessName: true,
+                    slug: true,
+                    logoUrl: true,
+                    rating: true
+                }
             },
-            orderBy: { createdAt: 'desc' },
-            take: 10,
+            images: {
+              orderBy: { sortOrder: 'asc' },
+            },
+            reviews: {
+              where: { isApproved: true },
+              include: {
+                user: {
+                  select: { firstName: true, lastName: true, avatarUrl: true },
+                },
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 5,
+            },
           },
-        },
-      });
+        });
+
+        if (product) {
+            await redisService.set(cacheKey, product, CACHE_TTL);
+        }
+      }
       
       if (!product) {
         throw new ApiError(404, 'Product not found.');
@@ -193,6 +254,13 @@ router.get(
         }
       }
       
+      
+      // Async view increment (fire and forget)
+      prisma.product.update({
+        where: { id: product.id },
+        data: { views: { increment: 1 } },
+      }).catch(err => console.error('View increment failed', err));
+
       res.json({
         success: true,
         data: {
@@ -212,13 +280,68 @@ router.get(
 );
 
 /**
+ * GET /api/products/:id/related
+ * Get related products based on category
+ */
+router.get(
+    '/:id/related',
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { id } = req.params;
+            const limit = 5;
+
+            // Get source product to find category
+            const product = await prisma.product.findFirst({
+                where: { OR: [{ id }, { slug: id }] },
+                select: { id: true, categoryId: true, category: { select: { parentId: true } } }
+            });
+
+            if (!product) {
+                throw new ApiError(404, 'Product not found');
+            }
+
+            // Find products in same category or sibling categories
+            const relatedProducts = await prisma.product.findMany({
+                where: {
+                    id: { not: product.id },
+                    isActive: true,
+                    OR: [
+                        { categoryId: product.categoryId },
+                        // Optional: Include parent category if needed
+                        // { category: { parentId: product.category.parentId } }
+                    ]
+                },
+                include: {
+                    images: { where: { isPrimary: true }, take: 1 },
+                    category: { select: { name: true, slug: true } }
+                },
+                orderBy: { views: 'desc' }, // Show popular related products
+                take: limit
+            });
+
+            res.json({
+                success: true,
+                data: relatedProducts.map(p => ({
+                    ...p,
+                    priceInCedis: p.priceInPesewas / 100,
+                    image: p.images[0]?.url || null
+                }))
+            });
+
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
+/**
  * POST /api/products
  * Create new product (Admin/Seller only)
  */
 router.post(
   '/',
   authenticate,
-  authenticate,
+
   requireSellerOrAdmin,
   validate(createProductSchema),
   async (req: Request, res: Response, next: NextFunction) => {
@@ -234,13 +357,14 @@ router.post(
         sellerId = req.user.sellerProfile.id;
       }
       
-      // Generate slug
+      // Generate slug with number increment if duplicate
       let slug = generateSlug(productData.name);
       
       // Check for duplicate slug
-      const existing = await prisma.product.findUnique({ where: { slug } });
-      if (existing) {
-        slug = `${slug}-${Date.now().toString(36)}`;
+      let suffix = 0;
+      while (await prisma.product.findUnique({ where: { slug } })) {
+          suffix++;
+          slug = `${generateSlug(productData.name)}-${suffix}`;
       }
       
       // Check SKU uniqueness
@@ -274,6 +398,74 @@ router.post(
           },
         },
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * PUT /api/products/:id/images
+ * Update product images (add, remove, reorder)
+ * Expects { images: [{ url: string, isPrimary: boolean, sortOrder: number }] }
+ */
+router.put(
+  '/:id/images',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { images } = req.body;
+      const user = (req as any).user;
+
+      if (!Array.isArray(images)) {
+        throw new ApiError(400, 'Images must be an array');
+      }
+
+      // Check ownership
+      const existingProduct = await prisma.product.findUnique({ where: { id } });
+      if (!existingProduct) throw new ApiError(404, 'Product not found');
+
+      if (user.role !== 'ADMIN') {
+         if (existingProduct.sellerId !== user.sellerProfile?.id) {
+            throw new ApiError(403, 'Not authorized to update this product');
+         }
+      }
+
+      // Transaction to replace images
+      await prisma.$transaction(async (tx) => {
+        // Delete all existing images
+        await tx.productImage.deleteMany({ where: { productId: id } });
+
+        // Insert new images
+        if (images.length > 0) {
+            await tx.productImage.createMany({
+                data: images.map((img: any, index: number) => ({
+                    productId: id,
+                    url: img.url,
+                    isPrimary: img.isPrimary || index === 0,
+                    sortOrder: img.sortOrder || index
+                }))
+            });
+        }
+      });
+
+      // Invalidate caches
+      await redisService.del(`products:detail:${id}`);
+      await redisService.del(`products:detail:${existingProduct.slug}`);
+      await redisService.clearPattern('products:list:*');
+
+      const updatedProduct = await prisma.product.findUnique({
+          where: { id },
+          include: { images: { orderBy: { sortOrder: 'asc' } } }
+      });
+
+      res.json({
+        success: true,
+        message: 'Product images updated successfully',
+        data: { images: updatedProduct?.images }
+      });
+
     } catch (error) {
       next(error);
     }
@@ -348,6 +540,12 @@ router.put(
         data: updateData,
         include: { category: true },
       });
+
+      // Invalidate caches
+      await redisService.del(`products:detail:${id}`);
+      await redisService.del(`products:detail:${product.slug}`);
+      await redisService.clearPattern('products:list:*');
+
       
       res.json({
         success: true,
@@ -401,6 +599,11 @@ router.delete(
           where: { id },
           data: { isActive: false },
         });
+
+        // Invalidate caches
+        await redisService.del(`products:detail:${id}`);
+        await redisService.del(`products:detail:${product.slug}`);
+        await redisService.clearPattern('products:list:*');
         
         res.json({
           success: true,
@@ -409,6 +612,11 @@ router.delete(
       } else {
         // Hard delete - no orders reference this product
         await prisma.product.delete({ where: { id } });
+
+        // Invalidate caches
+        await redisService.del(`products:detail:${id}`);
+        await redisService.del(`products:detail:${product.slug}`);
+        await redisService.clearPattern('products:list:*');
         
         res.json({
           success: true,
