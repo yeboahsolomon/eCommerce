@@ -158,6 +158,60 @@ export const createOrderSchema = z.object({
   couponCode: z.string().optional(),
 });
 
+// ==================== SELLER APPLICATION SCHEMAS ====================
+
+// Ghana phone regex: 0XX or +233XX format
+const ghanaPhoneSchema = z.string().regex(
+  /^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/,
+  'Invalid Ghana phone number (e.g. 0244123456 or +233244123456)'
+);
+
+// Ghana Card format: GHA-XXXXXXXXX-X (9 digits then 1 check digit)
+const ghanaCardSchema = z.string().regex(
+  /^GHA-\d{9}-\d$/,
+  'Invalid Ghana Card number (format: GHA-XXXXXXXXX-X)'
+);
+
+const ghanaRegions = [
+  'Greater Accra', 'Ashanti', 'Western', 'Eastern', 'Central',
+  'Northern', 'Volta', 'Upper East', 'Upper West', 'Brong-Ahafo',
+  'Western North', 'Ahafo', 'Bono East', 'Oti', 'North East', 'Savannah',
+] as const;
+
+export const sellerApplicationSchema = z.object({
+  storeName: z.string()
+    .min(3, 'Store name must be at least 3 characters')
+    .max(100, 'Store name must be at most 100 characters'),
+  businessType: z.enum(['INDIVIDUAL', 'BUSINESS'], {
+    errorMap: () => ({ message: 'Business type must be INDIVIDUAL or BUSINESS' }),
+  }),
+  businessEmail: z.string().email('Invalid business email'),
+  businessPhone: ghanaPhoneSchema,
+  ghanaCardNumber: ghanaCardSchema,
+  businessAddress: z.string().min(5, 'Business address must be at least 5 characters'),
+  ghanaRegion: z.string().min(1, 'Region is required'),
+  mobileMoneyNumber: ghanaPhoneSchema,
+  mobileMoneyProvider: z.enum(['MTN', 'TELECEL', 'AIRTELTIGO'], {
+    errorMap: () => ({ message: 'Provider must be MTN, TELECEL, or AIRTELTIGO' }),
+  }),
+});
+
+export const adminRejectApplicationSchema = z.object({
+  reason: z.string().min(10, 'Rejection reason must be at least 10 characters').max(1000),
+});
+
+export const adminRequestInfoSchema = z.object({
+  notes: z.string().min(10, 'Notes must be at least 10 characters').max(1000),
+});
+
+export const updateStoreSettingsSchema = z.object({
+  description: z.string().max(2000).optional(),
+  website: z.string().url().optional().or(z.literal('')),
+  instagram: z.string().optional(),
+  facebook: z.string().optional(),
+  twitter: z.string().optional(),
+});
+
 // ==================== CATEGORY SCHEMAS ====================
 
 export const createCategorySchema = z.object({
@@ -202,3 +256,7 @@ export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type PaymentCallbackInput = z.infer<typeof paymentCallbackSchema>;
+export type SellerApplicationInput = z.infer<typeof sellerApplicationSchema>;
+export type AdminRejectInput = z.infer<typeof adminRejectApplicationSchema>;
+export type AdminRequestInfoInput = z.infer<typeof adminRequestInfoSchema>;
+export type UpdateStoreSettingsInput = z.infer<typeof updateStoreSettingsSchema>;

@@ -98,3 +98,15 @@ export const emailVerifyLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Seller application rate limit - 3 per hour
+export const applicationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  message: {
+    success: false,
+    message: 'Too many application submissions. Please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
