@@ -27,23 +27,28 @@ const router = Router();
 // Cookie Helpers
 // ============================================================
 
-const setAuthCookies = (res: Response, accessToken: string, refreshToken: string) => {
+const setAuthCookies = (res: Response, accessToken: string, refreshToken: string, rememberMe = false) => {
   // Access Token: Short lived (15m)
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: config.nodeEnv === 'production',
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours for dev convenience 
+    maxAge: 15 * 60 * 1000, 
   });
 
-  // Refresh Token: Long lived (7d)
-  res.cookie('refreshToken', refreshToken, {
+  // Refresh Token: Long lived (7d) or Session
+  const refreshTokenOptions: any = {
     httpOnly: true,
     secure: config.nodeEnv === 'production',
     sameSite: 'strict',
     path: '/api/auth', // Scope to auth routes (refresh/logout)
-    maxAge: 7 * 24 * 60 * 60 * 1000, 
-  });
+  };
+
+  if (rememberMe) {
+    refreshTokenOptions.maxAge = 7 * 24 * 60 * 60 * 1000;
+  }
+
+  res.cookie('refreshToken', refreshToken, refreshTokenOptions);
 };
 
 // ============================================================
@@ -155,7 +160,7 @@ router.post(
   validate(loginSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, password } = req.body as LoginInput;
+      const { email, password, rememberMe } = req.body as LoginInput & { rememberMe?: boolean };
       
       const user = await prisma.user.findUnique({
         where: { email: email.toLowerCase() },
@@ -201,7 +206,7 @@ router.post(
         },
       });
 
-      setAuthCookies(res, accessToken, refreshToken);
+      setAuthCookies(res, accessToken, refreshToken, rememberMe);
       
       return ApiResponseHandler.success(res, {
         user: {
