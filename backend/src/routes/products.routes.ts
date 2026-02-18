@@ -129,6 +129,16 @@ router.get(
               orderBy: { sortOrder: 'asc' },
               take: 5,
             },
+            seller: {
+              select: {
+                id: true,
+                businessName: true,
+                slug: true,
+                ghanaRegion: true,
+                businessAddress: true,
+                logoUrl: true,
+              }
+            }
           },
           orderBy,
           skip,
@@ -216,7 +226,8 @@ router.get(
                     businessName: true,
                     slug: true,
                     logoUrl: true,
-                    rating: true
+                    ghanaRegion: true,
+                    businessAddress: true
                 }
             },
             images: {
