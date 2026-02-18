@@ -10,10 +10,13 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-query-devtools": "^5.91.3",
     "axios": "^1.13.5",
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.34.2",
     "lucide-react": "^0.562.0",
     "next": "16.1.2",
     "react": "19.2.3",
@@ -22,6 +25,7 @@
     "react-hook-form": "^7.71.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.1",
+    "use-debounce": "^10.1.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {

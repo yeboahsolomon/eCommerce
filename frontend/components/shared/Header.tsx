@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ShoppingBag, Menu, Heart } from "lucide-react";
+import { motion } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { axiosInstance } from "@/lib/axios";
+
 import { Category } from "@/types";
+
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 // Sub-components
 import Search from "@/components/shared/header/Search";
@@ -20,7 +24,7 @@ import MobileMenu from "@/components/shared/header/MobileMenu";
 export default function Header() {
   const { itemCount, subtotal } = useCart();
   const { isAuthenticated, isLoading } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+  // Categories fetched via React Query below
   
   // UI States
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
@@ -34,20 +38,19 @@ export default function Header() {
 
   const pathname = usePathname();
 
-  // Fetch Categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await axiosInstance.get('/categories');
-        if (res.data.success) {
-           setCategories(res.data.data.categories);
+  // ... inside component
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+        const res = await api.getCategories();
+        if (res.success && res.data?.categories) {
+            return res.data.categories;
         }
-      } catch (error) {
-        console.error("Failed to fetch categories", error);
-      }
-    };
-    fetchCategories();
-  }, []);
+        return [];
+    }
+  });
+
+  const categories = categoriesData || [];
 
   // Scroll Handler
   useEffect(() => {
@@ -150,9 +153,14 @@ export default function Header() {
                 <div className="relative">
                    <ShoppingBag className="h-6 w-6 text-slate-600 group-hover:text-blue-600 transition-colors" />
                    {itemCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-in zoom-in spin-in-12 duration-300">
+                      <motion.span 
+                        key={itemCount}
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm ring-2 ring-white"
+                      >
                          {itemCount > 99 ? '99+' : itemCount}
-                      </span>
+                      </motion.span>
                    )}
                 </div>
                 <div className="hidden xl:flex flex-col items-start leading-tight">

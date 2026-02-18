@@ -4,9 +4,7 @@ import "./globals.css";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
 import MobileNav from "@/components/shared/MobileNav";
-import { CartProvider } from "@/context/CartContext";
-import { AuthProvider } from "@/context/AuthContext";
-import { Toaster } from "sonner";
+import Providers from "./providers";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -23,8 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground`}>
-        <AuthProvider>
-          <CartProvider>
+        <Providers>
             {/* Top Header */}
             <Header />
             
@@ -38,9 +35,7 @@ export default function RootLayout({
 
             {/* Bottom Nav (Mobile Only) */}
             <MobileNav />
-            <Toaster richColors position="top-center" />
-          </CartProvider>
-        </AuthProvider>
+        </Providers>
       </body>
     </html>
   );
