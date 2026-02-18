@@ -1,36 +1,241 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
+import { authenticate, requireAdmin, requireSellerOrAdmin } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { createSellerProfileSchema, updateSellerProfileSchema, CreateSellerProfileInput, UpdateSellerProfileInput } from '../utils/validators.js';
+import {
+  createSellerProfileSchema,
+  updateSellerProfileSchema,
+  sellerApplicationSchema,
+  updateStoreSettingsSchema,
+  CreateSellerProfileInput,
+  UpdateSellerProfileInput,
+  SellerApplicationInput,
+  UpdateStoreSettingsInput,
+} from '../utils/validators.js';
 import { SellerService } from '../services/seller.service.js';
+import { uploadSellerDocuments, handleUploadError, getSellerDocUrl } from '../middleware/multer.middleware.js';
+import { applicationLimiter } from '../middleware/rate-limit.middleware.js';
+import { emailService } from '../services/email.service.js';
+import { config } from '../config/env.js';
+import prisma from '../config/database.js';
+import { ApiError } from '../middleware/error.middleware.js';
 
 const router = Router();
 const sellerService = new SellerService();
 
+// ==================== SELLER APPLICATION ====================
+
 /**
- * POST /api/seller/onboard
- * Convert current user to a SELLER with a profile
+ * POST /api/seller/apply
+ * Submit seller application (authenticated buyers only)
  */
 router.post(
-  '/onboard',
+  '/apply',
   authenticate,
-  validate(createSellerProfileSchema),
+  applicationLimiter,
+  (req: Request, res: Response, next: NextFunction) => {
+    uploadSellerDocuments(req, res, (err: any) => {
+      if (err) return handleUploadError(err, req, res, next);
+      next();
+    });
+  },
+  validate(sellerApplicationSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = req.body as CreateSellerProfileInput;
-      // User ID from token
-      const profile = await sellerService.createProfile(req.user!.id, data);
-      
+      const userId = req.user!.id;
+
+      // Only buyers can apply
+      if (req.user!.role !== 'BUYER') {
+        throw new ApiError(400, 'Only buyers can apply to become sellers. You are already a seller or admin.');
+      }
+
+      // Check for existing pending/info-requested application
+      const existingApp = await prisma.sellerApplication.findFirst({
+        where: {
+          userId,
+          status: { in: ['PENDING', 'INFO_REQUESTED'] },
+        },
+      });
+
+      if (existingApp) {
+        throw new ApiError(400, 'You already have an active application. Please wait for it to be reviewed.');
+      }
+
+      // Check store name uniqueness
+      const storeTaken = await prisma.sellerApplication.findFirst({
+        where: {
+          storeName: req.body.storeName,
+          status: { in: ['PENDING', 'APPROVED', 'INFO_REQUESTED'] },
+        },
+      });
+
+      if (storeTaken) {
+        throw new ApiError(400, 'This store name is already taken. Please choose another.');
+      }
+
+      // Also check against existing seller profiles
+      const slug = req.body.storeName
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
+
+      const slugTaken = await prisma.sellerProfile.findUnique({
+        where: { slug },
+      });
+
+      if (slugTaken) {
+        throw new ApiError(400, 'A seller with a similar store name already exists. Please choose a different name.');
+      }
+
+      // Handle uploaded files
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      let ghanaCardImageUrl: string | undefined;
+      let businessRegImageUrl: string | undefined;
+
+      if (files?.ghanaCardImage?.[0]) {
+        ghanaCardImageUrl = getSellerDocUrl(files.ghanaCardImage[0].filename, config.uploadsBaseUrl);
+      }
+
+      if (files?.businessRegImage?.[0]) {
+        businessRegImageUrl = getSellerDocUrl(files.businessRegImage[0].filename, config.uploadsBaseUrl);
+      }
+
+      // Business type validation: require business registration for BUSINESS type
+      if (req.body.businessType === 'BUSINESS' && !businessRegImageUrl) {
+        throw new ApiError(400, 'Business registration document is required for business accounts.');
+      }
+
+      const data: SellerApplicationInput = req.body;
+
+      // Create application
+      const application = await prisma.sellerApplication.create({
+        data: {
+          userId,
+          storeName: data.storeName,
+          businessType: data.businessType as any,
+          businessEmail: data.businessEmail,
+          businessPhone: data.businessPhone,
+          ghanaCardNumber: data.ghanaCardNumber,
+          businessAddress: data.businessAddress,
+          ghanaRegion: data.ghanaRegion,
+          mobileMoneyNumber: data.mobileMoneyNumber,
+          mobileMoneyProvider: data.mobileMoneyProvider as any,
+          ghanaCardImageUrl,
+          businessRegImageUrl,
+        },
+      });
+
+      // Fetch user for email
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true, email: true },
+      });
+
+      // Send emails (non-blocking)
+      if (user) {
+        emailService.sendApplicationReceivedEmail(
+          user.email,
+          user.firstName,
+          data.storeName,
+        ).catch(console.error);
+
+        emailService.sendNewApplicationAdminEmail(
+          config.adminEmail,
+          `${user.firstName} ${user.lastName}`,
+          data.storeName,
+          application.id,
+        ).catch(console.error);
+      }
+
       res.status(201).json({
         success: true,
-        message: 'Seller profile created successfully! You are now a seller.',
-        data: { profile },
+        message: 'Seller application submitted successfully! We will review it within 1-3 business days.',
+        data: { application },
       });
     } catch (error) {
       next(error);
     }
   }
 );
+
+/**
+ * GET /api/seller/application-status
+ * Check own application status
+ */
+router.get(
+  '/application-status',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const applications = await prisma.sellerApplication.findMany({
+        where: { userId: req.user!.id },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          storeName: true,
+          businessType: true,
+          ghanaRegion: true,
+          rejectionReason: true,
+          adminNotes: true,
+          createdAt: true,
+          updatedAt: true,
+          reviewedAt: true,
+        },
+      });
+
+      res.json({
+        success: true,
+        data: { applications },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * PUT /api/seller/store-settings
+ * Update store description and social links
+ */
+router.put(
+  '/store-settings',
+  authenticate,
+  requireSellerOrAdmin,
+  validate(updateStoreSettingsSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const profile = await prisma.sellerProfile.findUnique({
+        where: { userId: req.user!.id },
+      });
+
+      if (!profile) {
+        throw new ApiError(404, 'Seller profile not found.');
+      }
+
+      const data: UpdateStoreSettingsInput = req.body;
+
+      const updated = await prisma.sellerProfile.update({
+        where: { userId: req.user!.id },
+        data: {
+          description: data.description,
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Store settings updated.',
+        data: { profile: updated },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ==================== EXISTING ENDPOINTS ====================
+
 
 /**
  * POST /api/seller/approve/:sellerId

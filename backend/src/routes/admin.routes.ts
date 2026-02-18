@@ -2,7 +2,10 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import { requireAdmin } from '../middleware/auth.middleware.js';
-
+import { emailService } from '../services/email.service.js';
+import { config } from '../config/env.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { adminRejectApplicationSchema, adminRequestInfoSchema } from '../utils/validators.js';
 const router = Router();
 
 // All admin routes require authentication + admin role
@@ -428,6 +431,376 @@ router.get('/sellers', async (req: Request, res: Response) => {
       success: false,
       message: 'Failed to get sellers',
     });
+  }
+});
+
+// ==================== SELLER APPLICATION MANAGEMENT ====================
+
+// List seller applications with filters
+router.get('/seller-applications', async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const status = req.query.status as string;
+    const search = req.query.search as string;
+
+    const where: any = {};
+
+    if (status) {
+      where.status = status.toUpperCase();
+    }
+
+    if (search) {
+      where.OR = [
+        { storeName: { contains: search, mode: 'insensitive' } },
+        { businessEmail: { contains: search, mode: 'insensitive' } },
+        { ghanaCardNumber: { contains: search } },
+        { user: { firstName: { contains: search, mode: 'insensitive' } } },
+        { user: { lastName: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [applications, total] = await Promise.all([
+      prisma.sellerApplication.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.sellerApplication.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        applications,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('Get seller applications error:', error);
+    res.status(500).json({ success: false, message: 'Failed to get applications' });
+  }
+});
+
+// Get single application detail
+router.get('/seller-applications/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const application = await prisma.sellerApplication.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            role: true,
+            emailVerified: true,
+            createdAt: true,
+            _count: { select: { orders: true } },
+          },
+        },
+      },
+    });
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    res.json({ success: true, data: { application } });
+  } catch (error: any) {
+    console.error('Get application detail error:', error);
+    res.status(500).json({ success: false, message: 'Failed to get application' });
+  }
+});
+
+// Approve seller application (atomic transaction)
+router.post('/seller-applications/:id/approve', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const adminId = (req as any).user.id;
+
+    const application = await prisma.sellerApplication.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } },
+    });
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    if (application.status === 'APPROVED') {
+      return res.status(400).json({ success: false, message: 'Application is already approved' });
+    }
+
+    if (application.status === 'REJECTED') {
+      return res.status(400).json({ success: false, message: 'Cannot approve a rejected application' });
+    }
+
+    // Generate slug from store name
+    let slug = application.storeName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+
+    // Handle slug duplicates
+    const existingSlug = await prisma.sellerProfile.findUnique({ where: { slug } });
+    if (existingSlug) {
+      const suffix = Math.random().toString(36).substring(2, 6);
+      slug = `${slug}-${suffix}`;
+    }
+
+    // Atomic transaction: approve application + upgrade user + create profile
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update application status
+      const updatedApp = await tx.sellerApplication.update({
+        where: { id },
+        data: {
+          status: 'APPROVED',
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+        },
+      });
+
+      // 2. Update user role to SELLER
+      await tx.user.update({
+        where: { id: application.userId },
+        data: { role: 'SELLER' },
+      });
+
+      // 3. Create SellerProfile with wallet
+      const profile = await tx.sellerProfile.create({
+        data: {
+          userId: application.userId,
+          businessName: application.storeName,
+          slug,
+          businessEmail: application.businessEmail,
+          businessPhone: application.businessPhone,
+          businessAddress: application.businessAddress,
+          ghanaRegion: application.ghanaRegion,
+          isVerified: true,
+          verifiedAt: new Date(),
+          commissionRate: 5.0, // Default 5% commission
+          wallet: {
+            create: {
+              currentBalance: 0,
+              pendingBalance: 0,
+            },
+          },
+        },
+        include: { wallet: true },
+      });
+
+      return { application: updatedApp, profile };
+    });
+
+    // Send approval email (non-blocking)
+    emailService.sendApplicationApprovedEmail(
+      application.user.email,
+      application.user.firstName,
+      application.storeName,
+    ).catch(console.error);
+
+    res.json({
+      success: true,
+      message: `Seller application approved. ${application.user.firstName} is now a seller.`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Approve application error:', error);
+    res.status(500).json({ success: false, message: 'Failed to approve application' });
+  }
+});
+
+// Reject seller application
+router.post('/seller-applications/:id/reject', validate(adminRejectApplicationSchema), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const adminId = (req as any).user.id;
+
+    const application = await prisma.sellerApplication.findUnique({
+      where: { id },
+      include: { user: { select: { email: true, firstName: true } } },
+    });
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    if (application.status !== 'PENDING' && application.status !== 'INFO_REQUESTED') {
+      return res.status(400).json({ success: false, message: `Cannot reject an application with status: ${application.status}` });
+    }
+
+    const updated = await prisma.sellerApplication.update({
+      where: { id },
+      data: {
+        status: 'REJECTED',
+        rejectionReason: reason,
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+      },
+    });
+
+    // Send rejection email (non-blocking)
+    emailService.sendApplicationRejectedEmail(
+      application.user.email,
+      application.user.firstName,
+      reason,
+    ).catch(console.error);
+
+    res.json({
+      success: true,
+      message: 'Application rejected.',
+      data: { application: updated },
+    });
+  } catch (error: any) {
+    console.error('Reject application error:', error);
+    res.status(500).json({ success: false, message: 'Failed to reject application' });
+  }
+});
+
+// Request more info from applicant
+router.post('/seller-applications/:id/request-info', validate(adminRequestInfoSchema), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    const adminId = (req as any).user.id;
+
+    const application = await prisma.sellerApplication.findUnique({
+      where: { id },
+      include: { user: { select: { email: true, firstName: true } } },
+    });
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    if (application.status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: `Can only request info for pending applications` });
+    }
+
+    const updated = await prisma.sellerApplication.update({
+      where: { id },
+      data: {
+        status: 'INFO_REQUESTED',
+        adminNotes: notes,
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+      },
+    });
+
+    // Send info request email (non-blocking)
+    emailService.sendInfoRequestedEmail(
+      application.user.email,
+      application.user.firstName,
+      notes,
+    ).catch(console.error);
+
+    res.json({
+      success: true,
+      message: 'Info requested from applicant.',
+      data: { application: updated },
+    });
+  } catch (error: any) {
+    console.error('Request info error:', error);
+    res.status(500).json({ success: false, message: 'Failed to request info' });
+  }
+});
+
+// ==================== SELLER MANAGEMENT (Enhanced) ====================
+
+// Suspend a seller
+router.put('/sellers/:id/suspend', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const profile = await prisma.sellerProfile.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, email: true, firstName: true } } },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Seller not found' });
+    }
+
+    await prisma.$transaction([
+      prisma.sellerProfile.update({
+        where: { id },
+        data: { isActive: false },
+      }),
+      prisma.user.update({
+        where: { id: profile.userId },
+        data: { status: 'SUSPENDED' },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      message: `Seller ${profile.businessName} has been suspended.`,
+    });
+  } catch (error: any) {
+    console.error('Suspend seller error:', error);
+    res.status(500).json({ success: false, message: 'Failed to suspend seller' });
+  }
+});
+
+// Activate a seller
+router.put('/sellers/:id/activate', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const profile = await prisma.sellerProfile.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, email: true, firstName: true } } },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ success: false, message: 'Seller not found' });
+    }
+
+    await prisma.$transaction([
+      prisma.sellerProfile.update({
+        where: { id },
+        data: { isActive: true },
+      }),
+      prisma.user.update({
+        where: { id: profile.userId },
+        data: { status: 'ACTIVE' },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      message: `Seller ${profile.businessName} has been activated.`,
+    });
+  } catch (error: any) {
+    console.error('Activate seller error:', error);
+    res.status(500).json({ success: false, message: 'Failed to activate seller' });
   }
 });
 

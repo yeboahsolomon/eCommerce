@@ -27,6 +27,24 @@ enum AccountStatus {
   DEACTIVATED // Soft delete - preserves order history
 }
 
+enum SellerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  INFO_REQUESTED
+}
+
+enum BusinessType {
+  INDIVIDUAL
+  BUSINESS
+}
+
+enum MobileMoneyProvider {
+  MTN
+  TELECEL
+  AIRTELTIGO
+}
+
 model User {
   id            String        @id @default(cuid())
   email         String        @unique
@@ -52,6 +70,7 @@ model User {
   refreshTokens          RefreshToken[]
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
+  sellerApplications      SellerApplication[]
 
   // Timestamps
   createdAt    DateTime       @default(now())
@@ -109,6 +128,51 @@ model PasswordResetToken {
   @@index([token])
 }
 
+// =================================================================
+// SELLER APPLICATION (Onboarding Flow)
+// =================================================================
+
+model SellerApplication {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  // Application Status
+  status SellerApplicationStatus @default(PENDING)
+
+  // Business Information
+  storeName       String
+  businessType    BusinessType @default(INDIVIDUAL)
+  businessEmail   String
+  businessPhone   String
+  businessAddress String
+  ghanaRegion     String
+
+  // Ghana Card Verification
+  ghanaCardNumber   String
+  ghanaCardImageUrl String?
+
+  // Business Registration (required for BUSINESS type)
+  businessRegImageUrl String?
+
+  // Mobile Money Details
+  mobileMoneyNumber   String
+  mobileMoneyProvider MobileMoneyProvider
+
+  // Admin Review
+  rejectionReason String?
+  adminNotes      String?
+  reviewedBy      String?   // Admin user ID
+  reviewedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
 enum AddressType {
   HOME
   WORK
@@ -158,6 +222,8 @@ model SellerProfile {
   description   String?
   logoUrl       String?
   bannerUrl     String?
+  businessAddress String?
+  ghanaRegion     String?
 
   // Verification & Legal
   isVerified   Boolean   @default(false)

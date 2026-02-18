@@ -103,6 +103,70 @@ export const deleteUploadedFile = (filename: string): Promise<void> => {
   });
 };
 
+// ==================== SELLER DOCUMENT UPLOAD ====================
+
+const sellerDocsDir = path.join(uploadsDir, 'seller-docs');
+if (!fs.existsSync(sellerDocsDir)) {
+  fs.mkdirSync(sellerDocsDir, { recursive: true });
+}
+
+const sellerDocStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, sellerDocsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const filename = `${uuidv4()}${ext}`;
+    cb(null, filename);
+  },
+});
+
+// File filter - allow images AND PDFs for document uploads
+const documentFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = [
+    'image/jpeg', 'image/jpg', 'image/png',
+    'application/pdf',
+  ];
+  
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, and PDF documents are allowed.'));
+  }
+};
+
+// Seller document upload (Ghana Card + Business Registration, max 5MB each)
+export const uploadSellerDocuments = multer({
+  storage: sellerDocStorage,
+  fileFilter: documentFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB per file
+    files: 2, // Max 2 files (Ghana Card + optional business reg)
+  },
+}).fields([
+  { name: 'ghanaCardImage', maxCount: 1 },
+  { name: 'businessRegImage', maxCount: 1 },
+]);
+
+// Get public URL for a seller document
+export const getSellerDocUrl = (filename: string, baseUrl: string): string => {
+  return `${baseUrl}/uploads/seller-docs/${filename}`;
+};
+
+// Helper to delete a seller document
+export const deleteSellerDoc = (filename: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const filepath = path.join(sellerDocsDir, filename);
+    fs.unlink(filepath, (err) => {
+      if (err && err.code !== 'ENOENT') {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
 // Get public URL for an uploaded file
 export const getImageUrl = (filename: string, baseUrl: string): string => {
   return `${baseUrl}/uploads/products/${filename}`;

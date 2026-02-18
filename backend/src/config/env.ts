@@ -33,6 +33,12 @@ export const config = {
   // Token expiry (ms)
   emailVerificationExpiresIn: 24 * 60 * 60 * 1000,  // 24 hours
   passwordResetExpiresIn: 60 * 60 * 1000,            // 1 hour
+
+  // Admin
+  adminEmail: process.env.ADMIN_EMAIL || 'admin@ghanamarket.com',
+
+  // Uploads
+  uploadsBaseUrl: process.env.UPLOADS_BASE_URL || 'http://localhost:3001',
 } as const;
 
 // Validate required env vars
