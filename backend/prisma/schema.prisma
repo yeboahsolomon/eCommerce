@@ -151,6 +151,7 @@ model SellerApplication {
   // Ghana Card Verification
   ghanaCardNumber   String
   ghanaCardImageUrl String?
+  ghanaCardBackImageUrl String?
 
   // Business Registration (required for BUSINESS type)
   businessRegImageUrl String?
@@ -232,6 +233,10 @@ model SellerProfile {
   idCardType   String? // Ghana Card, Passport
   idCardNumber String?
   idCardImage  String?
+
+  // Payment Details
+  mobileMoneyNumber   String?
+  mobileMoneyProvider String? // "MTN", "VODA", "AT"
 
   // Financials
   wallet  SellerWallet?

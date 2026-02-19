@@ -8,6 +8,44 @@ import { ApiError } from '../middleware/error.middleware.js';
 
 const router = Router();
 
+// ==================== LOCAL UPLOAD ROUTES ====================
+
+import { uploadSingleImage, getImageUrl } from '../middleware/multer.middleware.js';
+import { config } from '../config/env.js';
+
+/**
+ * POST /api/upload/image
+ * Generic image upload (Local Storage)
+ */
+router.post(
+  '/image',
+  authenticate,
+  (req: Request, res: Response, next: NextFunction) => {
+    uploadSingleImage(req, res, (err: any) => {
+      if (err) return next(err);
+      
+      try {
+        if (!req.file) {
+          throw new ApiError(400, 'No image file provided');
+        }
+
+        const url = getImageUrl(req.file.filename, config.uploadsBaseUrl);
+
+        res.status(201).json({
+          success: true,
+          data: {
+            url,
+            fileId: req.file.filename, // Local filename
+            publicId: req.file.filename, // Mock publicId for compatibility
+          },
+        });
+      } catch (error) {
+        next(error);
+      }
+    });
+  }
+);
+
 // ==================== R2 ROUTES ====================
 
 /**

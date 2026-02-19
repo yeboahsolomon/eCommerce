@@ -289,4 +289,106 @@ export class SellerService {
       }
     };
   }
+
+  /**
+   * Get Seller Wallet & History
+   */
+  async getSellerWallet(userId: string) {
+    const profile = await this.getProfileByUserId(userId);
+    if (!profile) throw new ApiError(404, 'Seller profile not found');
+
+    // Ensure wallet exists
+    let wallet = await prisma.sellerWallet.findUnique({
+      where: { sellerId: profile.id },
+      include: {
+        transactions: {
+          take: 20,
+          orderBy: { createdAt: 'desc' },
+        }
+      }
+    });
+
+    if (!wallet) {
+      wallet = await prisma.sellerWallet.create({
+        data: { sellerId: profile.id },
+        include: { transactions: true }
+      });
+    }
+
+    // Format transactions
+    const history = wallet.transactions.map(t => ({
+      id: t.id,
+      type: t.type,
+      amount: t.amount / 100, // Convert to main unit
+      description: t.description,
+      status: 'COMPLETED',
+      createdAt: t.createdAt,
+    }));
+
+    return {
+      wallet: {
+        currentBalance: wallet.currentBalance / 100,
+        pendingBalance: wallet.pendingBalance / 100,
+        totalEarned: wallet.totalEarned / 100,
+        totalWithdrawn: wallet.totalWithdrawn / 100,
+      },
+      history
+    };
+  }
+
+  /**
+   * Request Payout
+   */
+  async requestPayout(userId: string, amount: number, provider: string) {
+    const profile = await this.getProfileByUserId(userId);
+    if (!profile) throw new ApiError(404, 'Seller profile not found');
+
+    const amountInPesewas = Math.round(amount * 100);
+
+    return await prisma.$transaction(async (tx) => {
+      const wallet = await tx.sellerWallet.findUnique({ where: { sellerId: profile.id } });
+      if (!wallet) throw new ApiError(404, 'Wallet not found');
+
+      if (wallet.currentBalance < amountInPesewas) {
+        throw new ApiError(400, 'Insufficient balance');
+      }
+
+      // Create Payout Request
+      const payout = await tx.payout.create({
+        data: {
+          sellerId: profile.id,
+          amount: amountInPesewas,
+          status: 'PENDING',
+          destinationType: 'MOMO',
+          destinationNetwork: provider,
+          destinationNumber: profile.mobileMoneyNumber || 'N/A',
+          destinationName: profile.businessName,
+        }
+      });
+
+      // Deduct from Wallet
+      const balanceBefore = wallet.currentBalance;
+      const balanceAfter = wallet.currentBalance - amountInPesewas;
+
+      await tx.sellerWallet.update({
+        where: { id: wallet.id },
+        data: { currentBalance: balanceAfter }
+      });
+
+      // Create Transaction Record
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: 'PAYOUT',
+          amount: -amountInPesewas,
+          balanceBefore,
+          balanceAfter,
+          description: `Payout Request to ${provider}`,
+          referenceId: payout.id,
+        }
+      });
+
+      return payout;
+    });
+  }
 }

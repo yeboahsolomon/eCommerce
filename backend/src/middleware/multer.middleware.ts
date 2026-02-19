@@ -145,6 +145,7 @@ export const uploadSellerDocuments = multer({
   },
 }).fields([
   { name: 'ghanaCardImage', maxCount: 1 },
+  { name: 'ghanaCardBackImage', maxCount: 1 },
   { name: 'businessRegImage', maxCount: 1 },
 ]);
 
