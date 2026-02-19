@@ -2,6 +2,12 @@ import { z } from 'zod';
 
 // ==================== SHARED SCHEMAS ====================
 
+// Ghana phone regex: 0XX or +233XX format
+const ghanaPhoneSchema = z.string().regex(
+  /^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/,
+  'Invalid Ghana phone number (e.g. 0244123456 or +233244123456)'
+);
+
 // Simplified for development ease - re-enable strict rules for production
 const passwordSchema = z
   .string()
@@ -78,6 +84,9 @@ export const createSellerProfileSchema = z.object({
   taxId: z.string().optional(),
   idCardType: z.string().optional(),
   idCardNumber: z.string().optional(),
+  // Payment Details
+  mobileMoneyNumber: ghanaPhoneSchema.optional(),
+  mobileMoneyProvider: z.enum(['MTN', 'TELECEL', 'AIRTELTIGO']).optional(),
 });
 
 export const updateSellerProfileSchema = createSellerProfileSchema.partial();
@@ -161,11 +170,7 @@ export const createOrderSchema = z.object({
 
 // ==================== SELLER APPLICATION SCHEMAS ====================
 
-// Ghana phone regex: 0XX or +233XX format
-const ghanaPhoneSchema = z.string().regex(
-  /^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/,
-  'Invalid Ghana phone number (e.g. 0244123456 or +233244123456)'
-);
+
 
 // Ghana Card format: GHA-XXXXXXXXX-X (9 digits then 1 check digit)
 const ghanaCardSchema = z.string().regex(
@@ -195,6 +200,10 @@ export const sellerApplicationSchema = z.object({
   mobileMoneyProvider: z.enum(['MTN', 'TELECEL', 'AIRTELTIGO'], {
     errorMap: () => ({ message: 'Provider must be MTN, TELECEL, or AIRTELTIGO' }),
   }),
+  // Document URLs (optional in schema because they might be uploaded as files)
+  ghanaCardImageUrl: z.string().optional(),
+  ghanaCardBackImageUrl: z.string().optional(),
+  businessRegImageUrl: z.string().optional(),
 });
 
 export const adminRejectApplicationSchema = z.object({

@@ -88,13 +88,18 @@ router.post(
         throw new ApiError(400, 'A seller with a similar store name already exists. Please choose a different name.');
       }
 
-      // Handle uploaded files
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      let ghanaCardImageUrl: string | undefined;
-      let businessRegImageUrl: string | undefined;
+      // Handle uploaded files or URLs from body
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+      let ghanaCardImageUrl: string | undefined = req.body.ghanaCardImageUrl;
+      let ghanaCardBackImageUrl: string | undefined = req.body.ghanaCardBackImageUrl;
+      let businessRegImageUrl: string | undefined = req.body.businessRegImageUrl;
 
       if (files?.ghanaCardImage?.[0]) {
         ghanaCardImageUrl = getSellerDocUrl(files.ghanaCardImage[0].filename, config.uploadsBaseUrl);
+      }
+
+      if (files?.ghanaCardBackImage?.[0]) {
+        ghanaCardBackImageUrl = getSellerDocUrl(files.ghanaCardBackImage[0].filename, config.uploadsBaseUrl);
       }
 
       if (files?.businessRegImage?.[0]) {
@@ -122,6 +127,7 @@ router.post(
           mobileMoneyNumber: data.mobileMoneyNumber,
           mobileMoneyProvider: data.mobileMoneyProvider as any,
           ghanaCardImageUrl,
+          ghanaCardBackImageUrl,
           businessRegImageUrl,
         },
       });
@@ -398,6 +404,50 @@ router.patch(
     }
   }
 );
+
+
+
+/**
+ * GET /api/seller/wallet
+ * Get seller wallet balance and history
+ */
+router.get(
+  '/wallet',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await sellerService.getSellerWallet(req.user!.id);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/seller/payouts/request
+ * Request a payout
+ */
+router.post(
+  '/payouts/request',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { amount, provider } = req.body;
+      
+      const payout = await sellerService.requestPayout(req.user!.id, parseFloat(amount), provider);
+      
+      res.json({
+        success: true,
+        message: 'Payout request submitted successfully.',
+        data: { payout },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 
 /**
  * GET /api/seller/:slug

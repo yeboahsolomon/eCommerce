@@ -602,6 +602,8 @@ router.post('/seller-applications/:id/approve', async (req: Request, res: Respon
           businessPhone: application.businessPhone,
           businessAddress: application.businessAddress,
           ghanaRegion: application.ghanaRegion,
+          mobileMoneyNumber: application.mobileMoneyNumber,
+          mobileMoneyProvider: application.mobileMoneyProvider,
           isVerified: true,
           verifiedAt: new Date(),
           commissionRate: 5.0, // Default 5% commission
