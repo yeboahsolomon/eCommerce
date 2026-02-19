@@ -1,222 +1,286 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, Upload, Trash } from 'lucide-react';
-import Image from 'next/image';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { useDropzone } from "react-dropzone";
+import { 
+  X, 
+  Upload, 
+  Loader2, 
+  ChevronLeft, 
+  Save, 
+  Image as ImageIcon 
+} from "lucide-react";
+import dynamic from "next/dynamic";
+import "react-quill/dist/quill.snow.css";
 
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input'; 
-import { Textarea } from '@/components/ui/Textarea';
-// import { Select } from '@/components/ui/SelectNative'; // Using native select directly for simplicity with react-hook-form register
-import { sellerApi } from '@/lib/seller-api';
-import { Category, Product } from '@/types';
-import ImageUpload from './ImageUpload';
+// Dynamic import for Quill to avoid SSR issues
+const ReactQuill = dynamic(() => import("react-quill"), { ssr: false, loading: () => <p>Loading editor...</p> });
 
-// Zod schema for form validation
 const productSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  description: z.string().optional(),
-  priceInCedis: z.coerce.number().positive('Price must be positive'),
-  comparePriceInCedis: z.coerce.number().positive().optional().or(z.literal(0)),
-  stockQuantity: z.coerce.number().int().nonnegative().default(0),
-  categoryId: z.string().min(1, 'Category is required'),
-  sku: z.string().optional(),
-  trackInventory: z.boolean().default(true),
+  name: z.string().min(3, "Product name is required"),
+  description: z.string().min(10, "Description is required"),
+  price: z.coerce.number().min(0.1, "Price must be greater than 0"),
+  compareAtPrice: z.coerce.number().optional(),
+  stockQuantity: z.coerce.number().int().min(0, "Stock cannot be negative"),
+  categoryId: z.string().min(1, "Category is required"),
   isActive: z.boolean().default(true),
+  images: z.array(z.string()).min(1, "At least one image is required"),
 });
 
-type ProductFormValues = z.infer<typeof productSchema>;
+type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
-  initialData?: Product;
-  categories: Category[];
+  initialData?: any;
+  isEditing?: boolean;
 }
 
-export default function ProductForm({ initialData, categories }: ProductFormProps) {
+export default function ProductForm({ initialData, isEditing = false }: ProductFormProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [images, setImages] = useState<{ file?: File; url: string; isPrimary: boolean; id?: string }[]>(
-    initialData?.images?.map(img => ({ url: img.url, isPrimary: img.isPrimary, id: img.id })) || []
-  );
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema) as any, // Bypass strict resolver type check due to version mismatch
+  const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
     defaultValues: {
-      name: initialData?.name || '',
-      description: initialData?.description || '',
-      priceInCedis: initialData ? initialData.priceInPesewas / 100 : 0,
-      comparePriceInCedis: initialData?.comparePriceInPesewas ? initialData.comparePriceInPesewas / 100 : 0,
+      name: initialData?.name || "",
+      description: initialData?.description || "",
+      price: initialData?.price || "",
+      compareAtPrice: initialData?.compareAtPrice || "",
       stockQuantity: initialData?.stockQuantity || 0,
-      categoryId: initialData?.category.id || '',
-      sku: '', 
-      trackInventory: initialData?.inStock ?? true,
-      isActive: initialData?.isActive ?? true, 
-    },
+      categoryId: initialData?.categoryId || "",
+      isActive: initialData?.isActive ?? true,
+      images: initialData?.images || [],
+    }
   });
 
-  // Watch for conditional rendering if needed
-  // const trackInventory = watch('trackInventory');
+  const images = watch("images");
 
-
-
-
-
-
-
-  const onSubmit = async (data: ProductFormValues) => {
-    try {
-      setLoading(true);
-
-      const payload: any = {
-        ...data,
-        priceInPesewas: Math.round(data.priceInCedis * 100),
-        comparePriceInPesewas: data.comparePriceInCedis ? Math.round(data.comparePriceInCedis * 100) : undefined,
-      };
-      
-      delete payload.priceInCedis;
-      delete payload.comparePriceInCedis;
-
-      let productId = initialData?.id;
-
-      if (initialData) {
-        await sellerApi.updateProduct(initialData.id, payload);
-        toast.success('Product updated successfully');
-      } else {
-        const res = await sellerApi.createProduct(payload);
-        // @ts-ignore
-        productId = res.data?.product?.id || res.data?.id; // backend response structure check needed
-        toast.success('Product created successfully');
-      }
-
-      // Handle Image Uploads for NEW images
-      if (productId) {
-        const newImages = images.filter(img => img.file);
-        for (const img of newImages) {
-            if (img.file) {
-                await sellerApi.uploadFileToR2(productId, img.file, img.isPrimary);
-            }
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.getCategories();
+        if (res.success && res.data) {
+          setCategories(res.data.categories);
         }
+      } catch (error) {
+        toast.error("Failed to load categories");
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const onDrop = async (acceptedFiles: File[]) => {
+    setUploading(true);
+    try {
+      const uploadPromises = acceptedFiles.map(file => api.uploadImage(file, 'product'));
+      const results = await Promise.all(uploadPromises);
+      
+      const newImages = results
+        .filter(res => res.success && res.data)
+        .map(res => res.data!.url);
+
+      if (newImages.length > 0) {
+        setValue("images", [...images, ...newImages], { shouldValidate: true });
+        toast.success(`${newImages.length} images uploaded`);
+      } else {
+        toast.error("Failed to upload images");
+      }
+    } catch (error) {
+      toast.error("Error uploading images");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.webp'] },
+    maxFiles: 5,
+    disabled: uploading
+  });
+
+  const removeImage = (index: number) => {
+    const newImages = [...images];
+    newImages.splice(index, 1);
+    setValue("images", newImages, { shouldValidate: true });
+  };
+
+  const onSubmit = async (data: ProductFormData) => {
+    setIsSubmitting(true);
+    try {
+      let res;
+      if (isEditing && initialData?.id) {
+        res = await api.updateProduct(initialData.id, data);
+      } else {
+        res = await api.createProduct(data);
       }
 
-      router.push('/seller/products');
-      router.refresh();
+      if (res.success) {
+        toast.success(isEditing ? "Product updated successfully!" : "Product created successfully!");
+        router.push("/seller/dashboard/products");
+      } else {
+        toast.error(res.message || "Operation failed");
+      }
     } catch (error: any) {
-      toast.error(error.message || 'Something went wrong');
+      toast.error(error.message || "An error occurred");
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-2xl bg-white p-6 rounded-lg border shadow-sm">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-4xl mx-auto pb-20">
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="col-span-2 space-y-2">
-            <label className="text-sm font-medium">Product Name</label>
-            <Input placeholder="e.g. Wireless Headphones" {...register('name')} error={errors.name?.message} />
-        </div>
-
-        <div className="space-y-2">
-            <label className="text-sm font-medium">Category</label>
-            <div className="relative">
-                <select 
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-                    {...register('categoryId')}
-                >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                        <SelectItemFlat key={cat.id} category={cat} level={0} />
-                    ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                </div>
-            </div>
-            {errors.categoryId && <p className="text-xs text-red-500">{errors.categoryId.message}</p>}
-        </div>
-
-        <div className="space-y-2">
-            <label className="text-sm font-medium">SKU (Optional)</label>
-            <Input placeholder="e.g. HEAD-001" {...register('sku')} error={errors.sku?.message} />
-        </div>
-
-        <div className="space-y-2">
-            <label className="text-sm font-medium">Price (₵)</label>
-            <Input type="number" step="0.01" {...register('priceInCedis')} error={errors.priceInCedis?.message} />
-        </div>
-
-        <div className="space-y-2">
-            <label className="text-sm font-medium">Compare Price (₵)</label>
-            <Input type="number" step="0.01" {...register('comparePriceInCedis')} error={errors.comparePriceInCedis?.message} />
-             <p className="text-[0.8rem] text-muted-foreground">Original price (for discounts)</p>
-        </div>
-
-        <div className="space-y-2">
-            <label className="text-sm font-medium">Stock Quantity</label>
-            <Input type="number" {...register('stockQuantity')} error={errors.stockQuantity?.message} />
-        </div>
-
-        <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-            <div className="space-y-0.5">
-                <label className="text-sm font-medium">Track Inventory</label>
-            </div>
-            <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" {...register('trackInventory')} />
-        </div>
-        
-        <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-            <div className="space-y-0.5">
-                <label className="text-sm font-medium">Active (Visible)</label>
-            </div>
-            <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" {...register('isActive')} />
-        </div>
+      {/* Header Actions */}
+      <div className="flex items-center justify-between sticky top-0 bg-slate-50 py-4 z-10 border-b border-slate-200">
+         <button type="button" onClick={() => router.back()} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition font-medium">
+            <ChevronLeft className="w-5 h-5" /> Back
+         </button>
+         <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition">
+               <input type="checkbox" {...register("isActive")} className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+               <span className="text-sm font-medium text-slate-700">Active</span>
+            </label>
+            <button type="submit" disabled={isSubmitting} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+               {isSubmitting ? (
+                  <>
+                     <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                  </>
+               ) : (
+                  <>
+                     <Save className="w-4 h-4" /> Save Product
+                  </>
+               )}
+            </button>
+         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Description</label>
-        {/* Textarea component needs error prop support or manual handling */}
-        <Textarea placeholder="Product details..." className="min-h-[120px]" {...register('description')} />
-        {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         {/* Main Content */}
+         <div className="lg:col-span-2 space-y-8">
+            {/* General Info */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+               <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-4">General Information</h3>
+               
+               <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+                  <input {...register("name")} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500" placeholder="e.g. Handmade Kente Scarf" />
+                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+               </div>
+
+               <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                  <div className="h-64 mb-12">
+                     <Controller
+                        name="description"
+                        control={control}
+                        render={({ field }) => (
+                           <ReactQuill 
+                              theme="snow" 
+                              value={field.value} 
+                              onChange={field.onChange} 
+                              className="h-48" 
+                           />
+                        )}
+                     />
+                  </div>
+                  {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
+               </div>
+            </div>
+
+            {/* Media */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <h3 className="font-bold text-slate-900">Media</h3>
+                  {uploading && <span className="text-xs text-blue-600 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Uploading...</span>}
+               </div>
+
+               <div {...getRootProps()} className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}`}>
+                  <input {...getInputProps()} />
+                  <div className="flex flex-col items-center">
+                     <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                        <Upload className="w-6 h-6 text-slate-400" />
+                     </div>
+                     <p className="text-sm font-medium text-slate-700">Drag & drop images or click to upload</p>
+                     <p className="text-xs text-slate-400 mt-1">First image will be the cover (max 5)</p>
+                  </div>
+               </div>
+
+               {images.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+                     {images.map((url, index) => (
+                        <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200">
+                           <img src={url} alt={`Product ${index + 1}`} className="w-full h-full object-cover" />
+                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <button type="button" onClick={() => removeImage(index)} className="p-2 bg-white rounded-full text-red-600 hover:bg-red-50">
+                                 <X className="w-4 h-4" />
+                              </button>
+                              {index === 0 && <span className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">Cover</span>}
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               )}
+               {errors.images && <p className="text-red-500 text-xs mt-1">{errors.images.message}</p>}
+            </div>
+         </div>
+
+         {/* Sidebar */}
+         <div className="space-y-8">
+            
+            {/* Pricing */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+               <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-4">Pricing</h3>
+               
+               <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Base Price (GHS)</label>
+                  <input type="number" step="0.01" {...register("price")} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500" placeholder="0.00" />
+                  {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price.message}</p>}
+               </div>
+
+               <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Compare-at Price (Optional)</label>
+                  <input type="number" step="0.01" {...register("compareAtPrice")} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500" placeholder="0.00" />
+                  <p className="text-xs text-slate-400 mt-1">To show a discount</p>
+               </div>
+            </div>
+
+            {/* Inventory */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+               <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-4">Inventory</h3>
+               
+               <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Stock Quantity</label>
+                  <input type="number" {...register("stockQuantity")} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500" placeholder="0" />
+                  {errors.stockQuantity && <p className="text-red-500 text-xs mt-1">{errors.stockQuantity.message}</p>}
+               </div>
+            </div>
+
+            {/* Organization */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+               <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-4">Organization</h3>
+               
+               <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                  <select {...register("categoryId")} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 bg-white">
+                     <option value="">Select Category</option>
+                     {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                     ))}
+                  </select>
+                  {errors.categoryId && <p className="text-red-500 text-xs mt-1">{errors.categoryId.message}</p>}
+               </div>
+            </div>
+
+         </div>
       </div>
-
-        {/* Image Upload Section */}
-        <div className="space-y-4">
-          <label className="text-sm font-medium">Product Images</label>
-          <ImageUpload 
-            productId={initialData?.id} 
-            images={images} 
-            onChange={setImages} 
-          />
-        </div>
-
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {initialData ? 'Update Product' : 'Create Product'}
-      </Button>
     </form>
   );
-}
-
-// Helper for nested categories
-function SelectItemFlat({ category, level }: { category: Category; level: number }) {
-    return (
-        <>
-            <option value={category.id} style={{ paddingLeft: `${level * 20}px` }}>
-                {'- '.repeat(level) + category.name}
-            </option>
-            {category.children && category.children.map(child => (
-                <SelectItemFlat key={child.id} category={child} level={level + 1} />
-            ))}
-        </>
-    )
 }

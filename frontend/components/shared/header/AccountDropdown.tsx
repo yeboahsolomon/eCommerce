@@ -111,7 +111,7 @@ export default function AccountDropdown() {
                 </Link>
             ) : (
                  <Link 
-                    href="/sell" 
+                    href="/seller/register" 
                     onClick={() => setIsOpen(false)}
                     className="flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-purple-600 hover:bg-purple-50 transition-colors"
                 >

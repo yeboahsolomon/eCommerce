@@ -228,7 +228,7 @@ export default function Header() {
 
                  {/* Become a Seller - Auth Only */}
                  {!isLoading && isAuthenticated && (
-                    <Link href="/sell" className="hover:text-purple-600 transition-colors font-semibold">
+                    <Link href="/seller/register" className="hover:text-purple-600 transition-colors font-semibold">
                        Become a Seller
                     </Link>
                  )}
