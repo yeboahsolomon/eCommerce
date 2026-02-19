@@ -244,8 +244,8 @@ export const api = {
     try {
       const response = await axiosInstance.post<{ success: boolean; data: { url: string; fileId: string; publicId: string }; message?: string }>('/upload/image', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+          'Content-Type': undefined, 
+        }
       });
       return response.data;
     } catch (error: any) {
@@ -306,6 +306,65 @@ export const api = {
 
   async deleteProduct(productId: string) {
     return request<void>('DELETE', `/products/${productId}`);
+  },
+
+  // ==================== SELLER APPLICATION ====================
+
+  async createSellerApplication(data: any) {
+    return request<{ 
+      success: boolean; 
+      message: string; 
+      data?: { application: any } 
+    }>('POST', '/seller/apply', data);
+  },
+
+  async getMySellerApplication() {
+    return request<{ application: any }>('GET', '/seller/application-status');
+  },
+
+  // ==================== SELLER DASHBOARD ====================
+
+  async getSellerStats() {
+    return request<{
+      stats: {
+        totalSales: number;
+        salesGrowth: number;
+        totalOrders: number;
+        ordersGrowth: number;
+        activeProducts: number;
+        productsGrowth: number;
+        rating: number;
+        ratingCount: number;
+      };
+      recentOrders: Order[];
+      salesChart: { name: string; sales: number }[];
+    }>('GET', '/seller/stats');
+  },
+
+  async getSellerProducts(params?: ProductQueryParams) {
+    return request<{ products: Product[]; pagination: Pagination }>('GET', '/seller/products', undefined, { params });
+  },
+
+  async createProduct(data: any) {
+    return request<{ product: Product }>('POST', '/products', data);
+  },
+
+  async updateProduct(id: string, data: any) {
+    return request<{ product: Product }>('PUT', `/products/${id}`, data);
+  },
+
+  // Use deleteProduct for deletion
+
+  async getSellerOrders(params?: { page?: number; limit?: number; status?: string }) {
+    return request<{ orders: Order[]; pagination: Pagination }>('GET', '/seller/orders', undefined, { params });
+  },
+
+  async getSellerWallet() {
+    return request<{ wallet: any; transactions: any[]; history: any[] }>('GET', '/seller/wallet');
+  },
+
+  async requestPayout(amount: number, provider: string) {
+    return request<{ payout: any }>('POST', '/seller/payouts/request', { amount, provider });
   },
 };
 

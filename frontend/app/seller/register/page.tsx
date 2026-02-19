@@ -56,27 +56,7 @@ const STEPS = [
 
 export default function SellerRegisterPage() {
   const { isAuthenticated } = useAuth();
-  const [formData, setFormData] = useState({
-    businessName: "",
-    businessDescription: "",
-    phone: "",
-    region: "",
-    category: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate API call (in production, this would call an actual endpoint)
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    setIsSubmitted(true);
-    setIsSubmitting(false);
-    toast.success("Application submitted! We'll review it within 24 hours.");
-  };
 
   return (
     <div className="min-h-screen pb-20 md:pb-12">
@@ -152,132 +132,37 @@ export default function SellerRegisterPage() {
           </div>
         </section>
 
-        {/* Registration Form */}
-        <section className="max-w-2xl mx-auto" id="apply">
-          {isSubmitted ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 text-center">
-              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-3">Application Submitted!</h2>
-              <p className="text-slate-500 mb-6">
-                Thank you for your interest in selling on GhanaMarket. Our team will review your 
-                application and get back to you within 24 hours.
+        {/* Ready to Apply CTA */}
+        <section className="max-w-3xl mx-auto text-center bg-white rounded-3xl shadow-xl shadow-blue-900/5 border border-slate-100 p-12 relative overflow-hidden" id="apply">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-green-50 rounded-full blur-3xl -z-10 -translate-x-1/3 translate-y-1/3"></div>
+          
+          <div className="inline-flex items-center justify-center p-4 bg-blue-50 text-blue-600 rounded-2xl mb-6">
+            <Store className="w-8 h-8" />
+          </div>
+          
+          <h2 className="text-3xl font-bold text-slate-900 mb-4">Ready to Grow Your Business?</h2>
+          <p className="text-lg text-slate-600 mb-8 max-w-xl mx-auto">
+            Join thousands of successful sellers on GhanaMarket today. Setup takes less than 5 minutes.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link 
+              href="/seller/apply" 
+              className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2 group"
+            >
+              Start Seller Application <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            {!isAuthenticated && (
+              <p className="text-sm text-slate-500 mt-4 sm:mt-0">
+                Already started? <Link href="/auth/login?redirect=/seller/apply" className="text-blue-600 font-bold hover:underline">Log in to continue</Link>
               </p>
-              <Link href="/" className="text-blue-600 font-bold hover:underline">
-                Back to Home
-              </Link>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="border-b border-slate-200 p-6 bg-slate-50">
-                <h2 className="text-xl font-bold text-slate-900">Seller Application</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  {isAuthenticated 
-                    ? "Complete the form below to apply as a seller."
-                    : "You'll need to create an account first, or fill this out and we'll set one up for you."
-                  }
-                </p>
-              </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1.5 block">Business Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Kwame's Electronics Shop"
-                    value={formData.businessName}
-                    onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                    className="w-full h-10 rounded-lg border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1.5 block">What do you sell? *</label>
-                  <select
-                    required
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full h-10 rounded-lg border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="">Select a category</option>
-                    <option value="electronics">Electronics</option>
-                    <option value="fashion">Fashion & Clothing</option>
-                    <option value="food">Food & Groceries</option>
-                    <option value="home">Home & Kitchen</option>
-                    <option value="beauty">Beauty & Health</option>
-                    <option value="phones">Phones & Tablets</option>
-                    <option value="sports">Sports & Outdoors</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1.5 block">Phone Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="054XXXXXXX"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full h-10 rounded-lg border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1.5 block">Region *</label>
-                  <select
-                    required
-                    value={formData.region}
-                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                    className="w-full h-10 rounded-lg border border-slate-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="">Select your region</option>
-                    {[
-                      "Greater Accra", "Ashanti", "Western", "Central", "Eastern",
-                      "Northern", "Volta", "Bono", "Ahafo", "Upper East",
-                      "Upper West", "Savannah", "North East", "Bono East", "Oti", "Western North"
-                    ].map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-1.5 block">Describe your business (optional)</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Tell us about what you sell and your business..."
-                    value={formData.businessDescription}
-                    onChange={(e) => setFormData({ ...formData, businessDescription: e.target.value })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-70 flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Store className="h-5 w-5" />
-                      Apply to Sell
-                    </>
-                  )}
-                </button>
-
-                <p className="text-xs text-slate-400 text-center">
-                  By applying, you agree to our <Link href="/terms" className="text-blue-600 hover:underline">Seller Terms</Link> and <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>.
-                </p>
-              </form>
-            </div>
-          )}
+            )}
+          </div>
+          
+          <p className="mt-8 text-xs text-slate-400">
+            By applying, you agree to our <Link href="/terms" className="text-blue-600 hover:underline">Seller Terms</Link> and <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>.
+          </p>
         </section>
 
         {/* Stats */}
