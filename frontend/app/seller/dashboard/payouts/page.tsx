@@ -23,6 +23,7 @@ import { toast } from "sonner";
 export default function SellerPayoutsPage() {
   const [wallet, setWallet] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [sellerProfile, setSellerProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [amount, setAmount] = useState("");
@@ -30,10 +31,18 @@ export default function SellerPayoutsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await api.getSellerWallet();
-      if (res.success && res.data) {
-        setWallet(res.data.wallet);
-        setHistory(res.data.history || []);
+      const [walletRes, profileRes] = await Promise.all([
+        api.getSellerWallet(),
+        api.getSellerProfile()
+      ]);
+      
+      if (walletRes.success && walletRes.data) {
+        setWallet(walletRes.data.wallet);
+        setHistory(walletRes.data.history || []);
+      }
+      
+      if (profileRes.success && profileRes.data) {
+        setSellerProfile(profileRes.data.profile);
       }
     } catch (error) {
       toast.error("Failed to load wallet data");
@@ -60,7 +69,9 @@ export default function SellerPayoutsPage() {
 
     setRequesting(true);
     try {
-      const res = await api.requestPayout(Number(amount), "MOMO");
+      // Ensure we use the provider from their profile
+      const provider = sellerProfile?.mobileMoneyProvider || "MOMO";
+      const res = await api.requestPayout(Number(amount), provider);
       if (res.success) {
         toast.success("Payout request submitted successfully");
         setAmount("");
@@ -181,14 +192,13 @@ export default function SellerPayoutsPage() {
                   </div>
 
                   <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex gap-3 items-center">
-                     <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-slate-900 text-xs shrink-0">
-                        MTN
+                     <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-slate-900 text-[10px] shrink-0">
+                        {sellerProfile?.mobileMoneyProvider || "MOMO"}
                      </div>
                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-900">MTN MobileMoney</p>
-                        <p className="text-xs text-slate-500 truncate">024 ••• ••••</p>
+                        <p className="text-sm font-bold text-slate-900">{sellerProfile?.mobileMoneyProvider} MobileMoney</p>
+                        <p className="text-xs text-slate-500 truncate">{sellerProfile?.mobileMoneyNumber || "Not configured"}</p>
                      </div>
-                     <Link href="/seller/dashboard/settings" className="text-xs text-blue-600 font-bold hover:underline">Change</Link>
                   </div>
 
                   <div className="pt-2">

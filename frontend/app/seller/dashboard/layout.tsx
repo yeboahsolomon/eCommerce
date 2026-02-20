@@ -67,7 +67,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
       {/* Sidebar */}
       <aside 
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:overflow-y-auto",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:sticky lg:top-[72px] lg:z-30 lg:h-[calc(100vh-72px)] lg:overflow-y-auto",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
