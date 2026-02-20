@@ -87,7 +87,7 @@ export default function SellerApplyPage() {
       let imageUrl = formData.ghanaCardImage; 
       
       if (formData.ghanaCardImage instanceof File) {
-         const uploadRes = await api.uploadImage(formData.ghanaCardImage, 'product'); 
+         const uploadRes = await api.uploadImage(formData.ghanaCardImage, 'product') as any; 
          if (!uploadRes.success || !uploadRes.data) {
             throw new Error(uploadRes.message || "Failed to upload Ghana Card");
          }
@@ -97,7 +97,7 @@ export default function SellerApplyPage() {
       // 2. Upload Ghana Card Back
       let backImageUrl = formData.ghanaCardBackImage;
       if (formData.ghanaCardBackImage instanceof File) {
-         const uploadRes = await api.uploadImage(formData.ghanaCardBackImage, 'product');
+         const uploadRes = await api.uploadImage(formData.ghanaCardBackImage, 'product') as any;
          if (!uploadRes.success || !uploadRes.data) {
             throw new Error(uploadRes.message || "Failed to upload Ghana Card Back");
          }
@@ -108,7 +108,7 @@ export default function SellerApplyPage() {
       let certUrl = typeof formData.businessCertificate === 'string' ? formData.businessCertificate : undefined;
       
       if (formData.businessCertificate instanceof File) {
-         const uploadRes = await api.uploadImage(formData.businessCertificate, 'product');
+         const uploadRes = await api.uploadImage(formData.businessCertificate, 'product') as any;
          if (!uploadRes.success || !uploadRes.data) {
             throw new Error(uploadRes.message || "Failed to upload Business Certificate");
          }
@@ -136,7 +136,8 @@ export default function SellerApplyPage() {
         if (res.errors && Array.isArray(res.errors)) {
           // Show the first validation error
           const firstError = res.errors[0];
-          toast.error(`${firstError.field}: ${firstError.message}`);
+          const errorField = firstError.path && firstError.path.length > 0 ? firstError.path[0] : "Validation Error";
+          toast.error(`${errorField}: ${firstError.message}`);
         } else {
           toast.error(res.message || "Failed to submit application");
         }
