@@ -46,6 +46,16 @@ export default function Home() {
     }
   });
 
+  const { data: sellerApplication } = useQuery({
+    queryKey: ['sellerApplication', isAuthenticated],
+    queryFn: async () => {
+        if (!isAuthenticated) return null;
+        const res = await api.getMySellerApplication();
+        return res.success && res.data?.application ? res.data.application : null;
+    },
+    enabled: isAuthenticated,
+  });
+
   const products = productsData || [];
   const categories = categoriesData || [];
   const isLoading = productsLoading || categoriesLoading;
@@ -262,10 +272,10 @@ export default function Home() {
           </div>
           {isAuthenticated && !authLoading && (
             <Link 
-              href="/seller/register"
+              href={sellerApplication ? "/seller/status" : "/seller/register"}
               className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-slate-100 transition-all shadow-xl flex-shrink-0 active:scale-[0.98] hover:scale-105"
             >
-              Become a Seller
+              {sellerApplication ? "Status" : "Become a Seller"}
             </Link>
           )}
         </div>

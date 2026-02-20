@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
-export default function AccountDropdown() {
+export default function AccountDropdown({ sellerApplication }: { sellerApplication?: any }) {
   const { user, isAuthenticated, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -108,6 +108,14 @@ export default function AccountDropdown() {
                     className="flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-purple-600 hover:bg-purple-50 transition-colors"
                 >
                     <Store className="h-4 w-4" /> Seller Dashboard
+                </Link>
+            ) : sellerApplication ? (
+                 <Link 
+                    href="/seller/status" 
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-purple-600 hover:bg-purple-50 transition-colors"
+                >
+                    <Store className="h-4 w-4" /> Application Status
                 </Link>
             ) : (
                  <Link 

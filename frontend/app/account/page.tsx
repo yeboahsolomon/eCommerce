@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   UserCircle, LogIn, Package, MapPin, Heart, Settings,
-  ChevronRight, Loader2, ShoppingBag, Star, Clock, Truck, CheckCircle2, Store
+  ChevronRight, Loader2, ShoppingBag, Star, Clock, Truck, CheckCircle2
 } from "lucide-react";
 
 const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof Clock }> = {
@@ -27,17 +27,15 @@ export default function AccountPage() {
   const router = useRouter();
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
-  const [sellerApplication, setSellerApplication] = useState<{ status: string } | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       const fetchData = async () => {
         try {
-          const [ordersRes, addressesRes, applicationRes] = await Promise.allSettled([
+          const [ordersRes, addressesRes] = await Promise.allSettled([
             api.getOrders({ limit: 3 }),
             api.getAddresses(),
-            api.getMySellerApplication(),
           ]);
 
           if (ordersRes.status === "fulfilled" && ordersRes.value.success && ordersRes.value.data?.orders) {
@@ -45,9 +43,6 @@ export default function AccountPage() {
           }
           if (addressesRes.status === "fulfilled" && addressesRes.value.success && addressesRes.value.data?.addresses) {
             setAddresses(addressesRes.value.data.addresses as Address[]);
-          }
-          if (applicationRes.status === "fulfilled" && applicationRes.value.success && applicationRes.value.data?.application) {
-             setSellerApplication(applicationRes.value.data.application);
           }
         } catch {
           // Fail silently
@@ -160,42 +155,6 @@ export default function AccountPage() {
             </Link>
           ))}
         </div>
-
-        {/* Seller Application Status Component */}
-        {sellerApplication && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-             <div className="flex items-center gap-4">
-               <div className={`h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  sellerApplication.status === 'APPROVED' ? 'bg-green-100 text-green-600' :
-                  sellerApplication.status === 'REJECTED' ? 'bg-red-100 text-red-600' :
-                  sellerApplication.status === 'NEEDS_INFO' ? 'bg-orange-100 text-orange-600' :
-                  'bg-yellow-100 text-yellow-600'
-               }`}>
-                  <Store className="h-6 w-6" />
-               </div>
-               <div>
-                 <h2 className="text-lg font-bold text-slate-900">Seller Application</h2>
-                 <p className="text-sm text-slate-500">
-                    Status: <span className={`font-semibold ${
-                      sellerApplication.status === 'APPROVED' ? 'text-green-600' :
-                      sellerApplication.status === 'REJECTED' ? 'text-red-600' :
-                      sellerApplication.status === 'NEEDS_INFO' ? 'text-orange-600' :
-                      'text-yellow-600'
-                    }`}>{
-                      sellerApplication.status === 'APPROVED' ? 'Approved' :
-                      sellerApplication.status === 'REJECTED' ? 'Rejected' :
-                      sellerApplication.status === 'NEEDS_INFO' ? 'Needs Info' :
-                      'Under Review'
-                    }</span>
-                 </p>
-               </div>
-             </div>
-             
-             <Link href="/seller/status" className="w-full sm:w-auto text-center px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
-                View Details
-             </Link>
-          </div>
-        )}
 
         {/* Recent Orders */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

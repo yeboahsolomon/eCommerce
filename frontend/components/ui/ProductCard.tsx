@@ -7,7 +7,7 @@ import { ShoppingCart, Star, ImageOff, Heart, Eye, MapPin, BadgeCheck } from "lu
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
-import { QuickViewModal } from "./QuickViewModal"; // Assuming we want to create this later or just use placeholder logic
+// import { QuickViewModal } from "./QuickViewModal"; // Assuming we want to create this later or just use placeholder logic
 // Actually, user asked for "Quick view icon", implies functionality. 
 // I'll add the button but maybe not full modal implementation yet unless I see requirements. 
 // I'll make it trigger a toast "Quick View coming soon" or simple state if easy.

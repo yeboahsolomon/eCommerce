@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -39,6 +38,12 @@ interface DashboardData {
   recentOrders: any[];
   salesChart: { name: string; sales: number }[];
 }
+
+const formatCurrency = (amountInPesewas: number) => {
+  return typeof amountInPesewas === 'number' 
+    ? `₵${(amountInPesewas / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `₵0.00`;
+};
 
 export default function SellerDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);

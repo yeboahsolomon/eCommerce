@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+
+const formatCurrency = (amountInPesewas: number) => {
+  return typeof amountInPesewas === 'number' 
+    ? `₵${(amountInPesewas / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `₵0.00`;
+};
+
 import { 
   Plus, 
   Search, 
@@ -13,7 +19,8 @@ import {
   Trash2, 
   Eye, 
   EyeOff,
-  Loader2 
+  Loader2,
+  Package
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
