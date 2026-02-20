@@ -505,8 +505,9 @@ router.get('/seller-applications', async (req: Request, res: Response) => {
 router.get('/seller-applications/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const adminId = (req as any).user.id;
 
-    const application = await prisma.sellerApplication.findUnique({
+    let application = await prisma.sellerApplication.findUnique({
       where: { id },
       include: {
         user: {
@@ -527,6 +528,33 @@ router.get('/seller-applications/:id', async (req: Request, res: Response) => {
 
     if (!application) {
       return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    // Automatically transition to REVIEWING if an admin is viewing it
+    if (application.status === 'PENDING') {
+      application = await prisma.sellerApplication.update({
+        where: { id },
+        data: {
+          status: 'REVIEWING',
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              role: true,
+              emailVerified: true,
+              createdAt: true,
+              _count: { select: { orders: true } },
+            },
+          },
+        },
+      });
     }
 
     res.json({ success: true, data: { application } });
@@ -654,7 +682,7 @@ router.post('/seller-applications/:id/reject', validate(adminRejectApplicationSc
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    if (application.status !== 'PENDING' && application.status !== 'INFO_REQUESTED') {
+    if (application.status !== 'PENDING' && application.status !== 'INFO_REQUESTED' && application.status !== 'REVIEWING') {
       return res.status(400).json({ success: false, message: `Cannot reject an application with status: ${application.status}` });
     }
 
@@ -702,8 +730,8 @@ router.post('/seller-applications/:id/request-info', validate(adminRequestInfoSc
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    if (application.status !== 'PENDING') {
-      return res.status(400).json({ success: false, message: `Can only request info for pending applications` });
+    if (application.status !== 'PENDING' && application.status !== 'REVIEWING') {
+      return res.status(400).json({ success: false, message: `Can only request info for pending or reviewing applications` });
     }
 
     const updated = await prisma.sellerApplication.update({
