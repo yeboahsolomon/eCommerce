@@ -193,7 +193,10 @@ router.get(
 
       res.json({
         success: true,
-        data: { applications },
+        data: { 
+          application: applications[0] || null,
+          applications 
+        },
       });
     } catch (error) {
       next(error);
