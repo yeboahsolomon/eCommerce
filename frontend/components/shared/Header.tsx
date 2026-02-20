@@ -239,7 +239,7 @@ export default function Header() {
                  {/* Become a Seller - Auth Only */}
                  {!isLoading && isAuthenticated && (
                     <Link href={sellerApplication ? "/seller/status" : "/seller/register"} className="hover:text-purple-600 transition-colors font-semibold">
-                       {sellerApplication ? "Status" : "Become a Seller"}
+                       {sellerApplication ? "Seller Status" : "Become a Seller"}
                     </Link>
                  )}
                </nav>

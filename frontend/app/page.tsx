@@ -275,7 +275,7 @@ export default function Home() {
               href={sellerApplication ? "/seller/status" : "/seller/register"}
               className="bg-white text-slate-900 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-slate-100 transition-all shadow-xl flex-shrink-0 active:scale-[0.98] hover:scale-105"
             >
-              {sellerApplication ? "Status" : "Become a Seller"}
+              {sellerApplication ? "Seller Status" : "Become a Seller"}
             </Link>
           )}
         </div>

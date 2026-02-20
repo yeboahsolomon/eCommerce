@@ -57,7 +57,7 @@ export default function Footer() {
     shopLinks = shopLinks.filter(link => link.label !== "Become a Seller");
   } else if (sellerApplication) {
     shopLinks = shopLinks.map(link => 
-      link.label === "Become a Seller" ? { label: "Status", href: "/seller/status" } : link
+      link.label === "Become a Seller" ? { label: "Seller Status", href: "/seller/status" } : link
     );
   }
 

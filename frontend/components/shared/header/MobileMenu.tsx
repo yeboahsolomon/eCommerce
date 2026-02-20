@@ -130,7 +130,7 @@ export default function MobileMenu({ isOpen, onClose, categories, sellerApplicat
                      ) : sellerApplication ? (
                          <Link href="/seller/status" onClick={onClose} className="flex items-center justify-center gap-2 p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 col-span-2">
                              <Store className="h-5 w-5 text-purple-600" />
-                             <span className="text-xs font-bold text-purple-700">Application Status</span>
+                             <span className="text-xs font-bold text-purple-700">Seller Status</span>
                          </Link>
                      ) : (
                          <Link href="/seller/register" onClick={onClose} className="flex items-center justify-center gap-2 p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 col-span-2">
