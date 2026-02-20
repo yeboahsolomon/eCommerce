@@ -6,10 +6,11 @@ import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { Loader2, CheckCircle, XCircle, Clock, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 
 interface SellerApplication {
   id: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "NEEDS_INFO";
+  status: "PENDING" | "REVIEWING" | "APPROVED" | "REJECTED" | "INFO_REQUESTED";
   rejectionReason?: string;
   adminNotes?: string;
   createdAt: string;
@@ -18,9 +19,7 @@ interface SellerApplication {
 export default function SellerStatusPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [application, setApplication] = useState<SellerApplication | null>(null);
   const [sellerProfile, setSellerProfile] = useState<{ isActive: boolean } | null>(null);
-  const [loadingApp, setLoadingApp] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,47 +28,36 @@ export default function SellerStatusPage() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  const fetchApplication = async () => {
-    try {
-      setLoadingApp(true);
+  const { data: appData, isLoading: loadingApp, error: fetchErr } = useQuery({
+    queryKey: ['mySellerApplication'],
+    queryFn: async () => {
       const res = await api.getMySellerApplication();
-      if (res.success && res.data) {
-        if (res.data.application) {
-          setApplication(res.data.application);
-          
-          if (res.data.application.status === 'APPROVED') {
-             try {
-                const profileRes = await api.getSellerProfile();
-                if (profileRes.success && profileRes.data?.profile) {
-                   setSellerProfile(profileRes.data.profile);
-                }
-             } catch (profileErr) {
-               console.error("Failed to fetch seller profile", profileErr);
-             }
-          }
-        } else {
-          router.push("/seller/apply");
-        }
-      } else {
-        // If no application found, redirect to apply
-        if (res.message?.includes("not found")) {
-           router.push("/seller/apply");
-        } else {
-           setError(res.message || "Failed to fetch application");
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-    } finally {
-      setLoadingApp(false);
-    }
-  };
+      if (!res.success) throw new Error(res.message || "Failed to fetch");
+      return res.data?.application || null;
+    },
+    enabled: isAuthenticated,
+    refetchInterval: 5000,
+  });
+
+  const application = appData || null;
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchApplication();
+    if (fetchErr) setError(fetchErr.message);
+  }, [fetchErr]);
+
+  useEffect(() => {
+    if (!loadingApp && !application && isAuthenticated) {
+       router.push("/seller/apply");
     }
-  }, [isAuthenticated]);
+  }, [loadingApp, application, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (application?.status === 'APPROVED') {
+       api.getSellerProfile().then(res => {
+          if (res.success && res.data?.profile) setSellerProfile(res.data.profile);
+       }).catch(console.error);
+    }
+  }, [application?.status]);
 
   if (isLoading || loadingApp) {
     return (
@@ -119,7 +107,7 @@ export default function SellerStatusPage() {
 
               {/* Status Message */}
               <div className="max-w-md">
-                {application.status === 'PENDING' && (
+                {(application.status === 'PENDING' || application.status === 'REVIEWING') && (
                   <p className="text-slate-600">
                     Your application is currently under review. Our team typically reviews applications within 2-3 business days. You will be notified via email once a decision is made.
                   </p>
@@ -161,7 +149,7 @@ export default function SellerStatusPage() {
                     </div>
                   </div>
                 )}
-                {application.status === 'NEEDS_INFO' && (
+                {application.status === 'INFO_REQUESTED' && (
                   <div className="bg-orange-50 p-6 rounded-xl text-left w-full border border-orange-100">
                     <h3 className="font-bold text-orange-800 mb-2">Additional information required</h3>
                     <p className="text-orange-700 mb-4">{application.adminNotes || "We need more information to process your application."}</p>
@@ -185,7 +173,7 @@ export default function SellerStatusPage() {
                     <div className="relative">
                        <div className={`absolute -left-[21px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${application.status === 'PENDING' ? 'bg-blue-100 animate-pulse' : 'bg-blue-600'}`}></div>
                        <p className={`text-sm ${application.status === 'PENDING' ? 'font-medium text-slate-600' : 'font-bold text-slate-900'}`}>Review in Progress</p>
-                       {application.status === 'PENDING' && (
+                       {(application.status === 'PENDING' || application.status === 'REVIEWING') && (
                            <p className="text-xs text-slate-400">Estimated completion: 2-3 days</p>
                        )}
                     </div>
@@ -206,7 +194,7 @@ export default function SellerStatusPage() {
                         </div>
                     )}
 
-                    {application.status === 'NEEDS_INFO' && (
+                    {application.status === 'INFO_REQUESTED' && (
                         <div className="relative">
                            <div className="absolute -left-[21px] top-0 w-4 h-4 rounded-full bg-orange-500 border-2 border-white shadow-sm"></div>
                            <p className="text-sm font-bold text-slate-900">Needs Information</p>
@@ -231,13 +219,14 @@ export default function SellerStatusPage() {
 export function StatusDisplay({ status, isActive }: { status: string, isActive?: boolean }) {
   switch (status) {
     case 'PENDING':
+    case 'REVIEWING':
       return (
         <div className="flex flex-col items-center gap-3">
           <div className="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
             <Clock className="w-10 h-10" />
           </div>
           <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold uppercase tracking-wide">
-            Under Review
+            {status === 'REVIEWING' ? 'In Review' : 'Under Review'}
           </span>
         </div>
       );
@@ -263,7 +252,7 @@ export function StatusDisplay({ status, isActive }: { status: string, isActive?:
           </span>
         </div>
       );
-    case 'NEEDS_INFO':
+    case 'INFO_REQUESTED':
       return (
         <div className="flex flex-col items-center gap-3">
           <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
