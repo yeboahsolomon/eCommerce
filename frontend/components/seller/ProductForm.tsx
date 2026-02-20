@@ -12,10 +12,11 @@ import {
   X, 
   Upload, 
   Loader2, 
-  ChevronLeft, 
+  ChevronLeft,
   Save, 
   Image as ImageIcon 
 } from "lucide-react";
+import { Category } from "@/types";
 import dynamic from "next/dynamic";
 import "react-quill/dist/quill.snow.css";
 
@@ -25,11 +26,11 @@ const ReactQuill = dynamic(() => import("react-quill"), { ssr: false, loading: (
 const productSchema = z.object({
   name: z.string().min(3, "Product name is required"),
   description: z.string().min(10, "Description is required"),
-  price: z.coerce.number().min(0.1, "Price must be greater than 0"),
-  compareAtPrice: z.coerce.number().optional(),
-  stockQuantity: z.coerce.number().int().min(0, "Stock cannot be negative"),
+  price: z.any().transform(v => Number(v)),
+  compareAtPrice: z.any().transform(v => v ? Number(v) : undefined),
+  stockQuantity: z.any().transform(v => Number(v)),
   categoryId: z.string().min(1, "Category is required"),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
   images: z.array(z.string()).min(1, "At least one image is required"),
 });
 
@@ -37,10 +38,11 @@ type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
   initialData?: any;
+  categories?: Category[];
   isEditing?: boolean;
 }
 
-export default function ProductForm({ initialData, isEditing = false }: ProductFormProps) {
+export default function ProductForm({ initialData, categories: initialCategories, isEditing = false }: ProductFormProps) {
   const router = useRouter();
   const [categories, setCategories] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,6 +65,10 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
   const images = watch("images");
 
   useEffect(() => {
+    if (initialCategories && initialCategories.length > 0) {
+       setCategories(initialCategories);
+       return;
+    }
     const fetchCategories = async () => {
       try {
         const res = await api.getCategories();
@@ -74,7 +80,7 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
       }
     };
     fetchCategories();
-  }, []);
+  }, [initialCategories]);
 
   const onDrop = async (acceptedFiles: File[]) => {
     setUploading(true);
@@ -83,8 +89,8 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
       const results = await Promise.all(uploadPromises);
       
       const newImages = results
-        .filter(res => res.success && res.data)
-        .map(res => res.data!.url);
+        .filter((res: any) => res.success && res.data)
+        .map((res: any) => res.data!.url);
 
       if (newImages.length > 0) {
         setValue("images", [...images, ...newImages], { shouldValidate: true });
@@ -112,7 +118,7 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
     setValue("images", newImages, { shouldValidate: true });
   };
 
-  const onSubmit = async (data: ProductFormData) => {
+  const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
       let res;

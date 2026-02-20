@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
-import { 
+import { cn } from "@/lib/utils";
+
+const formatCurrency = (amountInPesewas: number) => {
+  return typeof amountInPesewas === 'number' 
+    ? `₵${(amountInPesewas / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `₵0.00`;
+};
+import {
   Search, 
   Filter, 
   Eye, 

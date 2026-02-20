@@ -19,6 +19,7 @@ export default function SellerStatusPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [application, setApplication] = useState<SellerApplication | null>(null);
+  const [sellerProfile, setSellerProfile] = useState<{ isActive: boolean } | null>(null);
   const [loadingApp, setLoadingApp] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,17 @@ export default function SellerStatusPage() {
       if (res.success && res.data) {
         if (res.data.application) {
           setApplication(res.data.application);
+          
+          if (res.data.application.status === 'APPROVED') {
+             try {
+                const profileRes = await api.getSellerProfile();
+                if (profileRes.success && profileRes.data?.profile) {
+                   setSellerProfile(profileRes.data.profile);
+                }
+             } catch (profileErr) {
+               console.error("Failed to fetch seller profile", profileErr);
+             }
+          }
         } else {
           router.push("/seller/apply");
         }
@@ -103,7 +115,7 @@ export default function SellerStatusPage() {
             <div className="flex flex-col items-center justify-center text-center space-y-6">
               
               {/* Status Icon & Badge */}
-              <StatusDisplay status={application.status} />
+              <StatusDisplay status={application.status} isActive={sellerProfile?.isActive} />
 
               {/* Status Message */}
               <div className="max-w-md">
@@ -114,12 +126,28 @@ export default function SellerStatusPage() {
                 )}
                 {application.status === 'APPROVED' && (
                   <div className="space-y-4 flex flex-col items-center">
-                    <p className="text-slate-600 font-medium">
-                      Congratulations! You're now a seller
-                    </p>
-                    <Link href="/seller/dashboard" className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200">
-                      Go to Dashboard <ChevronRight className="w-5 h-5" />
-                    </Link>
+                    {sellerProfile?.isActive === false ? (
+                        <>
+                            <p className="text-red-700 font-medium">
+                              Your seller account is currently suspended.
+                            </p>
+                            <p className="text-sm text-red-600 mb-2">
+                              Access to your seller dashboard and product listings has been temporarily disabled. Please contact our support team to resolve any outstanding issues with your account.
+                            </p>
+                            <Link href="/contact" className="inline-flex items-center gap-2 bg-red-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-red-700 transition shadow-lg shadow-red-200">
+                              Contact Support <ChevronRight className="w-5 h-5" />
+                            </Link>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-slate-600 font-medium">
+                              Congratulations! You're an active seller
+                            </p>
+                            <Link href="/seller/dashboard" className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+                              Go to Dashboard <ChevronRight className="w-5 h-5" />
+                            </Link>
+                        </>
+                    )}
                   </div>
                 )}
                 {application.status === 'REJECTED' && (
@@ -145,23 +173,48 @@ export default function SellerStatusPage() {
               </div>
 
               {/* Timeline */}
-              {application.status === 'PENDING' && (
-                <div className="w-full pt-8 border-t border-slate-100">
-                   <h3 className="text-sm font-bold text-slate-900 mb-4 text-left">Application Timeline</h3>
-                   <div className="space-y-6 relative pl-4 border-l-2 border-slate-100 text-left">
-                      <div className="relative">
-                         <div className="absolute -left-[21px] top-0 w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-sm"></div>
-                         <p className="text-sm font-bold text-slate-900">Application Submitted</p>
-                         <p className="text-xs text-slate-500">{new Date(application.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <div className="relative">
-                         <div className="absolute -left-[21px] top-0 w-4 h-4 rounded-full bg-blue-100 border-2 border-white shadow-sm animate-pulse"></div>
-                         <p className="text-sm font-medium text-slate-600">Review in Progress</p>
-                         <p className="text-xs text-slate-400">Estimated completion: 2-3 days</p>
-                      </div>
-                   </div>
-                </div>
-              )}
+              <div className="w-full pt-8 border-t border-slate-100">
+                 <h3 className="text-sm font-bold text-slate-900 mb-4 text-left">Application Timeline</h3>
+                 <div className="space-y-6 relative pl-4 border-l-2 border-slate-100 text-left">
+                    <div className="relative">
+                       <div className="absolute -left-[21px] top-0 w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-sm"></div>
+                       <p className="text-sm font-bold text-slate-900">Application Submitted</p>
+                       <p className="text-xs text-slate-500">{new Date(application.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    
+                    <div className="relative">
+                       <div className={`absolute -left-[21px] top-0 w-4 h-4 rounded-full border-2 border-white shadow-sm ${application.status === 'PENDING' ? 'bg-blue-100 animate-pulse' : 'bg-blue-600'}`}></div>
+                       <p className={`text-sm ${application.status === 'PENDING' ? 'font-medium text-slate-600' : 'font-bold text-slate-900'}`}>Review in Progress</p>
+                       {application.status === 'PENDING' && (
+                           <p className="text-xs text-slate-400">Estimated completion: 2-3 days</p>
+                       )}
+                    </div>
+                    
+                    {application.status === 'APPROVED' && (
+                        <div className="relative">
+                           <div className="absolute -left-[21px] top-0 w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow-sm"></div>
+                           <p className="text-sm font-bold text-slate-900">Approved</p>
+                           <p className="text-xs text-slate-500">Welcome to GhanaMarket!</p>
+                        </div>
+                    )}
+
+                    {application.status === 'REJECTED' && (
+                        <div className="relative">
+                           <div className="absolute -left-[21px] top-0 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-sm"></div>
+                           <p className="text-sm font-bold text-slate-900">Rejected</p>
+                           <p className="text-xs text-slate-500">Application did not meet requirements</p>
+                        </div>
+                    )}
+
+                    {application.status === 'NEEDS_INFO' && (
+                        <div className="relative">
+                           <div className="absolute -left-[21px] top-0 w-4 h-4 rounded-full bg-orange-500 border-2 border-white shadow-sm"></div>
+                           <p className="text-sm font-bold text-slate-900">Needs Information</p>
+                           <p className="text-xs text-slate-500">Please provide additional details</p>
+                        </div>
+                    )}
+                 </div>
+              </div>
 
             </div>
           </div>
@@ -175,7 +228,7 @@ export default function SellerStatusPage() {
   );
 }
 
-function StatusDisplay({ status }: { status: string }) {
+export function StatusDisplay({ status, isActive }: { status: string, isActive?: boolean }) {
   switch (status) {
     case 'PENDING':
       return (
@@ -191,11 +244,11 @@ function StatusDisplay({ status }: { status: string }) {
     case 'APPROVED':
       return (
         <div className="flex flex-col items-center gap-3">
-          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-10 h-10" />
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center ${isActive === false ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+             {isActive === false ? <AlertCircle className="w-10 h-10" /> : <CheckCircle className="w-10 h-10" />}
           </div>
-          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide">
-            Approved
+          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${isActive === false ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+            {isActive === false ? 'Seller Account: Suspended' : 'Seller Account: Active'}
           </span>
         </div>
       );

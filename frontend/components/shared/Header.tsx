@@ -50,6 +50,16 @@ export default function Header() {
     }
   });
 
+  const { data: sellerApplication } = useQuery({
+    queryKey: ['sellerApplication', isAuthenticated],
+    queryFn: async () => {
+        if (!isAuthenticated) return null;
+        const res = await api.getMySellerApplication();
+        return res.success && res.data?.application ? res.data.application : null;
+    },
+    enabled: isAuthenticated,
+  });
+
   const categories = categoriesData || [];
 
   // Scroll Handler
@@ -173,7 +183,7 @@ export default function Header() {
 
              {/* Account */}
              <div className="hidden lg:block pl-2 border-l border-slate-200 ml-2">
-                <AccountDropdown />
+                <AccountDropdown sellerApplication={sellerApplication} />
              </div>
           </div>
         </div>
@@ -228,8 +238,8 @@ export default function Header() {
 
                  {/* Become a Seller - Auth Only */}
                  {!isLoading && isAuthenticated && (
-                    <Link href="/seller/register" className="hover:text-purple-600 transition-colors font-semibold">
-                       Become a Seller
+                    <Link href={sellerApplication ? "/seller/status" : "/seller/register"} className="hover:text-purple-600 transition-colors font-semibold">
+                       {sellerApplication ? "Status" : "Become a Seller"}
                     </Link>
                  )}
                </nav>
@@ -245,6 +255,7 @@ export default function Header() {
         isOpen={isMobileMenuOpen} 
         onClose={() => setIsMobileMenuOpen(false)} 
         categories={categories} 
+        sellerApplication={sellerApplication}
       />
       
       <MiniCart 

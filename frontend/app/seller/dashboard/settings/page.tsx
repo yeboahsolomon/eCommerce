@@ -56,7 +56,8 @@ export default function SellerSettingsPage() {
            // but we didn't add it to API explicitly. 
            // I'll simulate it or use what's available.
            setValue("businessName", user.firstName + "'s Store"); // Placeholder
-           setValue("businessPhone", user.phoneNumber || "");
+           // Optional: map other fields if they exist on user
+           // setValue("businessPhone", user.phoneNumber || "");
         }
       } catch (error) {
         // console.error(error);
@@ -71,7 +72,7 @@ export default function SellerSettingsPage() {
     if (files.length === 0) return;
     setLogoUploading(true);
     try {
-      const res = await api.uploadImage(files[0], 'avatar');
+      const res = await api.uploadImage(files[0], 'avatar') as any;
       if (res.success && res.data) {
         setValue("logoUrl", res.data.url);
         toast.success("Logo uploaded");
@@ -87,7 +88,7 @@ export default function SellerSettingsPage() {
     if (files.length === 0) return;
     setBannerUploading(true);
     try {
-      const res = await api.uploadImage(files[0], 'avatar'); // Using avatar type for now
+      const res = await api.uploadImage(files[0], 'avatar') as any; // Using avatar type for now
       if (res.success && res.data) {
         setValue("bannerUrl", res.data.url);
         toast.success("Banner uploaded");

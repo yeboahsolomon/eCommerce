@@ -324,6 +324,10 @@ export const api = {
 
   // ==================== SELLER DASHBOARD ====================
 
+  async getSellerProfile() {
+    return request<{ profile: any }>('GET', '/seller/me');
+  },
+
   async getSellerStats() {
     return request<{
       stats: {

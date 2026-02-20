@@ -6,6 +6,8 @@ import {
   CheckCircle2, ArrowRight
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 const FOOTER_LINKS = {
   shop: [
@@ -40,9 +42,24 @@ const PAYMENT_METHODS = [
 export default function Footer() {
   const { isAuthenticated } = useAuth();
 
-  const shopLinks = isAuthenticated 
-    ? FOOTER_LINKS.shop 
-    : FOOTER_LINKS.shop.filter(link => link.label !== "Become a Seller");
+  const { data: sellerApplication } = useQuery({
+    queryKey: ['sellerApplication', isAuthenticated],
+    queryFn: async () => {
+        if (!isAuthenticated) return null;
+        const res = await api.getMySellerApplication();
+        return res.success && res.data?.application ? res.data.application : null;
+    },
+    enabled: isAuthenticated,
+  });
+
+  let shopLinks = FOOTER_LINKS.shop;
+  if (!isAuthenticated) {
+    shopLinks = shopLinks.filter(link => link.label !== "Become a Seller");
+  } else if (sellerApplication) {
+    shopLinks = shopLinks.map(link => 
+      link.label === "Become a Seller" ? { label: "Status", href: "/seller/status" } : link
+    );
+  }
 
   return (
     <footer className="bg-gradient-to-br from-slate-900 to-blue-950 text-white mt-auto relative overflow-hidden">
