@@ -33,7 +33,11 @@ export default function SellerStatusPage() {
       setLoadingApp(true);
       const res = await api.getMySellerApplication();
       if (res.success && res.data) {
-        setApplication(res.data.application);
+        if (res.data.application) {
+          setApplication(res.data.application);
+        } else {
+          router.push("/seller/apply");
+        }
       } else {
         // If no application found, redirect to apply
         if (res.message?.includes("not found")) {
@@ -78,7 +82,11 @@ export default function SellerStatusPage() {
     );
   }
 
-  if (!application) return null;
+  if (!application) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -105,9 +113,9 @@ export default function SellerStatusPage() {
                   </p>
                 )}
                 {application.status === 'APPROVED' && (
-                  <div className="space-y-4">
-                    <p className="text-slate-600">
-                      Congratulations! Your application has been approved. You can now access your seller dashboard and start listing products.
+                  <div className="space-y-4 flex flex-col items-center">
+                    <p className="text-slate-600 font-medium">
+                      Congratulations! You're now a seller
                     </p>
                     <Link href="/seller/dashboard" className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200">
                       Go to Dashboard <ChevronRight className="w-5 h-5" />
@@ -115,21 +123,21 @@ export default function SellerStatusPage() {
                   </div>
                 )}
                 {application.status === 'REJECTED' && (
-                  <div className="bg-red-50 p-6 rounded-xl text-left w-full">
+                  <div className="bg-red-50 p-6 rounded-xl text-left w-full border border-red-100">
                     <h3 className="font-bold text-red-800 mb-2">Reason for rejection:</h3>
                     <p className="text-red-700 mb-4">{application.rejectionReason || "Requirements not met."}</p>
                     <div className="pt-4 border-t border-red-100 flex justify-end">
-                       <Link href="/seller/apply" className="text-sm font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
-                          Re-apply <RefreshCw className="w-3 h-3" />
+                       <Link href="/seller/apply" className="text-sm font-bold text-red-600 hover:text-red-700 flex items-center gap-1 bg-white px-4 py-2 rounded-lg shadow-sm border border-red-200 transition">
+                          Reapply later <RefreshCw className="w-4 h-4 ml-1" />
                        </Link>
                     </div>
                   </div>
                 )}
                 {application.status === 'NEEDS_INFO' && (
-                  <div className="bg-orange-50 p-6 rounded-xl text-left w-full">
-                    <h3 className="font-bold text-orange-800 mb-2">Action Required:</h3>
+                  <div className="bg-orange-50 p-6 rounded-xl text-left w-full border border-orange-100">
+                    <h3 className="font-bold text-orange-800 mb-2">Additional information required</h3>
                     <p className="text-orange-700 mb-4">{application.adminNotes || "We need more information to process your application."}</p>
-                    <Link href="/seller/apply" className="inline-block bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-700 transition">
+                    <Link href="/seller/apply" className="inline-block bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-700 transition shadow">
                       Update Application
                     </Link>
                   </div>
