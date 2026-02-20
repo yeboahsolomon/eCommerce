@@ -29,6 +29,7 @@ enum AccountStatus {
 
 enum SellerApplicationStatus {
   PENDING
+  REVIEWING
   APPROVED
   REJECTED
   INFO_REQUESTED
