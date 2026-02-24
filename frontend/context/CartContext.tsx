@@ -8,6 +8,28 @@ import { toast } from "sonner";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+// Helper to ensure Cart object always has calculated totals
+function normalizeCart(serverCart: any): Cart {
+  if (!serverCart) return null as unknown as Cart;
+  const items = serverCart.items || [];
+  
+  // User explicitly requested the counter to represent the NUMBER OF DISTINCT ITEMS
+  // instead of the raw total quantity sum
+  const itemCount = items.length;
+
+  const subtotalInCedis = items.reduce((sum: number, item: any) => {
+    const pricePesewas = item.product?.priceInPesewas || item.priceAtAddInPesewas || (item.priceAtAddInCedis ? item.priceAtAddInCedis * 100 : 0) || 0;
+    return sum + ((pricePesewas / 100) * (item.quantity || 0));
+  }, 0);
+
+  return {
+    ...serverCart,
+    items,
+    itemCount,
+    subtotalInCedis
+  };
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,7 +43,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         try {
           const res = await api.getCart();
           if (res.success && res.data?.cart) {
-             setCart(res.data.cart as unknown as Cart);
+             setCart(normalizeCart(res.data.cart));
           }
         } catch (error) {
            console.error("Failed to load server cart", error);
@@ -61,7 +83,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await api.addToCart(productId, quantity);
         if (res.success && res.data?.cart) {
-           setCart(res.data.cart as unknown as Cart);
+           setCart(normalizeCart(res.data.cart));
            toast.success("Added to cart");
         }
       } catch (error) {
@@ -83,7 +105,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         if (productToAdd) {
            setCart((currentCart) => {
-              const newCart = currentCart ? { ...currentCart } : { id: 'local', items: [], itemCount: 0, subtotalInCedis: 0 };
+              // Deep copy the cart and its items array to prevent React Strict Mode direct sequence mutations
+              const newItems = currentCart?.items ? currentCart.items.map(item => ({ ...item })) : [];
+              const newCart = currentCart ? { ...currentCart, items: newItems } : { id: `local-${Date.now()}`, items: newItems as any[], itemCount: 0, subtotalInCedis: 0 };
               
               const existingItemIndex = newCart.items.findIndex(i => i.productId === productId);
               
@@ -94,7 +118,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                   const price = (productToAdd!.priceInPesewas / 100) || 0;
                   
                   newCart.items.push({
-                      id: `local-${Date.now()}`,
+                      id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                       productId,
                       quantity,
                       priceAtAddInCedis: price,
@@ -105,13 +129,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                           priceInPesewas: productToAdd!.priceInPesewas,
                           image: productToAdd!.image || (productToAdd!.images && productToAdd!.images[0] ? productToAdd!.images[0].url : null),
                           inStock: productToAdd!.inStock,
-                          stockQuantity: productToAdd!.stockQuantity || 0
+                          stockQuantity: productToAdd!.stockQuantity || 0,
+                          seller: productToAdd!.seller ? {
+                              id: productToAdd!.seller.id,
+                              businessName: productToAdd!.seller.businessName
+                          } : undefined
                       }
                   });
               }
               
               // Recalculate totals
-              newCart.itemCount = newCart.items.reduce((acc, item) => acc + item.quantity, 0);
+              newCart.itemCount = newCart.items.length;
               newCart.subtotalInCedis = newCart.items.reduce((acc, item) => acc + ((item.product.priceInPesewas / 100) * item.quantity), 0);
               
               return newCart;
@@ -141,11 +169,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             try {
                 const res = await api.removeFromCart(item.id); 
                 if (res.success && res.data?.cart) {
-                     setCart(res.data.cart as unknown as Cart);
+                     setCart(normalizeCart(res.data.cart));
                 } else {
                     // Fallback refresh
                     const rootRes = await api.getCart();
-                    if (rootRes.success && rootRes.data?.cart) setCart(rootRes.data.cart as unknown as Cart);
+                    if (rootRes.success && rootRes.data?.cart) setCart(normalizeCart(rootRes.data.cart));
                 }
                 toast.success("Removed from cart");
             } catch {
@@ -163,7 +191,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               }
               
               // Recalculate totals
-              const itemCount = newItems.reduce((acc, i) => acc + i.quantity, 0);
+              const itemCount = newItems.length;
               const subtotalInCedis = newItems.reduce((acc, i) => acc + ((i.product.priceInPesewas / 100) * i.quantity), 0);
               
               return {
@@ -190,7 +218,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             try {
              const res = await api.updateCartItem(item.id, quantity);
              if (res.success && res.data?.cart) {
-                 setCart(res.data.cart as unknown as Cart);
+                 setCart(normalizeCart(res.data.cart));
              }
             } catch {
                 toast.error("Failed to update quantity");
@@ -211,7 +239,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               };
               
               // Recalculate totals
-              const itemCount = newItems.reduce((acc, i) => acc + i.quantity, 0);
+              const itemCount = newItems.length;
               const subtotalInCedis = newItems.reduce((acc, i) => acc + ((i.product.priceInPesewas / 100) * i.quantity), 0);
               
               return {

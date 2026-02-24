@@ -167,6 +167,10 @@ export const api = {
 
   // ==================== ORDERS ====================
 
+  async calculateCheckout(data: { shippingRegion?: string; shippingCity?: string; currentCart: any }) {
+    return request<{ subtotal: number; shipping: number; total: number; sellers: any[]; shippingInCedis: number; subtotalInCedis: number; totalInCedis: number }>('POST', '/checkout/calculate', data);
+  },
+
   async createOrder(data: CreateOrderInput) {
     return request<{ order: Order }>('POST', '/orders', data);
   },

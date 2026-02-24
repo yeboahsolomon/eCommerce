@@ -32,7 +32,6 @@ function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
     await addItem(product.id, 1, product);
-    toast.success("Added to cart");
   }, [addItem, product]);
 
   const handleWishlist = useCallback((e: React.MouseEvent) => {
