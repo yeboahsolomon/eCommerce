@@ -10,7 +10,7 @@ import { checkoutSchema, CheckoutFormValues } from "@/lib/validators";
 import { CreateOrderInput } from "@/types";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import { api } from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronLeft, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +41,9 @@ export default function CheckoutPage() {
   const totalPrice = subtotal;
   const router = useRouter();
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+  const [sellerPackages, setSellerPackages] = useState<any[]>([]);
 
   // Redirect if empty
   useEffect(() => {
@@ -66,10 +69,59 @@ export default function CheckoutPage() {
   });
 
   const selectedPayment = watch("paymentMethod");
+  const watchRegion = watch("region");
+  const watchCity = watch("city");
 
-  // Delivery fee calculation
-  const deliveryFee = totalPrice >= 200 ? 0 : 15;
+  // Fetch dynamic delivery fee
+  useEffect(() => {
+    let isMounted = true;
+
+    async function calculateShipping() {
+      if (!items || items.length === 0) return;
+      
+      setIsCalculatingShipping(true);
+      try {
+        const res = await api.calculateCheckout({
+          shippingRegion: watchRegion || undefined,
+          shippingCity: watchCity || undefined,
+          currentCart: { items }
+        });
+        
+        if (res.success && res.data && isMounted) {
+          setDeliveryFee(res.data.shippingInCedis);
+          if (res.data.sellers) {
+            setSellerPackages(res.data.sellers);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to calculate shipping", error);
+      } finally {
+        if (isMounted) setIsCalculatingShipping(false);
+      }
+    }
+
+    calculateShipping();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [watchRegion, watchCity, items]);
+
   const grandTotal = totalPrice + deliveryFee;
+
+  // Group items locally for display if API hasn't responded yet
+  const groupedItemsMap = useMemo(() => {
+    return items.reduce((acc, item) => {
+      const sellerId = item.product.seller?.id || 'GHANA_MARKET';
+      const sellerName = item.product.seller?.businessName || 'GhanaMarket Official';
+      if (!acc.has(sellerId)) {
+        acc.set(sellerId, { name: sellerName, items: [] });
+      }
+      acc.get(sellerId)!.items.push(item);
+      return acc;
+    }, new Map<string, { name: string; items: typeof items }>());
+  }, [items]);
+
 
   async function onSubmit(data: CheckoutFormValues) {
     setOrderError(null);
@@ -215,20 +267,38 @@ export default function CheckoutPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 sticky top-4">
             <h3 className="font-bold text-slate-900 mb-4">Your Order ({items.length} item{items.length !== 1 ? 's' : ''})</h3>
             
-            <div className="space-y-4 mb-6 max-h-60 overflow-y-auto pr-2">
-              {items.map((item) => (
-                <div key={item.id} className="flex gap-3">
-                  <div className="relative h-12 w-12 rounded bg-slate-100 overflow-hidden flex-shrink-0">
-                     {item.product.image && <img src={item.product.image} alt={item.product.name} className="object-cover h-full w-full" />}
-                     <span className="absolute bottom-0 right-0 bg-slate-800 text-white text-[10px] px-1">{item.quantity}</span>
+            <div className="space-y-6 mb-6 max-h-[400px] overflow-y-auto pr-2">
+              {Array.from(groupedItemsMap).map(([sellerId, group], index) => {
+                // Find dynamic package shipping info from API if available
+                const pkgInfo = sellerPackages.find(p => p.sellerId === sellerId);
+                const pkgShipping = pkgInfo ? pkgInfo.shipping / 100 : 0;
+                
+                return (
+                  <div key={sellerId} className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+                      <span className="text-xs font-bold text-slate-800">Package {index + 1}: {group.name}</span>
+                      <span className="text-xs text-slate-500">
+                        Shipping: {pkgShipping === 0 ? <span className="text-green-600 font-medium">calculating...</span> : `₵${pkgShipping.toLocaleString()}`}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {group.items.map((item) => (
+                        <div key={item.id} className="flex gap-3">
+                          <div className="relative h-12 w-12 rounded bg-slate-100 overflow-hidden flex-shrink-0">
+                            {item.product.image && <img src={item.product.image} alt={item.product.name} className="object-cover h-full w-full" />}
+                            <span className="absolute bottom-0 right-0 bg-slate-800 text-white text-[10px] px-1">{item.quantity}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
+                            <p className="text-xs text-slate-500">₵{(item.product.priceInPesewas / 100).toLocaleString()}</p>
+                          </div>
+                          <p className="text-sm font-bold flex-shrink-0">₵{((item.product.priceInPesewas * item.quantity) / 100).toLocaleString()}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
-                    <p className="text-xs text-slate-500">₵{(item.product.priceInPesewas / 100).toLocaleString()}</p>
-                  </div>
-                  <p className="text-sm font-bold flex-shrink-0">₵{((item.product.priceInPesewas * item.quantity) / 100).toLocaleString()}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="border-t border-slate-100 pt-4 space-y-2 mb-6">
@@ -238,15 +308,15 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between text-sm">
                  <span className="text-slate-500">Delivery Fee</span>
-                 {deliveryFee === 0 ? (
-                   <span className="text-green-600 font-medium">Free</span>
+                 {isCalculatingShipping ? (
+                   <span className="text-slate-400 italic">calculating...</span>
+                 ) : deliveryFee === 0 && !watchRegion ? (
+                   <span className="text-slate-400 italic">Select region to calculate</span>
                  ) : (
                    <span>₵{deliveryFee.toLocaleString()}</span>
                  )}
               </div>
-              {deliveryFee === 0 && totalPrice >= 200 && (
-                <p className="text-[10px] text-green-600">🎉 Free delivery for orders over ₵200!</p>
-              )}
+              
               <div className="flex justify-between text-lg font-bold text-slate-900 pt-2">
                 <span>Total</span>
                 <span>₵{grandTotal.toLocaleString()}</span>

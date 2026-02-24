@@ -93,21 +93,53 @@ export default function OrderSuccessPage({ params }: { params: Promise<{ id: str
                   <Package className="h-5 w-5 text-blue-600" />
                   Items Ordered ({order.items?.length || 0})
                 </h3>
-                <div className="space-y-3">
-                  {order.items?.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0">
-                          {item.productImage && <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />}
+                
+                <div className="space-y-4">
+                  {(() => {
+                    const groupedItemsMap = new Map<string, { sellerName: string; items: typeof order.items }>();
+                    if (order?.items) {
+                      order.items.forEach((item) => {
+                        const sellerOrderId = item.sellerOrderId || 'PLATFORM';
+                        let sellerName = 'GhanaMarket Official';
+                        
+                        if (sellerOrderId !== 'PLATFORM' && order.sellerOrders) {
+                          const matchedSellerOrder = order.sellerOrders.find(so => so.id === sellerOrderId);
+                          if (matchedSellerOrder?.seller?.businessName) {
+                            sellerName = matchedSellerOrder.seller.businessName;
+                          }
+                        }
+                        
+                        if (!groupedItemsMap.has(sellerOrderId)) {
+                          groupedItemsMap.set(sellerOrderId, { sellerName, items: [] });
+                        }
+                        groupedItemsMap.get(sellerOrderId)!.items.push(item);
+                      });
+                    }
+
+                    return Array.from(groupedItemsMap).map(([sellerOrderId, group], index) => (
+                      <div key={sellerOrderId} className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                        <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+                          <span className="text-xs font-bold text-slate-800">Package {index + 1}: {group.sellerName}</span>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{item.productName}</p>
-                          <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
+                        <div className="space-y-3">
+                          {group.items.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-white border border-slate-100 overflow-hidden flex-shrink-0">
+                                  {item.productImage && <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-slate-900 line-clamp-1">{item.productName}</p>
+                                  <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
+                                </div>
+                              </div>
+                              <p className="text-sm font-bold text-slate-900 flex-shrink-0">₵{item.totalPriceInCedis?.toLocaleString()}</p>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <p className="text-sm font-bold text-slate-900">₵{item.totalPriceInCedis?.toLocaleString()}</p>
-                    </div>
-                  ))}
+                    ));
+                  })()}
                 </div>
               </div>
 

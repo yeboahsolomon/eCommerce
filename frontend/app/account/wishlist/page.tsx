@@ -58,7 +58,6 @@ export default function WishlistPage() {
 
   const handleAddToCart = async (item: WishlistItem) => {
     await addItem(item.product.id, 1, item.product);
-    toast.success("Added to cart");
   };
 
   if (authLoading || isLoading) {

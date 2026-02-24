@@ -79,6 +79,10 @@ export interface CartItem {
     image: string | null;
     inStock: boolean;
     stockQuantity: number;
+    seller?: {
+      id: string;
+      businessName: string;
+    };
   };
 }
 
@@ -138,6 +142,7 @@ export interface OrderItem {
   quantity: number;
   unitPriceInCedis: number;
   totalPriceInCedis: number;
+  sellerOrderId?: string;
 }
 
 export interface Order {
@@ -166,6 +171,14 @@ export interface Order {
   shippedAt?: string;
   deliveredAt?: string;
   trackingNumber?: string;
+  sellerOrders?: {
+    id: string;
+    status: string;
+    seller?: {
+      businessName: string;
+      slug: string;
+    };
+  }[];
 }
 
 // ==================== REVIEWS ====================

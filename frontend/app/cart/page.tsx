@@ -50,12 +50,34 @@ export default function CartPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* LEFT COLUMN: Cart Items */}
-        <div className="lg:col-span-8">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 sm:p-6">
-            {items.map((item) => (
-              <CartItemRow key={item.id} item={item} />
-            ))}
-          </div>
+        <div className="lg:col-span-8 space-y-6">
+          {Array.from(
+            items.reduce((acc, item) => {
+              const sellerId = item.product.seller?.id || 'GHANA_MARKET';
+              const sellerName = item.product.seller?.businessName || 'GhanaMarket Official';
+              if (!acc.has(sellerId)) {
+                acc.set(sellerId, { name: sellerName, items: [] });
+              }
+              acc.get(sellerId)!.items.push(item);
+              return acc;
+            }, new Map<string, { name: string; items: typeof items }>())
+          ).map(([sellerId, group], index) => (
+            <div key={sellerId} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">Package {index + 1}</span>
+                  <span className="font-medium text-slate-800 text-sm">Sold by <span className="font-bold">{group.name}</span></span>
+                </div>
+              </div>
+              <div className="p-4 sm:p-6 divide-y divide-slate-100">
+                {group.items.map((item) => (
+                  <div key={item.id} className="pt-4 first:pt-0">
+                    <CartItemRow item={item} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* RIGHT COLUMN: Order Summary */}
