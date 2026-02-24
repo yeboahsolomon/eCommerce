@@ -363,6 +363,10 @@ export const api = {
     return request<{ orders: Order[]; pagination: Pagination }>('GET', '/seller/orders', undefined, { params });
   },
 
+  async updateSellerOrderStatus(orderId: string, status: string) {
+    return request<{ order: Order }>('PATCH', `/seller/orders/${orderId}/status`, { status });
+  },
+
   async getSellerWallet() {
     return request<{ wallet: any; transactions: any[]; history: any[] }>('GET', '/seller/wallet');
   },

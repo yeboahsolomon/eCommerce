@@ -127,7 +127,9 @@ export class SellerService {
       ordersToday,
       totalRevenue,
       pendingOrders,
-      lowStockProducts
+      lowStockProducts,
+      activeProducts,
+      recentOrdersDb
     ] = await Promise.all([
       prisma.sellerOrder.count({ where: { sellerId } }),
       prisma.sellerOrder.count({ 
@@ -144,21 +146,53 @@ export class SellerService {
           trackInventory: true,
           stockQuantity: { lte: 5 } // Hardcoded low stock for now
         }
+      }),
+      prisma.product.count({
+        where: { sellerId, isActive: true }
+      }),
+      prisma.sellerOrder.findMany({
+        where: { sellerId },
+        include: {
+          order: { select: { orderNumber: true } },
+          items: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
       })
     ]);
 
     return {
-      orders: {
-        total: totalOrders,
-        today: ordersToday,
-        pending: pendingOrders,
+      stats: {
+        totalSales: totalRevenue._sum.subtotalInPesewas || 0, // returned directly in pesewas
+        salesGrowth: 0, // placeholder
+        totalOrders,
+        ordersGrowth: 0, // placeholder
+        activeProducts,
+        productsGrowth: 0, // placeholder
+        rating: 0, // placeholder until reviews implemented
+        ratingCount: 0, // placeholder
       },
-      revenue: {
-        total: (totalRevenue._sum.subtotalInPesewas || 0) / 100,
-      },
-      inventory: {
-        lowStock: lowStockProducts,
-      }
+      recentOrders: recentOrdersDb.map(o => ({
+        id: o.id,
+        orderNumber: o.order.orderNumber,
+        status: o.status,
+        createdAt: o.createdAt,
+        totalAmount: o.totalInPesewas,
+        items: o.items.map(item => ({
+           id: item.id,
+           quantity: item.quantity,
+           price: item.unitPriceInPesewas,
+        })),
+      })),
+      salesChart: [
+        { name: 'Mon', sales: 0 },
+        { name: 'Tue', sales: 0 },
+        { name: 'Wed', sales: 0 },
+        { name: 'Thu', sales: 0 },
+        { name: 'Fri', sales: 0 },
+        { name: 'Sat', sales: 0 },
+        { name: 'Sun', sales: 0 },
+      ]
     };
   }
 
@@ -181,7 +215,10 @@ export class SellerService {
             select: {
               orderNumber: true,
               shippingFullName: true,
+              shippingPhone: true,
+              shippingStreetAddress: true,
               shippingCity: true,
+              shippingRegion: true,
               createdAt: true,
             }
           }
@@ -197,12 +234,25 @@ export class SellerService {
       orders: orders.map(o => ({
         id: o.id,
         orderNumber: o.order.orderNumber,
-        customerName: o.order.shippingFullName,
-        location: o.order.shippingCity,
         status: o.status,
-        date: o.createdAt,
-        total: o.totalInPesewas / 100,
-        items: o.items.length,
+        createdAt: o.createdAt,
+        totalAmount: o.totalInPesewas,
+        address: {
+          fullName: o.order.shippingFullName,
+          phone: o.order.shippingPhone,
+          streetAddress: o.order.shippingStreetAddress,
+          city: o.order.shippingCity,
+          region: o.order.shippingRegion,
+        },
+        items: o.items.map(item => ({
+          id: item.id,
+          quantity: item.quantity,
+          price: item.unitPriceInPesewas,
+          product: {
+            name: item.productName,
+            images: item.productImage ? [item.productImage] : [],
+          }
+        })),
       })),
       pagination: {
         page,

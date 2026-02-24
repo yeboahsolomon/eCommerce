@@ -99,7 +99,7 @@ function ProductCard({ product }: ProductCardProps) {
             src={product.image}
             alt={product.name}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
+            className="object-contain transition-transform duration-500 group-hover:scale-110 bg-white"
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
             loading="lazy"
           />

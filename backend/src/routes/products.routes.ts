@@ -357,7 +357,7 @@ router.post(
   validate(createProductSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const productData = req.body as CreateProductInput;
+      const { images, ...productData } = req.body as CreateProductInput & { images?: string[] };
       
       // Assign Seller ID
       let sellerId = productData.sellerId;
@@ -393,9 +393,17 @@ router.post(
           ...productData,
           slug,
           sellerId,
+          images: images && images.length > 0 ? {
+            create: images.map((url, index) => ({
+              url,
+              isPrimary: index === 0,
+              sortOrder: index,
+            }))
+          } : undefined,
         },
         include: {
           category: true,
+          images: { orderBy: { sortOrder: 'asc' } },
         },
       });
       
@@ -495,7 +503,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const updateData = req.body as UpdateProductInput;
+      const { images, ...updateData } = req.body as UpdateProductInput & { images?: string[] };
       
       // Check product exists
       const existingProduct = await prisma.product.findUnique({ where: { id } });
@@ -546,10 +554,26 @@ router.put(
         });
       }
       
+      // Handle images update if provided
+      if (images !== undefined) {
+        // Delete existing images and create new ones
+        await prisma.productImage.deleteMany({ where: { productId: id } });
+        if (images.length > 0) {
+          await prisma.productImage.createMany({
+            data: images.map((url, index) => ({
+              productId: id,
+              url,
+              isPrimary: index === 0,
+              sortOrder: index,
+            }))
+          });
+        }
+      }
+
       const product = await prisma.product.update({
         where: { id },
         data: updateData,
-        include: { category: true },
+        include: { category: true, images: { orderBy: { sortOrder: 'asc' } } },
       });
 
       // Invalidate caches

@@ -15,9 +15,7 @@ if (!fs.existsSync(productImagesDir)) {
   fs.mkdirSync(productImagesDir, { recursive: true });
 }
 
-// ==================== MULTER CONFIGURATION ====================
-
-const storage = multer.diskStorage({
+const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, productImagesDir);
   },
@@ -27,6 +25,8 @@ const storage = multer.diskStorage({
     cb(null, filename);
   },
 });
+
+const memoryStorage = multer.memoryStorage();
 
 // File filter - only allow images
 const imageFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
@@ -41,7 +41,15 @@ const imageFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFil
 
 // Single image upload (max 5MB)
 export const uploadSingleImage = multer({
-  storage,
+  storage: diskStorage,
+  fileFilter: imageFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+}).single('image');
+
+export const uploadSingleImageMemory = multer({
+  storage: memoryStorage,
   fileFilter: imageFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
@@ -50,7 +58,7 @@ export const uploadSingleImage = multer({
 
 // Multiple images upload (max 5 images, 5MB each)
 export const uploadMultipleImages = multer({
-  storage,
+  storage: diskStorage,
   fileFilter: imageFilter,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB per file
