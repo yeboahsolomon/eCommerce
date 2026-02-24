@@ -8,20 +8,20 @@ import { ApiError } from '../middleware/error.middleware.js';
 
 const router = Router();
 
-// ==================== LOCAL UPLOAD ROUTES ====================
+// ==================== IMAGE UPLOAD ROUTES ====================
 
-import { uploadSingleImage, getImageUrl } from '../middleware/multer.middleware.js';
+import { uploadSingleImageMemory } from '../middleware/multer.middleware.js';
 import { config } from '../config/env.js';
 
 /**
  * POST /api/upload/image
- * Generic image upload (Local Storage)
+ * Generic image upload to Cloudflare R2
  */
 router.post(
   '/image',
   authenticate,
   (req: Request, res: Response, next: NextFunction) => {
-    uploadSingleImage(req, res, (err: any) => {
+    uploadSingleImageMemory(req, res, async (err: any) => {
       if (err) return next(err);
       
       try {
@@ -29,14 +29,19 @@ router.post(
           throw new ApiError(400, 'No image file provided');
         }
 
-        const url = getImageUrl(req.file.filename, config.uploadsBaseUrl);
+        const ext = req.file.originalname.split('.').pop() || 'webp';
+        const uuid = uuidv4();
+        const sellerFolder = req.user?.sellerProfile?.id || req.user?.id || 'temp';
+        const key = `products/${sellerFolder}/${uuid}.${ext}`;
+
+        const url = await r2Service.uploadProcessedImage(req.file.buffer, key, req.file.mimetype);
 
         res.status(201).json({
           success: true,
           data: {
             url,
-            fileId: req.file.filename, // Local filename
-            publicId: req.file.filename, // Mock publicId for compatibility
+            fileId: key, // Use R2 key as fileId
+            publicId: key, // Mock publicId for compatibility
           },
         });
       } catch (error) {

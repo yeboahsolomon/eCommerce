@@ -17,11 +17,7 @@ import {
   Image as ImageIcon 
 } from "lucide-react";
 import { Category } from "@/types";
-import dynamic from "next/dynamic";
-import "react-quill/dist/quill.snow.css";
-
-// Dynamic import for Quill to avoid SSR issues
-const ReactQuill = dynamic(() => import("react-quill"), { ssr: false, loading: () => <p>Loading editor...</p> });
+// Removed ReactQuill imports
 
 const productSchema = z.object({
   name: z.string().min(3, "Product name is required"),
@@ -53,12 +49,12 @@ export default function ProductForm({ initialData, categories: initialCategories
     defaultValues: {
       name: initialData?.name || "",
       description: initialData?.description || "",
-      price: initialData?.price || "",
-      compareAtPrice: initialData?.compareAtPrice || "",
+      price: initialData?.priceInCedis || initialData?.price || "",
+      compareAtPrice: initialData?.comparePriceInCedis || initialData?.compareAtPrice || "",
       stockQuantity: initialData?.stockQuantity || 0,
       categoryId: initialData?.categoryId || "",
       isActive: initialData?.isActive ?? true,
-      images: initialData?.images || [],
+      images: initialData?.images?.map((img: any) => typeof img === 'string' ? img : img.url) || [],
     }
   });
 
@@ -121,11 +117,19 @@ export default function ProductForm({ initialData, categories: initialCategories
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
+      // Transform data for backend
+      const { price, compareAtPrice, ...restData } = data;
+      const payload = {
+        ...restData,
+        priceInPesewas: Math.round(Number(price) * 100),
+        ...(compareAtPrice ? { comparePriceInPesewas: Math.round(Number(compareAtPrice) * 100) } : {})
+      };
+
       let res;
       if (isEditing && initialData?.id) {
-        res = await api.updateProduct(initialData.id, data);
+        res = await api.updateProduct(initialData.id, payload);
       } else {
-        res = await api.createProduct(data);
+        res = await api.createProduct(payload);
       }
 
       if (res.success) {
@@ -183,20 +187,11 @@ export default function ProductForm({ initialData, categories: initialCategories
 
                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                  <div className="h-64 mb-12">
-                     <Controller
-                        name="description"
-                        control={control}
-                        render={({ field }) => (
-                           <ReactQuill 
-                              theme="snow" 
-                              value={field.value} 
-                              onChange={field.onChange} 
-                              className="h-48" 
-                           />
-                        )}
-                     />
-                  </div>
+                  <textarea 
+                     {...register("description")} 
+                     className="w-full h-48 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 resize-y" 
+                     placeholder="Detailed description of your product..."
+                  />
                   {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
                </div>
             </div>

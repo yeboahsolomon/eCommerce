@@ -112,6 +112,7 @@ export const createProductSchema = z.object({
   isActive: z.boolean().optional().default(true),
   isFeatured: z.boolean().optional().default(false),
   weightInGrams: z.number().int().positive().optional(),
+  images: z.array(z.string()).optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();
