@@ -9,7 +9,7 @@ import { Product, Review, ReviewSummary } from "@/types";
 import { toast } from "sonner";
 import { 
   Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, ChevronRight, 
-  Minus, Plus, Heart, Share2, ImageOff, Loader2, CheckCircle, BadgeCheck
+  Minus, Plus, Heart, Share2, ImageOff, Loader2, CheckCircle, BadgeCheck, X
 } from "lucide-react";
 import { use, useState, useEffect, useCallback } from "react";
 
@@ -22,6 +22,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [reviewSummary, setReviewSummary] = useState<ReviewSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   // Fetch product data from API
@@ -230,7 +231,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   </button>
                 </div>
 
-                <div className="relative w-full h-full">
+                <div 
+                  className="relative w-full h-full cursor-pointer"
+                  onClick={() => images.length > 0 && setIsModalOpen(true)}
+                  title="Click to view full image gallery"
+                >
                   {images.length > 0 ? (
                     <Image
                       src={images[selectedImage]?.url || images[0]?.url}
@@ -563,8 +568,72 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
              <div className="w-40">
                <AddToCartButton className="w-full" />
              </div>
-        </div>
+         </div>
       </div>
+
+      {/* ===== IMAGE GALLERY MODAL ===== */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 sm:p-6 md:p-12 backdrop-blur-sm animate-fade-in" style={{ animationDuration: '0.2s' }} onClick={() => setIsModalOpen(false)}>
+          <div className="bg-white rounded-lg w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden shadow-2xl relative animate-slide-up" style={{ animationDuration: '0.3s' }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-white z-10">
+              <h2 className="text-xl font-medium text-slate-800">Product Images</h2>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
+                aria-label="Close modal"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            {/* Main Image Area */}
+            <div className="flex-1 relative bg-white p-4 md:p-8 flex items-center justify-center overflow-hidden">
+              {images.length > 0 ? (
+                <div key={selectedImage} className="relative w-full h-full animate-fade-in" style={{ animationDuration: '0.3s' }}>
+                  <Image
+                    src={images[selectedImage]?.url || images[0]?.url}
+                    alt={images[selectedImage]?.altText || product.name}
+                    fill
+                    className="object-contain"
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 1024px"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-slate-400">
+                  <ImageOff className="h-24 w-24" />
+                </div>
+              )}
+            </div>
+
+            {/* Thumbnail Strip */}
+            {images.length > 1 && (
+              <div className="border-t border-slate-200 bg-white p-4 flex justify-center gap-3 overflow-x-auto min-h-[100px] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                {images.map((img, i) => (
+                  <button
+                    key={img.id}
+                    onClick={() => setSelectedImage(i)}
+                    className={`relative h-16 w-16 sm:h-20 sm:w-20 rounded overflow-hidden flex-shrink-0 border-2 transition-all ${
+                      selectedImage === i 
+                        ? "border-[#f68b1e] shadow-sm" 
+                        : "border-transparent hover:border-slate-300"
+                    }`}
+                  >
+                    <Image
+                      src={img.url}
+                      alt={img.altText || `${product.name} ${i + 1}`}
+                      fill
+                      className="object-contain p-1"
+                      sizes="80px"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
