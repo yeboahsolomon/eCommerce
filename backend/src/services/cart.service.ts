@@ -225,25 +225,18 @@ export class CartService {
      let cart = await prisma.cart.findUnique({ where: { userId } });
      if (!cart) cart = await prisma.cart.create({ data: { userId } });
 
-     const existing = await prisma.cartItem.findUnique({
-         where: { cartId_productId: { cartId: cart.id, productId: item.productId } }
+     await prisma.cartItem.upsert({
+         where: { cartId_productId: { cartId: cart.id, productId: item.productId } },
+         update: { quantity: { increment: item.quantity } },
+         create: {
+             cartId: cart.id,
+             productId: item.productId,
+             quantity: item.quantity,
+             priceAtAddInPesewas: product.priceInPesewas
+         }
      });
-
-     if (existing) {
-         return prisma.cartItem.update({
-             where: { id: existing.id },
-             data: { quantity: existing.quantity + item.quantity }
-         });
-     } else {
-         return prisma.cartItem.create({
-             data: {
-                 cartId: cart.id,
-                 productId: item.productId,
-                 quantity: item.quantity,
-                 priceAtAddInPesewas: product.priceInPesewas
-             }
-         });
-     }
+     
+     return this.getDbCart(userId);
   }
 
   private async updateDbItem(userId: string, productId: string, quantity: number) {
@@ -256,10 +249,11 @@ export class CartService {
       });
       if (!item) return null;
 
-      return prisma.cartItem.update({
+      await prisma.cartItem.update({
           where: { id: item.id },
           data: { quantity }
       });
+      return this.getDbCart(userId);
   }
 
   private async removeDbItem(userId: string, productId: string) {
@@ -268,12 +262,14 @@ export class CartService {
       await prisma.cartItem.deleteMany({
           where: { cartId: cart.id, productId }
       });
+      return this.getDbCart(userId);
   }
 
   private async clearDbCart(userId: string) {
       const cart = await prisma.cart.findUnique({ where: { userId } });
       if (!cart) return;
       await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+      return this.getDbCart(userId);
   }
 
 }
