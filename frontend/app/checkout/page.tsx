@@ -35,8 +35,8 @@ const GHANA_REGIONS = [
 ];
 
 export default function CheckoutPage() {
-  const { cart, subtotal, clearCart } = useCart();
-  const { user, isAuthenticated } = useAuth();
+  const { cart, subtotal, clearCart, isLoading: isCartLoading } = useCart();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const items = cart?.items || [];
   const totalPrice = subtotal;
   const router = useRouter();
@@ -45,12 +45,28 @@ export default function CheckoutPage() {
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [sellerPackages, setSellerPackages] = useState<any[]>([]);
 
-  // Redirect if empty
+  // Auth guard: redirect unauthenticated users to login
   useEffect(() => {
-    if (items.length === 0) {
+    if (!isAuthLoading && !isAuthenticated) {
+      router.push("/auth/login?redirect=/checkout");
+    }
+  }, [isAuthLoading, isAuthenticated, router]);
+
+  // Redirect if empty cart
+  useEffect(() => {
+    if (!isCartLoading && !isAuthLoading && isAuthenticated && items.length === 0) {
       router.push("/cart");
     }
-  }, [items, router]);
+  }, [items, router, isCartLoading, isAuthLoading, isAuthenticated]);
+
+  // Show loading while auth is being checked
+  if (isAuthLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   const {
     register,
@@ -196,18 +212,6 @@ export default function CheckoutPage() {
                 <p className="font-medium text-sm">Order could not be placed</p>
                 <p className="text-sm mt-1">{orderError}</p>
               </div>
-            </div>
-          )}
-
-          {/* Login prompt for guests */}
-          {!isAuthenticated && (
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-center justify-between">
-              <p className="text-sm text-blue-800">
-                <span className="font-medium">Already have an account?</span> Sign in for a faster checkout.
-              </p>
-              <Link href="/auth/login?redirect=/checkout" className="text-sm font-bold text-blue-600 hover:underline flex-shrink-0 ml-4">
-                Sign In
-              </Link>
             </div>
           )}
 
