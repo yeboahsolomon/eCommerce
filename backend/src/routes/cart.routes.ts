@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../config/database.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { authenticate } from '../middleware/auth.middleware.js';
+import { authenticate, optionalAuth } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { cartService } from '../services/cart.service.js';
 import { addToCartSchema, updateCartItemSchema, AddToCartInput, UpdateCartItemInput } from '../utils/validators.js';
@@ -14,7 +14,7 @@ const router = Router();
  */
 router.get(
   '/',
-  // authenticate, // Allow guest
+  optionalAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user?.id || null;
@@ -45,7 +45,7 @@ router.get(
  */
 router.post(
   '/items',
-  // authenticate, // Allow guest
+  optionalAuth,
   validate(addToCartSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -81,7 +81,7 @@ router.post(
  */
 router.put(
   '/items/:id',
-  // authenticate,
+  optionalAuth,
   validate(updateCartItemSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -117,6 +117,7 @@ router.put(
 // DELETE /items/:id (id is now productId)
 router.delete(
   '/items/:id',
+  optionalAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params; // productId
@@ -138,6 +139,7 @@ router.delete(
 
 router.delete(
   '/',
+  optionalAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = (req as any).user?.id || null;
@@ -157,20 +159,34 @@ router.delete(
 
 /**
  * POST /api/cart/merge
- * Merge guest cart into user cart
+ * Merge guest cart items (from localStorage) into authenticated user's DB cart
  */
 router.post(
     '/merge',
     authenticate,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { sessionId } = req.body;
-            if (!sessionId) throw new ApiError(400, 'Session ID required');
-            
-            await cartService.mergeCarts(req.user!.id, sessionId);
-            
-            const cart = await cartService.getCart(req.user!.id, sessionId); // Fetch DB cart
-             res.json({
+            const { items } = req.body;
+            if (!items || !Array.isArray(items) || items.length === 0) {
+                // Nothing to merge, just return the current DB cart
+                const cart = await cartService.getCart(req.user!.id, '');
+                return res.json({ success: true, message: 'Nothing to merge', data: { cart } });
+            }
+
+            // Merge each guest item into the DB cart
+            for (const item of items) {
+                if (item.productId && item.quantity > 0) {
+                    try {
+                        await cartService.addItem(req.user!.id, '', { productId: item.productId, quantity: item.quantity });
+                    } catch (e) {
+                        // Skip invalid products silently
+                        console.warn(`Merge: skipped product ${item.productId}`, e);
+                    }
+                }
+            }
+
+            const cart = await cartService.getCart(req.user!.id, '');
+            res.json({
                 success: true,
                 message: 'Carts merged',
                 data: { cart }
