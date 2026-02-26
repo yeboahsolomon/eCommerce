@@ -88,19 +88,26 @@ export default function CheckoutPage() {
   const watchRegion = watch("region");
   const watchCity = watch("city");
 
-  // Fetch dynamic delivery fee
-  useEffect(() => {
-    let isMounted = true;
+  // Stable reference for item count to avoid infinite re-renders
+  const itemCount = cart?.items?.length ?? 0;
 
-    async function calculateShipping() {
-      if (!items || items.length === 0) return;
-      
+  // Calculate delivery fee when buyer selects region/city
+  useEffect(() => {
+    // Don't calculate until the buyer has at least selected a region
+    if (!watchRegion || itemCount === 0) {
+      setDeliveryFee(0);
+      setSellerPackages([]);
+      return;
+    }
+
+    let isMounted = true;
+    const debounceTimer = setTimeout(async () => {
       setIsCalculatingShipping(true);
       try {
         const res = await api.calculateCheckout({
-          shippingRegion: watchRegion || undefined,
+          shippingRegion: watchRegion,
           shippingCity: watchCity || undefined,
-          currentCart: { items }
+          currentCart: { items: cart?.items || [] }
         });
         
         if (res.success && res.data && isMounted) {
@@ -114,14 +121,13 @@ export default function CheckoutPage() {
       } finally {
         if (isMounted) setIsCalculatingShipping(false);
       }
-    }
+    }, 400); // Debounce 400ms so city typing doesn't spam the API
 
-    calculateShipping();
-    
     return () => {
       isMounted = false;
+      clearTimeout(debounceTimer);
     };
-  }, [watchRegion, watchCity, items]);
+  }, [watchRegion, watchCity, itemCount]);
 
   const grandTotal = totalPrice + deliveryFee;
 
@@ -282,7 +288,14 @@ export default function CheckoutPage() {
                     <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
                       <span className="text-xs font-bold text-slate-800">Package {index + 1}: {group.name}</span>
                       <span className="text-xs text-slate-500">
-                        Shipping: {pkgShipping === 0 ? <span className="text-green-600 font-medium">calculating...</span> : `₵${pkgShipping.toLocaleString()}`}
+                        Shipping:{' '}
+                        {isCalculatingShipping ? (
+                          <span className="text-slate-400 italic">calculating...</span>
+                        ) : !watchRegion ? (
+                          <span className="text-slate-400 italic">select region</span>
+                        ) : (
+                          <span className="font-medium">₵{(pkgInfo?.shippingInCedis ?? pkgShipping).toLocaleString()}</span>
+                        )}
                       </span>
                     </div>
                     <div className="space-y-3">
