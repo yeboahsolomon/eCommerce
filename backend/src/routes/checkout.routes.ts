@@ -1,7 +1,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../config/database.js';
-import { authenticate } from '../middleware/auth.middleware.js';
+import { authenticate, optionalAuth } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { deliveryService } from '../services/delivery.service.js';
 import { paymentService } from '../services/payment.service.js';
@@ -17,6 +17,7 @@ const router = Router();
  */
 router.post(
   '/calculate',
+  optionalAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { shippingRegion, shippingCity, currentCart } = req.body;
