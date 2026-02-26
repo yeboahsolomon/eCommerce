@@ -21,13 +21,13 @@ export default function CartItemRow({ item }: Props) {
   return (
     <div className="flex gap-4 py-6 border-b border-slate-100 last:border-0">
       {/* Product Image */}
-      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-slate-200">
+      <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
         {item.product.image ? (
           <Image
             src={item.product.image}
             alt={item.product.name}
             fill
-            className="object-cover"
+            className="object-contain p-1"
             sizes="96px"
           />
         ) : (

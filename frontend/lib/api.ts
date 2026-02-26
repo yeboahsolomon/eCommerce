@@ -143,6 +143,10 @@ export const api = {
     return request<{ cart: Cart }>('DELETE', '/cart');
   },
 
+  async mergeCart(localCart: { items: { productId: string; quantity: number }[] }) {
+    return request<{ cart: Cart }>('POST', '/cart/merge', { items: localCart.items });
+  },
+
   // ==================== WISHLIST ====================
 
   async getWishlist() {

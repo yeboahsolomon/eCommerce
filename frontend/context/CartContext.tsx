@@ -1,18 +1,32 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { Cart, CartContextType, Product } from "@/types";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+
+const CART_STORAGE_KEY = "ghana-market-cart";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 // Helper to ensure Cart object always has calculated totals
 function normalizeCart(serverCart: any): Cart {
   if (!serverCart) return null as unknown as Cart;
-  const items = serverCart.items || [];
+  const rawItems = serverCart.items || [];
   
+  // Flatten product.images array into product.image for the UI
+  const items = rawItems.map((item: any) => {
+    const product = item.product || {};
+    return {
+      ...item,
+      product: {
+        ...product,
+        image: product.image || (product.images && product.images[0] ? product.images[0].url : null),
+      }
+    };
+  });
+
   // User explicitly requested the counter to represent the NUMBER OF DISTINCT ITEMS
   // instead of the raw total quantity sum
   const itemCount = items.length;
@@ -33,45 +47,81 @@ function normalizeCart(serverCart: any): Cart {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const wasAuthenticated = useRef<boolean | null>(null);
 
-  // Load Cart
+  // Load & merge cart on auth changes
   useEffect(() => {
+    // Wait for the auth check to finish before doing anything
+    if (isAuthLoading) return;
+
     const loadCart = async () => {
       setIsLoading(true);
+
       if (isAuthenticated) {
+        // Detect guest → authenticated transition: merge localStorage cart
+        if (wasAuthenticated.current === false) {
+          const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+          if (savedCart) {
+            try {
+              const parsed = JSON.parse(savedCart);
+              const guestItems = (parsed.items || []).map((item: any) => ({
+                productId: item.productId,
+                quantity: item.quantity || 1,
+              }));
+              if (guestItems.length > 0) {
+                await api.mergeCart({ items: guestItems });
+              }
+            } catch (e) {
+              console.error("Failed to merge guest cart:", e);
+            }
+            localStorage.removeItem(CART_STORAGE_KEY);
+          }
+        }
+
+        // Fetch the server cart (includes any merged items)
         try {
           const res = await api.getCart();
           if (res.success && res.data?.cart) {
-             setCart(normalizeCart(res.data.cart));
+            setCart(normalizeCart(res.data.cart));
           }
         } catch (error) {
-           console.error("Failed to load server cart", error);
+          console.error("Failed to load server cart", error);
         }
       } else {
-        // Local Storage fallback
-        const savedCart = localStorage.getItem("ghana-market-cart");
-        if (savedCart) {
-          try {
-            const parsedCart = JSON.parse(savedCart);
-            if (!parsedCart.items) parsedCart.items = [];
-            setCart(parsedCart);
-          } catch (error) {
-            console.error("Failed to parse cart", error);
-            localStorage.removeItem("ghana-market-cart");
+        // Detect authenticated → guest transition (logout): preserve cart items
+        if (wasAuthenticated.current === true && cart && cart.items && cart.items.length > 0) {
+          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+          // Cart is already in state, no need to re-set
+        } else {
+          // Guest: load from localStorage
+          const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+          if (savedCart) {
+            try {
+              const parsedCart = JSON.parse(savedCart);
+              if (!parsedCart.items) parsedCart.items = [];
+              setCart(parsedCart);
+            } catch (error) {
+              console.error("Failed to parse cart", error);
+              localStorage.removeItem(CART_STORAGE_KEY);
+            }
+          } else {
+            setCart(null);
           }
         }
       }
+
+      wasAuthenticated.current = isAuthenticated;
       setIsLoading(false);
     };
 
     loadCart();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isAuthLoading]);
 
   // Save Cart to LocalStorage (only if Guest)
   useEffect(() => {
     if (!isLoading && !isAuthenticated && cart) {
-      localStorage.setItem("ghana-market-cart", JSON.stringify(cart));
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
     }
   }, [cart, isLoading, isAuthenticated]);
 
@@ -167,7 +217,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const item = cart.items.find((i) => i.productId === productId);
         if (item) {
             try {
-                const res = await api.removeFromCart(item.id); 
+                const res = await api.removeFromCart(productId); 
                 if (res.success && res.data?.cart) {
                      setCart(normalizeCart(res.data.cart));
                 } else {
@@ -216,7 +266,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const item = cart.items.find((i) => i.productId === productId);
         if (item) {
             try {
-             const res = await api.updateCartItem(item.id, quantity);
+             const res = await api.updateCartItem(productId, quantity);
              if (res.success && res.data?.cart) {
                  setCart(normalizeCart(res.data.cart));
              }
