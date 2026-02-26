@@ -39,7 +39,7 @@ router.post(
 
       let subtotal = 0;
       let totalShipping = 0;
-      const sellerGroups: any = {};
+      const sellerGroups: Record<string, { items: any[]; region: string; city: string; subtotal: number }> = {};
 
       for (const item of cart.items) {
           const product = products.find(p => p.id === item.productId);
@@ -49,7 +49,8 @@ router.post(
           if (!sellerGroups[sellerId]) {
               sellerGroups[sellerId] = { 
                   items: [], 
-                  region: product.seller?.ghanaRegion,
+                  region: product.seller?.ghanaRegion || '',
+                  city: product.seller?.businessAddress || '',
                   subtotal: 0 
               };
           }
@@ -61,10 +62,9 @@ router.post(
 
       const sellerBreakdown = [];
       for (const [sellerId, group] of Object.entries(sellerGroups)) {
-          const g = group as any;
           const fee = deliveryService.calculateFee(
-              g.region || '',
-              null,
+              group.region,
+              group.city,
               shippingRegion || '',
               shippingCity || ''
           );
@@ -72,9 +72,10 @@ router.post(
           totalShipping += fee;
           sellerBreakdown.push({
               sellerId,
-              subtotal: g.subtotal,
+              subtotal: group.subtotal,
               shipping: fee,
-              total: g.subtotal + fee
+              shippingInCedis: fee / 100,
+              total: group.subtotal + fee
           });
       }
 
