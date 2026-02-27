@@ -838,6 +838,25 @@ model InventoryLog {
   @@index([createdAt])
 }
 
+// Admin audit trail - logs all admin actions
+model AdminActivityLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  adminEmail String
+  action     String   // "APPROVE_APPLICATION", "REJECT_APPLICATION", "SUSPEND_SELLER", etc.
+  entityType String   // "seller_application", "seller", "user", "order", "product"
+  entityId   String
+  details    Json?    // Additional context (reason, notes, previous values, etc.)
+  ipAddress  String?
+
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}
+
 // Coupon/Discount codes
 model Coupon {
   id   String @id @default(cuid())
