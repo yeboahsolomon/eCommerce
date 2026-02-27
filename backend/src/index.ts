@@ -27,6 +27,7 @@ import sellerRoutes from './routes/seller.routes.js';
 import sellerAnalyticsRoutes from './routes/seller-analytics.routes.js';
 import userRoutes from './routes/user.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import payoutRoutes from './routes/payout.routes.js';
 
 const app = express();
 
@@ -90,7 +91,8 @@ app.get('/api/health', (req, res) => {
       'products',
       'cart',
       'orders',
-      'payments (MTN MoMo)',
+      'payments (Paystack + MTN MoMo)',
+      'seller payouts',
       'wishlist',
       'reviews',
       'search',
@@ -112,6 +114,7 @@ app.use('/api/orders', orderRoutes);
 
 // New feature routes
 app.use('/api/payments', paymentRoutes);
+app.use('/api/payouts', payoutRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewRoutes);
@@ -151,7 +154,8 @@ app.listen(config.port, () => {
 ║   • Products:  /api/products                              ║
 ║   • Cart:      /api/cart                                  ║
 ║   • Orders:    /api/orders                                ║
-║   • Payments:  /api/payments (MTN MoMo)                   ║
+║   • Payments:  /api/payments (Paystack + MoMo)             ║
+║   • Payouts:   /api/payouts                                ║
 ║   • Wishlist:  /api/wishlist                              ║
 ║   • Reviews:   /api/reviews                               ║
 ║   • Search:    /api/search                                ║

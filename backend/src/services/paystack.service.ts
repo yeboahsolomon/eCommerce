@@ -297,6 +297,214 @@ class PaystackService {
   getPublicKey(): string {
     return this.publicKey || 'pk_test_xxxxxxxxxxxxxxxxxxxxxx';
   }
+
+  // ==================== MOBILE MONEY PROVIDER CODES ====================
+
+  /**
+   * Map our provider names to Paystack's bank codes for Ghana MoMo
+   * Reference: https://paystack.com/docs/transfers/creating-transfer-recipients
+   */
+  getMomoProviderCode(provider: string): string {
+    const codes: Record<string, string> = {
+      'MTN': 'MPS',           // MTN Mobile Money
+      'mtn': 'MPS',
+      'TELECEL': 'VDF',       // Telecel (ex-Vodafone Cash)
+      'telecel': 'VDF',
+      'vodafone': 'VDF',
+      'VODAFONE': 'VDF',
+      'AIRTELTIGO': 'ATL',    // AirtelTigo Money
+      'airteltigo': 'ATL',
+    };
+    return codes[provider] || 'MPS'; // Default to MTN
+  }
+
+  /**
+   * Get display name for a provider code
+   */
+  getProviderDisplayName(provider: string): string {
+    const names: Record<string, string> = {
+      'MTN': 'MTN Mobile Money',
+      'mtn': 'MTN Mobile Money',
+      'TELECEL': 'Telecel Cash',
+      'telecel': 'Telecel Cash',
+      'vodafone': 'Telecel Cash',
+      'AIRTELTIGO': 'AirtelTigo Money',
+      'airteltigo': 'AirtelTigo Money',
+    };
+    return names[provider] || provider;
+  }
+
+  // ==================== PAYSTACK TRANSFERS (PAYOUTS) ====================
+
+  /**
+   * Create a transfer recipient (for seller payouts via MoMo)
+   * Must be created before initiating a transfer
+   */
+  async createTransferRecipient(params: {
+    name: string;
+    accountNumber: string;   // MoMo phone number (e.g., 0241234567)
+    bankCode: string;        // Paystack provider code (MPS, VDF, ATL)
+    type?: string;           // 'mobile_money' or 'nuban'
+    currency?: string;
+  }): Promise<{ recipientCode: string; details: any }> {
+    // Dev sandbox
+    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+      const mockCode = `RCP_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      console.log('💳 [Paystack Sandbox] Created transfer recipient:', {
+        name: params.name,
+        number: params.accountNumber,
+        bankCode: params.bankCode,
+        recipientCode: mockCode,
+      });
+      return {
+        recipientCode: mockCode,
+        details: {
+          type: params.type || 'mobile_money',
+          name: params.name,
+          account_number: params.accountNumber,
+          bank_code: params.bankCode,
+        },
+      };
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/transferrecipient`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.secretKey}`,
+        },
+        body: JSON.stringify({
+          type: params.type || 'mobile_money',
+          name: params.name,
+          account_number: params.accountNumber,
+          bank_code: params.bankCode,
+          currency: params.currency || 'GHS',
+        }),
+      });
+
+      const data = await response.json() as any;
+      if (!data.status) {
+        throw new Error(data.message || 'Failed to create transfer recipient');
+      }
+
+      return {
+        recipientCode: data.data.recipient_code,
+        details: data.data,
+      };
+    } catch (error) {
+      console.error('Paystack create recipient error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Initiate a transfer (payout) to a recipient
+   * @param amountInPesewas Amount in pesewas (smallest unit)
+   */
+  async initiateTransfer(params: {
+    amountInPesewas: number;
+    recipientCode: string;
+    reason?: string;
+    reference?: string;
+  }): Promise<{ transferCode: string; reference: string; status: string }> {
+    const reference = params.reference || this.generateReference('PAYOUT');
+
+    // Dev sandbox
+    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+      const mockCode = `TRF_${Date.now()}`;
+      console.log('💳 [Paystack Sandbox] Transfer initiated:', {
+        amount: params.amountInPesewas / 100,
+        recipient: params.recipientCode,
+        reference,
+        transferCode: mockCode,
+      });
+      return {
+        transferCode: mockCode,
+        reference,
+        status: 'pending',
+      };
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/transfer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.secretKey}`,
+        },
+        body: JSON.stringify({
+          source: 'balance',
+          amount: params.amountInPesewas,
+          recipient: params.recipientCode,
+          reason: params.reason || 'Seller payout',
+          reference,
+        }),
+      });
+
+      const data = await response.json() as any;
+      if (!data.status) {
+        throw new Error(data.message || 'Failed to initiate transfer');
+      }
+
+      return {
+        transferCode: data.data.transfer_code,
+        reference: data.data.reference || reference,
+        status: data.data.status,
+      };
+    } catch (error) {
+      console.error('Paystack transfer error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify a transfer status
+   */
+  async verifyTransfer(reference: string): Promise<{
+    status: string;
+    amount: number;
+    recipientCode: string;
+    reason: string;
+  }> {
+    // Dev sandbox
+    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+      console.log('💳 [Paystack Sandbox] Verifying transfer:', reference);
+      return {
+        status: 'success',
+        amount: 5000,
+        recipientCode: 'RCP_mock',
+        reason: 'Seller payout',
+      };
+    }
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/transfer/verify/${encodeURIComponent(reference)}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${this.secretKey}`,
+          },
+        }
+      );
+
+      const data = await response.json() as any;
+      if (!data.status) {
+        throw new Error(data.message || 'Transfer verification failed');
+      }
+
+      return {
+        status: data.data.status,
+        amount: data.data.amount,
+        recipientCode: data.data.recipient?.recipient_code,
+        reason: data.data.reason,
+      };
+    } catch (error) {
+      console.error('Paystack verify transfer error:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

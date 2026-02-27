@@ -342,6 +342,46 @@ class EmailService {
       `,
     });
   }
+
+  // ============================================================
+  // PAYMENT EMAILS
+  // ============================================================
+
+  /**
+   * Send payment confirmation email
+   */
+  async sendPaymentConfirmationEmail(to: string, name: string, orderNumber: string, amountInCedis: string, paymentMethod: string): Promise<void> {
+    const orderUrl = `${config.frontendUrl}/orders`;
+
+    await this.send({
+      to,
+      subject: `Payment Confirmed — Order ${orderNumber}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #059669;">Payment Confirmed! 🎉</h2>
+          <p>Hi ${name},</p>
+          <p>Your payment of <strong>₵${amountInCedis}</strong> for order <strong>${orderNumber}</strong> has been received.</p>
+          
+          <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin: 20px 0;">
+            <p style="margin: 0 0 8px;"><strong>Payment Method:</strong> ${paymentMethod.replace(/_/g, ' ')}</p>
+            <p style="margin: 0;"><strong>Order Number:</strong> ${orderNumber}</p>
+          </div>
+
+          <p>Your order is now being processed. You'll be notified when sellers start preparing your items.</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${orderUrl}" 
+               style="background-color: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Track Your Order
+            </a>
+          </div>
+          <p style="color: #666; font-size: 13px;">Thank you for shopping on GhanaMarket! 🤝</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace 🇬🇭</p>
+        </div>
+      `,
+    });
+  }
 }
 
 // Singleton instance
