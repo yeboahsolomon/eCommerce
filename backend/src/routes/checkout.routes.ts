@@ -4,7 +4,7 @@ import prisma from '../config/database.js';
 import { authenticate, optionalAuth } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { deliveryService } from '../services/delivery.service.js';
-import { paymentService } from '../services/payment.service.js';
+import { paystackService } from '../services/paystack.service.js';
 import { cartService } from '../services/cart.service.js';
 import { createOrderSchema, CreateOrderInput } from '../utils/validators.js';
 import { validate } from '../middleware/validate.middleware.js';
@@ -268,38 +268,20 @@ router.post(
        // 5. Paystack
        if (orderData.paymentMethod !== 'CASH_ON_DELIVERY') {
            try {
-             const paymentInit = await paymentService.initializeTransaction({
-               email: orderData.customerEmail,
-               amount: total * 100, // Paystack expects lowest currency unit? 
-               // Wait, my `total` IS in pesewas (lowest unit).
-               // My `PaymentService` expects amount. 
-               // Paystack takes amount in kobo/pesewas.
-               // So if `total` is 1000 (10 GHS), I pass 1000.
-               // Verify `PaymentService` implementation: `amount: params.amount.toString()`.
-               // So `total` is correct.
-               // Wait... Paystack GHS currency. "Amount should be in kobo" (or pesewas).
-               // 1 GHS = 100 Pesewas.
-               // My schema stores `totalInPesewas`.
-               // So passing `total` directly is correct.
-               // BUT `create-order` logic passed `total`.
-               // Let's verify.
-               // Yes, `total` is pesewas.
-               
-               // But wait, in `PaymentService` I commented "usually number in lowest denomination".
-               // So `total` is correct.
-               
-               // Double check PaymentService `initializeTransaction` implementation I wrote in Step 375:
-               // `amount: params.amount.toString()`.
-               
-               // So passing `total` is correct.
-               
-               metadata: { orderId: order.id, orderNumber: order.orderNumber }
-             });
-             
-             return res.json({
-               success: true,
-               data: { order, paymentUrl: paymentInit.authorization_url, reference: paymentInit.reference }
-             });
+              const reference = paystackService.generateReference();
+              const paymentInit = await paystackService.initializeTransaction({
+                email: orderData.customerEmail,
+                amount: total,
+                reference,
+                currency: 'GHS',
+                metadata: { orderId: order.id, userId },
+                channels: ['card', 'mobile_money'],
+              });
+              
+              return res.json({
+                success: true,
+                data: { order, paymentUrl: paymentInit.data.authorization_url, reference: paymentInit.data.reference }
+              });
            } catch(e) {
                console.error("Payment Init Failed", e);
                // Order created but payment failed init.
