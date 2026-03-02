@@ -1,0 +1,44 @@
+<h2>New Order Received! 🔔</h2>
+
+<p>Hi {{sellerName}},</p>
+
+<p>You have a new order on GhanaMarket!</p>
+
+<div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 16px 0;">
+  <h3 style="margin: 0 0 12px; color: #1a1a2e;">Order #{{orderNumber}}</h3>
+  <div class="summary-row"><strong>Customer:</strong> {{customerName}}</div>
+  <div class="summary-row"><strong>Region:</strong> {{customerRegion}}</div>
+  <div class="summary-row"><strong>Order Total:</strong> GH₵ {{orderTotal}}</div>
+  <div class="summary-row"><strong>Your Payout:</strong> <strong style="color: #059669;">GH₵ {{payoutAmount}}</strong></div>
+</div>
+
+<h3>Items to Prepare:</h3>
+<table class="order-table">
+  {{#each items}}
+  <tr>
+    <td>
+      <strong>{{this.name}}</strong>
+      {{#if this.sku}}<br><small style="color: #6b7280;">SKU: {{this.sku}}</small>{{/if}}
+    </td>
+    <td style="text-align: right;">
+      Qty: <strong>{{this.quantity}}</strong>
+    </td>
+  </tr>
+  {{/each}}
+</table>
+
+<h3>Delivery Address:</h3>
+<div class="warning-box">
+  <p style="margin: 0;">
+    {{deliveryName}}<br>
+    {{deliveryAddress}}<br>
+    {{deliveryCity}}, {{deliveryRegion}}<br>
+    📞 {{deliveryPhone}}
+  </p>
+</div>
+
+<div style="text-align: center;">
+  <a href="{{platformUrl}}/seller/orders" class="btn">Process Order</a>
+</div>
+
+<p style="color: #6b7280; font-size: 13px;">Please prepare and ship this order within 2 business days to maintain your seller rating.</p>

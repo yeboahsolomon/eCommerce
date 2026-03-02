@@ -1,0 +1,37 @@
+<h2>Your Order Has Shipped! 🚚</h2>
+
+<p>Hi {{customerName}},</p>
+
+<p>Great news! Your order <strong>#{{orderNumber}}</strong> has been shipped by <strong>{{sellerName}}</strong>.</p>
+
+<div class="success-box">
+  <div class="summary-row"><strong>Tracking Number:</strong> {{#if trackingNumber}}{{trackingNumber}}{{else}}N/A{{/if}}</div>
+  <div class="summary-row"><strong>Shipping Method:</strong> {{#if shippingMethod}}{{shippingMethod}}{{else}}Standard Delivery{{/if}}</div>
+  <div class="summary-row"><strong>Estimated Delivery:</strong> {{#if estimatedDelivery}}{{estimatedDelivery}}{{else}}2–5 business days{{/if}}</div>
+</div>
+
+<h3>Items Shipped:</h3>
+<table class="order-table">
+  {{#each items}}
+  <tr>
+    <td>
+      <strong>{{this.name}}</strong>
+    </td>
+    <td style="text-align: right;">
+      Qty: {{this.quantity}}
+    </td>
+  </tr>
+  {{/each}}
+</table>
+
+{{#if trackingUrl}}
+<div style="text-align: center;">
+  <a href="{{trackingUrl}}" class="btn btn-green">Track Shipment</a>
+</div>
+{{/if}}
+
+<div style="text-align: center;">
+  <a href="{{platformUrl}}/orders" class="btn">View Order Details</a>
+</div>
+
+<p>If you have any questions about your delivery, contact the seller or our support team.</p>

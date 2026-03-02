@@ -1,17 +1,175 @@
 import nodemailer from 'nodemailer';
+import Handlebars from 'handlebars';
+import fs from 'fs';
+import path from 'path';
 import { config } from '../config/env.js';
+import { prisma } from '../config/database.js';
 
 // ============================================================
-// Email Service
-// Sends verification and password reset emails.
-// In development mode, logs to console instead of sending.
+// Email Service — Template-based with Handlebars
+// Supports logging, retry queue, and Ghana-specific branding
 // ============================================================
 
-interface EmailOptions {
+// ==================== HANDLEBARS HELPERS ====================
+
+Handlebars.registerHelper('formatCedis', (pesewas: number) => {
+  return (pesewas / 100).toFixed(2);
+});
+
+Handlebars.registerHelper('formatPhone', (phone: string) => {
+  if (!phone) return '';
+  // Convert 0241234567 → +233 24 123 4567
+  if (phone.startsWith('0') && phone.length === 10) {
+    return `+233 ${phone.slice(1, 3)} ${phone.slice(3, 6)} ${phone.slice(6)}`;
+  }
+  return phone;
+});
+
+Handlebars.registerHelper('formatPaymentMethod', (method: string) => {
+  const map: Record<string, string> = {
+    MOMO_MTN: 'MTN Mobile Money',
+    MOMO_VODAFONE: 'Telecel Cash',
+    MOMO_AIRTELTIGO: 'AirtelTigo Money',
+    CARD: 'Card Payment',
+    BANK_TRANSFER: 'Bank Transfer',
+    CASH_ON_DELIVERY: 'Cash on Delivery',
+  };
+  return map[method] || method?.replace(/_/g, ' ') || 'N/A';
+});
+
+Handlebars.registerHelper('formatDate', (date: string | Date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Africa/Accra',
+  });
+});
+
+Handlebars.registerHelper('eq', (a: any, b: any) => a === b);
+Handlebars.registerHelper('gt', (a: any, b: any) => a > b);
+
+// ==================== TYPES ====================
+
+interface SendOptions {
   to: string;
   subject: string;
-  html: string;
+  template: string;
+  context: Record<string, any>;
+  metadata?: Record<string, any>;
 }
+
+interface RetryJob {
+  options: SendOptions;
+  attempts: number;
+  logId: string;
+}
+
+// ==================== TEMPLATE CACHE ====================
+
+const templateCache = new Map<string, Handlebars.TemplateDelegate>();
+let baseLayoutTemplate: Handlebars.TemplateDelegate | null = null;
+
+function getTemplatesDir(): string {
+  return path.join(__dirname, '..', 'templates');
+}
+
+function loadBaseLayout(): Handlebars.TemplateDelegate {
+  if (baseLayoutTemplate) return baseLayoutTemplate;
+
+  const layoutPath = path.join(getTemplatesDir(), 'layouts', 'base.hbs');
+  if (fs.existsSync(layoutPath)) {
+    const source = fs.readFileSync(layoutPath, 'utf-8');
+    baseLayoutTemplate = Handlebars.compile(source);
+  } else {
+    // Fallback: simple wrapper
+    baseLayoutTemplate = Handlebars.compile(
+      '<div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">{{{body}}}</div>'
+    );
+  }
+  return baseLayoutTemplate;
+}
+
+function loadTemplate(name: string): Handlebars.TemplateDelegate {
+  if (templateCache.has(name)) return templateCache.get(name)!;
+
+  const templatePath = path.join(getTemplatesDir(), `${name}.hbs`);
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Email template not found: ${name}`);
+  }
+
+  const source = fs.readFileSync(templatePath, 'utf-8');
+  const compiled = Handlebars.compile(source);
+  templateCache.set(name, compiled);
+  return compiled;
+}
+
+function renderEmail(template: string, context: Record<string, any>): string {
+  // Common context variables
+  const fullContext = {
+    ...context,
+    currentYear: new Date().getFullYear(),
+    platformName: 'GhanaMarket',
+    platformUrl: config.frontendUrl,
+    supportEmail: 'support@ghanamarket.com',
+  };
+
+  // Render content template
+  const contentTemplate = loadTemplate(template);
+  const body = contentTemplate(fullContext);
+
+  // Wrap in base layout
+  const layout = loadBaseLayout();
+  return layout({ ...fullContext, body });
+}
+
+// ==================== RETRY QUEUE ====================
+
+const retryQueue: RetryJob[] = [];
+let retryTimerActive = false;
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 5000;
+
+function scheduleRetry(job: RetryJob) {
+  retryQueue.push(job);
+  if (!retryTimerActive) {
+    retryTimerActive = true;
+    processRetryQueue();
+  }
+}
+
+async function processRetryQueue() {
+  while (retryQueue.length > 0) {
+    const job = retryQueue.shift()!;
+    const delay = BASE_DELAY_MS * Math.pow(2, job.attempts - 1); // Exponential backoff
+    await new Promise((r) => setTimeout(r, delay));
+
+    try {
+      await emailService.sendDirect(job.options);
+      // Update log on success
+      await (prisma as any).emailLog.update({
+        where: { id: job.logId },
+        data: { status: 'sent', sentAt: new Date(), attempts: job.attempts + 1 },
+      }).catch(() => {});
+    } catch (error: any) {
+      if (job.attempts + 1 < MAX_RETRIES) {
+        scheduleRetry({ ...job, attempts: job.attempts + 1 });
+      } else {
+        // Final failure
+        await (prisma as any).emailLog.update({
+          where: { id: job.logId },
+          data: { status: 'failed', errorMessage: error.message, attempts: job.attempts + 1 },
+        }).catch(() => {});
+        console.error(`❌ Email permanently failed after ${MAX_RETRIES} attempts:`, job.options.to, job.options.template);
+      }
+    }
+  }
+  retryTimerActive = false;
+}
+
+// ==================== EMAIL SERVICE ====================
 
 class EmailService {
   private transporter: nodemailer.Transporter | null = null;
@@ -33,17 +191,74 @@ class EmailService {
     }
   }
 
+  // ==================== CORE SEND ====================
+
   /**
-   * Send an email. In dev mode, logs to console.
+   * Send an email using a Handlebars template.
+   * Logs to DB, retries on failure, logs to console in dev.
    */
-  private async send(options: EmailOptions): Promise<void> {
+  async sendTemplateEmail(options: SendOptions): Promise<void> {
+    const { to, subject, template, context, metadata } = options;
+
+    // Create log entry
+    let logId: string | undefined;
+    try {
+      const log = await (prisma as any).emailLog.create({
+        data: {
+          recipient: to,
+          subject,
+          template,
+          status: 'queued',
+          metadata: metadata || {},
+        },
+      });
+      logId = log.id;
+    } catch (e) {
+      // DB logging is non-critical
+      console.warn('Email log creation failed:', e);
+    }
+
+    try {
+      await this.sendDirect(options);
+
+      // Update log
+      if (logId) {
+        await (prisma as any).emailLog.update({
+          where: { id: logId },
+          data: { status: 'sent', sentAt: new Date(), attempts: 1 },
+        }).catch(() => {});
+      }
+    } catch (error: any) {
+      console.error(`Email send failed (${template} → ${to}):`, error.message);
+
+      // Update log
+      if (logId) {
+        await (prisma as any).emailLog.update({
+          where: { id: logId },
+          data: { status: 'failed', errorMessage: error.message, attempts: 1 },
+        }).catch(() => {});
+
+        // Schedule retry
+        scheduleRetry({ options, attempts: 1, logId });
+      }
+    }
+  }
+
+  /**
+   * Direct send (no retry, no logging). Used internally.
+   */
+  async sendDirect(options: SendOptions): Promise<void> {
+    const { to, subject, template, context } = options;
+    const html = renderEmail(template, context);
+
     if (this.isDev) {
       console.log('\n📧 ──────────────────────────────────────────');
-      console.log(`   To:      ${options.to}`);
-      console.log(`   Subject: ${options.subject}`);
+      console.log(`   To:       ${to}`);
+      console.log(`   Subject:  ${subject}`);
+      console.log(`   Template: ${template}`);
       console.log('   ──────────────────────────────────────────');
       // Extract plain text link from HTML for easy testing
-      const linkMatch = options.html.match(/href="([^"]+)"/);
+      const linkMatch = html.match(/href="([^"]+)"/);
       if (linkMatch) {
         console.log(`   🔗 Link: ${linkMatch[1]}`);
       }
@@ -51,339 +266,239 @@ class EmailService {
       return;
     }
 
-    try {
-      await this.transporter!.sendMail({
-        from: config.emailFrom,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-      });
-    } catch (error) {
-      console.error('Failed to send email:', error);
-      throw new Error('Failed to send email. Please try again later.');
-    }
+    const info = await this.transporter!.sendMail({
+      from: config.emailFrom,
+      to,
+      subject,
+      html,
+    });
+
+    console.log(`✅ Email sent: ${template} → ${to} (${info.messageId})`);
   }
 
-  /**
-   * Send email verification link
-   */
-  async sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
-    const verifyUrl = `${config.frontendUrl}/verify-email?token=${token}`;
+  // ==================== AUTH EMAILS ====================
 
-    await this.send({
+  async sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
+    const verificationUrl = `${config.frontendUrl}/verify-email?token=${token}`;
+    await this.sendTemplateEmail({
       to,
       subject: 'Verify your GhanaMarket account',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a1a2e;">Welcome to GhanaMarket! 🇬🇭</h2>
-          <p>Hi ${name},</p>
-          <p>Thanks for creating your account. Please verify your email address to get the most out of GhanaMarket.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${verifyUrl}" 
-               style="background-color: #e94560; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Verify My Email
-            </a>
-          </div>
-          <p style="color: #666; font-size: 14px;">
-            Or copy and paste this link into your browser:<br/>
-            <a href="${verifyUrl}" style="color: #e94560;">${verifyUrl}</a>
-          </p>
-          <p style="color: #666; font-size: 12px;">This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace</p>
-        </div>
-      `,
+      template: 'email-verification',
+      context: { name, verificationUrl },
+      metadata: { type: 'verification' },
     });
   }
 
-  /**
-   * Send password reset link
-   */
   async sendPasswordResetEmail(to: string, name: string, token: string): Promise<void> {
     const resetUrl = `${config.frontendUrl}/reset-password?token=${token}`;
-
-    await this.send({
+    await this.sendTemplateEmail({
       to,
       subject: 'Reset your GhanaMarket password',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a1a2e;">Password Reset Request</h2>
-          <p>Hi ${name},</p>
-          <p>We received a request to reset your password. Click the button below to choose a new password.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}" 
-               style="background-color: #e94560; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Reset Password
-            </a>
-          </div>
-          <p style="color: #666; font-size: 14px;">
-            Or copy and paste this link:<br/>
-            <a href="${resetUrl}" style="color: #e94560;">${resetUrl}</a>
-          </p>
-          <p style="color: #666; font-size: 12px;">This link expires in 1 hour. If you didn't request this, your account is safe — just ignore this email.</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace</p>
-        </div>
-      `,
+      template: 'password-reset',
+      context: { name, resetUrl },
+      metadata: { type: 'password_reset' },
     });
   }
 
-  /**
-   * Send welcome email (after verification)
-   */
   async sendWelcomeEmail(to: string, name: string): Promise<void> {
-    const shopUrl = `${config.frontendUrl}/shop`;
-
-    await this.send({
+    await this.sendTemplateEmail({
       to,
       subject: 'Welcome to GhanaMarket! 🎉',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a1a2e;">You're all set, ${name}! 🎉</h2>
-          <p>Your email has been verified. You now have full access to GhanaMarket.</p>
-          <p>Here's what you can do:</p>
-          <ul style="line-height: 2;">
-            <li>🛍️ Browse products from sellers across Ghana</li>
-            <li>💳 Pay securely with MTN MoMo, Telecel Cash, or Card</li>
-            <li>🏪 Apply to become a seller and grow your business</li>
-          </ul>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${shopUrl}" 
-               style="background-color: #e94560; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Start Shopping
-            </a>
-          </div>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace</p>
-        </div>
-      `,
+      template: 'welcome',
+      context: { name },
+      metadata: { type: 'welcome' },
     });
   }
 
-  // ============================================================
-  // SELLER APPLICATION EMAILS
-  // ============================================================
+  // ==================== SELLER APPLICATION EMAILS ====================
 
-  /**
-   * Send confirmation email after seller application submission
-   */
   async sendApplicationReceivedEmail(to: string, name: string, storeName: string): Promise<void> {
-    const statusUrl = `${config.frontendUrl}/seller/application-status`;
-
-    await this.send({
+    await this.sendTemplateEmail({
       to,
       subject: 'Seller Application Received — GhanaMarket 🏪',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a1a2e;">Application Received! 📋</h2>
-          <p>Hi ${name},</p>
-          <p>We've received your application to sell on GhanaMarket as <strong>"${storeName}"</strong>.</p>
-          
-          <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 4px; margin: 20px 0;">
-            <p style="margin: 0; font-weight: bold; color: #1e40af;">What happens next?</p>
-            <ul style="margin: 8px 0 0; padding-left: 20px; color: #1e3a5f; line-height: 1.8;">
-              <li>Our team will review your application within <strong>1-3 business days</strong></li>
-              <li>We'll verify your Ghana Card and business details</li>
-              <li>You'll receive an email once your application is reviewed</li>
-            </ul>
-          </div>
-
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${statusUrl}" 
-               style="background-color: #e94560; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Check Application Status
-            </a>
-          </div>
-          <p style="color: #666; font-size: 13px;">If you have questions, reply to this email or contact our support team.</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace 🇬🇭</p>
-        </div>
-      `,
+      template: 'seller-application-received',
+      context: { name, storeName },
+      metadata: { type: 'seller_application', storeName },
     });
   }
 
-  /**
-   * Notify admin about new seller application
-   */
   async sendNewApplicationAdminEmail(adminEmail: string, applicantName: string, storeName: string, applicationId: string): Promise<void> {
-    await this.send({
+    // Admin emails use inline HTML (simple notification)
+    await this.sendTemplateEmail({
       to: adminEmail,
       subject: `New Seller Application: ${storeName} — GhanaMarket Admin`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a1a2e;">New Seller Application 🔔</h2>
-          <p>A new seller application has been submitted and is awaiting your review.</p>
-          
-          <div style="background-color: #fefce8; border: 1px solid #fde68a; padding: 16px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 8px;"><strong>Applicant:</strong> ${applicantName}</p>
-            <p style="margin: 0 0 8px;"><strong>Store Name:</strong> ${storeName}</p>
-            <p style="margin: 0;"><strong>Application ID:</strong> ${applicationId}</p>
-          </div>
-
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${config.frontendUrl}/admin/seller-applications/${applicationId}" 
-               style="background-color: #1a1a2e; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Review Application
-            </a>
-          </div>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket Admin Panel</p>
-        </div>
-      `,
+      template: 'seller-application-received',
+      context: {
+        name: 'Admin',
+        storeName,
+        isAdminNotification: true,
+        applicantName,
+        applicationId,
+      },
+      metadata: { type: 'admin_notification', applicationId },
     });
   }
 
-  /**
-   * Send approval email to seller
-   */
   async sendApplicationApprovedEmail(to: string, name: string, storeName: string): Promise<void> {
-    const dashboardUrl = `${config.frontendUrl}/seller/products`;
-
-    await this.send({
+    await this.sendTemplateEmail({
       to,
       subject: 'Congratulations! Your Seller Application is Approved 🎉 — GhanaMarket',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #059669;">You're Approved! 🎉🇬🇭</h2>
-          <p>Hi ${name},</p>
-          <p>Great news! Your seller application for <strong>"${storeName}"</strong> has been approved.</p>
-          
-          <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin: 20px 0;">
-            <p style="margin: 0; font-weight: bold; color: #065f46;">You can now:</p>
-            <ul style="margin: 8px 0 0; padding-left: 20px; color: #064e3b; line-height: 1.8;">
-              <li>🏪 Access your Seller Dashboard</li>
-              <li>📦 List your products for sale</li>
-              <li>💰 Receive Mobile Money payments directly</li>
-              <li>📊 Track your orders and analytics</li>
-            </ul>
-          </div>
-
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${dashboardUrl}" 
-               style="background-color: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Go to Seller Dashboard
-            </a>
-          </div>
-          <p style="color: #666; font-size: 13px;">Welcome to the GhanaMarket seller community! 🤝</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace 🇬🇭</p>
-        </div>
-      `,
+      template: 'seller-approved',
+      context: { name, storeName },
+      metadata: { type: 'seller_approved', storeName },
     });
   }
 
-  /**
-   * Send rejection email with reason
-   */
   async sendApplicationRejectedEmail(to: string, name: string, reason: string): Promise<void> {
-    const reapplyUrl = `${config.frontendUrl}/seller/register`;
-
-    await this.send({
+    await this.sendTemplateEmail({
       to,
       subject: 'Seller Application Update — GhanaMarket',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #dc2626;">Application Not Approved</h2>
-          <p>Hi ${name},</p>
-          <p>Thank you for your interest in selling on GhanaMarket. Unfortunately, we are unable to approve your application at this time.</p>
-          
-          <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 4px; margin: 20px 0;">
-            <p style="margin: 0 0 8px; font-weight: bold; color: #991b1b;">Reason:</p>
-            <p style="margin: 0; color: #7f1d1d;">${reason}</p>
-          </div>
-
-          <p>You are welcome to address the issues above and submit a new application.</p>
-
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${reapplyUrl}" 
-               style="background-color: #e94560; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Submit New Application
-            </a>
-          </div>
-          <p style="color: #666; font-size: 13px;">If you believe this was an error, please contact our support team.</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace 🇬🇭</p>
-        </div>
-      `,
+      template: 'seller-rejected',
+      context: { name, reason },
+      metadata: { type: 'seller_rejected' },
     });
   }
 
-  /**
-   * Send request for more information/documents
-   */
   async sendInfoRequestedEmail(to: string, name: string, notes: string): Promise<void> {
-    const statusUrl = `${config.frontendUrl}/seller/application-status`;
-
-    await this.send({
+    // Reuse seller-application-received with different context
+    await this.sendTemplateEmail({
       to,
       subject: 'Additional Information Needed — GhanaMarket Seller Application',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #d97706;">Additional Information Needed 📝</h2>
-          <p>Hi ${name},</p>
-          <p>We are reviewing your seller application, but we need some additional information before we can proceed.</p>
-          
-          <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 4px; margin: 20px 0;">
-            <p style="margin: 0 0 8px; font-weight: bold; color: #92400e;">What we need:</p>
-            <p style="margin: 0; color: #78350f;">${notes}</p>
-          </div>
-
-          <p>Please reply to this email with the requested information, or update your application.</p>
-
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${statusUrl}" 
-               style="background-color: #d97706; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              View Application Status
-            </a>
-          </div>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace 🇬🇭</p>
-        </div>
-      `,
+      template: 'seller-application-received',
+      context: { name, storeName: 'your application', isInfoRequest: true, notes },
+      metadata: { type: 'info_requested' },
     });
   }
 
-  // ============================================================
-  // PAYMENT EMAILS
-  // ============================================================
+  // ==================== PAYMENT EMAILS ====================
 
-  /**
-   * Send payment confirmation email
-   */
-  async sendPaymentConfirmationEmail(to: string, name: string, orderNumber: string, amountInCedis: string, paymentMethod: string): Promise<void> {
-    const orderUrl = `${config.frontendUrl}/orders`;
-
-    await this.send({
+  async sendPaymentConfirmationEmail(
+    to: string,
+    name: string,
+    orderNumber: string,
+    amountInCedis: string,
+    paymentMethod: string
+  ): Promise<void> {
+    await this.sendTemplateEmail({
       to,
       subject: `Payment Confirmed — Order ${orderNumber}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #059669;">Payment Confirmed! 🎉</h2>
-          <p>Hi ${name},</p>
-          <p>Your payment of <strong>₵${amountInCedis}</strong> for order <strong>${orderNumber}</strong> has been received.</p>
-          
-          <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin: 20px 0;">
-            <p style="margin: 0 0 8px;"><strong>Payment Method:</strong> ${paymentMethod.replace(/_/g, ' ')}</p>
-            <p style="margin: 0;"><strong>Order Number:</strong> ${orderNumber}</p>
-          </div>
+      template: 'payment-confirmation',
+      context: { name, orderNumber, amountInCedis, paymentMethod },
+      metadata: { type: 'payment_confirmation', orderNumber },
+    });
+  }
 
-          <p>Your order is now being processed. You'll be notified when sellers start preparing your items.</p>
+  // ==================== ORDER LIFECYCLE EMAILS ====================
 
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${orderUrl}" 
-               style="background-color: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-              Track Your Order
-            </a>
-          </div>
-          <p style="color: #666; font-size: 13px;">Thank you for shopping on GhanaMarket! 🤝</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          <p style="color: #999; font-size: 11px;">GhanaMarket — Your trusted online marketplace 🇬🇭</p>
-        </div>
-      `,
+  async sendOrderConfirmationEmail(params: {
+    to: string;
+    customerName: string;
+    orderNumber: string;
+    orderDate: string;
+    totalAmount: string;
+    subtotal: string;
+    shippingFee: string;
+    paymentMethod: string;
+    paymentStatus: string;
+    items: Array<{ name: string; quantity: number; price: string; image?: string; sellerName?: string }>;
+    deliveryName: string;
+    deliveryAddress: string;
+    deliveryCity: string;
+    deliveryRegion: string;
+    deliveryPhone: string;
+  }): Promise<void> {
+    await this.sendTemplateEmail({
+      to: params.to,
+      subject: `Order Confirmed — #${params.orderNumber}`,
+      template: 'order-confirmation',
+      context: params,
+      metadata: { type: 'order_confirmation', orderNumber: params.orderNumber },
+    });
+  }
+
+  async sendOrderShippedEmail(params: {
+    to: string;
+    customerName: string;
+    orderNumber: string;
+    sellerName: string;
+    items: Array<{ name: string; quantity: number }>;
+    trackingNumber?: string;
+    trackingUrl?: string;
+    shippingMethod?: string;
+    estimatedDelivery?: string;
+  }): Promise<void> {
+    await this.sendTemplateEmail({
+      to: params.to,
+      subject: `Order Shipped — #${params.orderNumber}`,
+      template: 'order-shipped',
+      context: params,
+      metadata: { type: 'order_shipped', orderNumber: params.orderNumber },
+    });
+  }
+
+  async sendOrderDeliveredEmail(params: {
+    to: string;
+    customerName: string;
+    orderNumber: string;
+    sellerName: string;
+    totalAmount: string;
+    deliveredDate: string;
+  }): Promise<void> {
+    await this.sendTemplateEmail({
+      to: params.to,
+      subject: `Order Delivered — #${params.orderNumber}`,
+      template: 'order-delivered',
+      context: params,
+      metadata: { type: 'order_delivered', orderNumber: params.orderNumber },
+    });
+  }
+
+  async sendNewOrderSellerEmail(params: {
+    to: string;
+    sellerName: string;
+    orderNumber: string;
+    customerName: string;
+    customerRegion: string;
+    orderTotal: string;
+    payoutAmount: string;
+    items: Array<{ name: string; quantity: number; sku?: string }>;
+    deliveryName: string;
+    deliveryAddress: string;
+    deliveryCity: string;
+    deliveryRegion: string;
+    deliveryPhone: string;
+  }): Promise<void> {
+    await this.sendTemplateEmail({
+      to: params.to,
+      subject: `New Order — #${params.orderNumber}`,
+      template: 'new-order-seller',
+      context: params,
+      metadata: { type: 'new_order_seller', orderNumber: params.orderNumber },
+    });
+  }
+
+  // ==================== PAYOUT EMAILS ====================
+
+  async sendPayoutProcessedEmail(params: {
+    to: string;
+    sellerName: string;
+    amount: string;
+    provider: string;
+    phoneNumber: string;
+    reference: string;
+    processedDate: string;
+    availableBalance: string;
+    pendingBalance: string;
+  }): Promise<void> {
+    await this.sendTemplateEmail({
+      to: params.to,
+      subject: `Payout Processed — GH₵${params.amount}`,
+      template: 'payout-processed',
+      context: params,
+      metadata: { type: 'payout_processed', reference: params.reference },
     });
   }
 }
 
 // Singleton instance
 export const emailService = new EmailService();
-

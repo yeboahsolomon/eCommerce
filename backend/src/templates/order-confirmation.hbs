@@ -1,0 +1,57 @@
+<h2>Medaase! Your Order is Confirmed 🎉</h2>
+
+<p>Hi {{customerName}},</p>
+
+<p>Your order has been received and is being processed. Here are your details:</p>
+
+<div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 16px 0;">
+  <h3 style="margin: 0 0 12px; color: #1a1a2e;">Order #{{orderNumber}}</h3>
+  <div class="summary-row"><strong>Order Date:</strong> {{orderDate}}</div>
+  <div class="summary-row"><strong>Total Amount:</strong> GH₵ {{totalAmount}}</div>
+  <div class="summary-row"><strong>Payment Method:</strong> {{paymentMethod}}</div>
+  <div class="summary-row"><strong>Status:</strong> {{paymentStatus}}</div>
+</div>
+
+<h3>Items Ordered:</h3>
+<table class="order-table">
+  {{#each items}}
+  <tr>
+    <td style="width: 60px;">
+      {{#if this.image}}
+      <img src="{{this.image}}" alt="{{this.name}}" class="item-img">
+      {{else}}
+      <div style="width: 56px; height: 56px; background: #e5e7eb; border-radius: 6px;"></div>
+      {{/if}}
+    </td>
+    <td>
+      <strong>{{this.name}}</strong><br>
+      <small style="color: #6b7280;">by {{this.sellerName}}</small>
+    </td>
+    <td style="text-align: right; white-space: nowrap;">
+      {{this.quantity}} × GH₵ {{this.price}}
+    </td>
+  </tr>
+  {{/each}}
+</table>
+
+<div style="border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 8px;">
+  <div class="summary-row"><strong>Subtotal:</strong> GH₵ {{subtotal}}</div>
+  <div class="summary-row"><strong>Delivery Fee:</strong> GH₵ {{shippingFee}}</div>
+  <div class="summary-row" style="font-size: 17px; margin-top: 8px;"><strong>Total:</strong> <strong style="color: #059669;">GH₵ {{totalAmount}}</strong></div>
+</div>
+
+<h3>Delivery Information:</h3>
+<div class="info-box">
+  <p style="margin: 0;">
+    {{deliveryName}}<br>
+    {{deliveryAddress}}<br>
+    {{deliveryCity}}, {{deliveryRegion}}<br>
+    📞 {{deliveryPhone}}
+  </p>
+</div>
+
+<div style="text-align: center;">
+  <a href="{{platformUrl}}/orders" class="btn btn-green">Track Your Order</a>
+</div>
+
+<p>Medaase for shopping with GhanaMarket! 🙏</p>
