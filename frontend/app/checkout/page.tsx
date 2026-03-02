@@ -150,7 +150,6 @@ export default function CheckoutPage() {
 
     try {
       // Build order payload matching the backend
-      // Build order payload matching the backend
       const orderPayload = {
         shippingFullName: data.fullName,
         shippingPhone: data.phone,
@@ -172,12 +171,19 @@ export default function CheckoutPage() {
 
       if (res.success && res.data?.order) {
         const order = res.data.order;
-        toast.success("Order placed successfully!");
         
         // Clear cart after successful order
         await clearCart();
 
-        // Redirect to order success page
+        // If Paystack returned a payment URL, redirect to Paystack
+        if (res.data.paymentUrl) {
+          toast.success("Redirecting to payment...");
+          window.location.href = res.data.paymentUrl;
+          return;
+        }
+
+        // Cash on Delivery or payment init failed — go to order success
+        toast.success("Order placed successfully!");
         router.push(`/order-success/${order.id}`);
       } else {
         setOrderError(res.message || "Failed to place order. Please try again.");
