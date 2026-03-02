@@ -92,13 +92,13 @@ function PaymentCallbackContent() {
 
           <div className="space-y-3">
             <Link
-              href="/orders"
+              href="/account/orders"
               className="block w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
             >
               View My Orders
             </Link>
             <Link
-              href="/shop"
+              href="/"
               className="block w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-medium hover:bg-slate-200 transition"
             >
               Continue Shopping
@@ -126,7 +126,7 @@ function PaymentCallbackContent() {
 
         <div className="space-y-3">
           <Link
-            href="/orders"
+            href="/account/orders"
             className="block w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
           >
             Go to My Orders
