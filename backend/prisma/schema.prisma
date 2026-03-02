@@ -887,3 +887,31 @@ model Coupon {
   @@index([code])
   @@index([isActive])
 }
+
+// =================================================================
+// EMAIL LOGS
+// =================================================================
+
+model EmailLog {
+  id        String @id @default(cuid())
+
+  recipient String
+  subject   String
+  template  String   // Template name used (e.g., "order-confirmation")
+  messageId String?  // SMTP message ID for tracking
+
+  status       String  @default("queued") // queued, sent, failed, bounced
+  errorMessage String?
+  attempts     Int     @default(0)
+
+  // Metadata
+  metadata Json? // Extra context (orderId, userId, etc.)
+
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([recipient])
+  @@index([status])
+  @@index([template])
+  @@index([createdAt])
+}

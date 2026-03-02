@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      background-color: #f3f4f6;
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .header .subtitle {
+      color: #a8b2d1;
+      font-size: 12px;
+      margin-top: 4px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .accent-bar {
+      height: 4px;
+      background: linear-gradient(90deg, #CE1126 33%, #FCD116 33%, #FCD116 66%, #006B3F 66%);
+    }
+    .content {
+      padding: 36px 32px;
+      color: #374151;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .content h2 {
+      color: #1a1a2e;
+      font-size: 22px;
+      margin: 0 0 16px;
+      font-weight: 700;
+    }
+    .content h3 {
+      color: #1a1a2e;
+      font-size: 16px;
+      margin: 24px 0 8px;
+      font-weight: 600;
+    }
+    .content p {
+      margin: 0 0 14px;
+    }
+    .content a {
+      color: #e94560;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #e94560, #c81e45);
+      color: #ffffff !important;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      margin: 8px 0 16px;
+      text-align: center;
+    }
+    .btn-green {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
+    .info-box {
+      background: #f0f9ff;
+      border-left: 4px solid #3b82f6;
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+    .success-box {
+      background: #ecfdf5;
+      border-left: 4px solid #10b981;
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+    .warning-box {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+    .error-box {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+    .order-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    .order-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: middle;
+    }
+    .order-table .item-img {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .summary-row {
+      padding: 6px 0;
+    }
+    .summary-row strong {
+      display: inline-block;
+      min-width: 160px;
+    }
+    .footer {
+      background: #f9fafb;
+      padding: 24px 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer a {
+      color: #e94560;
+      text-decoration: none;
+    }
+    .ghana-flag {
+      display: inline-block;
+      width: 24px;
+      height: 16px;
+      background: linear-gradient(to bottom, #CE1126 33%, #FCD116 33%, #FCD116 66%, #006B3F 66%);
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    @media only screen and (max-width: 620px) {
+      .container { margin: 0 !important; border-radius: 0 !important; }
+      .content { padding: 24px 20px !important; }
+      .header { padding: 20px 16px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🛒 GhanaMarket</h1>
+      <div class="subtitle">Your Trusted Online Marketplace</div>
+    </div>
+    <div class="accent-bar"></div>
+    <div class="content">
+      {{{body}}}
+    </div>
+    <div class="footer">
+      <p><span class="ghana-flag"></span> Proudly serving Ghana 🇬🇭</p>
+      <p>© {{currentYear}} GhanaMarket — All rights reserved</p>
+      <p>
+        <a href="{{platformUrl}}">Home</a> &nbsp;|&nbsp;
+        <a href="{{platformUrl}}/help">Help Center</a> &nbsp;|&nbsp;
+        <a href="{{platformUrl}}/contact">Contact Us</a>
+      </p>
+      <p style="margin-top: 12px; font-size: 11px; color: #9ca3af;">
+        Support: {{supportEmail}} &nbsp;|&nbsp; Mon–Sat, 8am–6pm GMT
+      </p>
+    </div>
+  </div>
+</body>
+</html>

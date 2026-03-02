@@ -1,0 +1,26 @@
+<h2>Payout Processed! 💰</h2>
+
+<p>Hi {{sellerName}},</p>
+
+<p>Your payout has been successfully processed and sent to your Mobile Money account.</p>
+
+<div class="success-box">
+  <div class="summary-row"><strong>Amount:</strong> <strong style="color: #059669; font-size: 18px;">GH₵ {{amount}}</strong></div>
+  <div class="summary-row"><strong>Destination:</strong> {{provider}} — {{phoneNumber}}</div>
+  <div class="summary-row"><strong>Reference:</strong> {{reference}}</div>
+  <div class="summary-row"><strong>Processed On:</strong> {{processedDate}}</div>
+</div>
+
+<div class="info-box">
+  <p style="margin: 0;">
+    <strong>Wallet Balance:</strong><br>
+    Available: GH₵ {{availableBalance}}<br>
+    Pending: GH₵ {{pendingBalance}}
+  </p>
+</div>
+
+<div style="text-align: center;">
+  <a href="{{platformUrl}}/seller/wallet" class="btn btn-green">View Wallet</a>
+</div>
+
+<p>Medaase for selling on GhanaMarket! 🙏</p>
