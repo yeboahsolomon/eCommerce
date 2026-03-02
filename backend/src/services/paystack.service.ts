@@ -12,6 +12,7 @@ export interface PaystackInitializeRequest {
   metadata?: {
     orderId: string;
     userId: string;
+    orderNumber?: string;
     custom_fields?: Array<{
       display_name: string;
       variable_name: string;
@@ -107,8 +108,8 @@ class PaystackService {
   async initializeTransaction(
     request: PaystackInitializeRequest
   ): Promise<PaystackInitializeResponse> {
-    // In development mode, simulate the response
-    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+    // In development mode WITHOUT keys, simulate the response
+    if (!this.secretKey) {
       console.log('💳 [Paystack Sandbox] Initializing payment:', {
         reference: request.reference,
         amount: request.amount / 100, // Convert pesewas to cedis
@@ -119,7 +120,7 @@ class PaystackService {
         status: true,
         message: 'Authorization URL created',
         data: {
-          authorization_url: `http://localhost:3000/payment/verify?reference=${request.reference}&demo=true`,
+          authorization_url: `http://localhost:3000/payment/callback?reference=${request.reference}&demo=true`,
           access_code: `ACCESS_${Date.now()}`,
           reference: request.reference,
         },
@@ -155,8 +156,8 @@ class PaystackService {
 
   // Verify a transaction
   async verifyTransaction(reference: string): Promise<PaystackVerifyResponse> {
-    // In development mode, simulate verification
-    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+    // In development mode WITHOUT keys, simulate verification
+    if (!this.secretKey) {
       console.log('💳 [Paystack Sandbox] Verifying payment:', reference);
 
       // Simulate success/failure (90% success rate)
