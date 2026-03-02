@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { createOrderSchema, CreateOrderInput } from '../utils/validators.js';
+import { paystackService } from '../services/paystack.service.js';
 
 const router = Router();
 
@@ -11,11 +12,11 @@ const router = Router();
  * POST /api/orders
  * Create new order from cart (ACID Transaction)
  * Supports Multi-Vendor: Splits order into SellerOrders
+ * Initializes Paystack payment for non-COD orders
  */
 router.post(
   '/',
   authenticate,
-  // requireBuyer, // Optional
   validate(createOrderSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -35,7 +36,7 @@ router.post(
                     take: 1,
                   },
                   seller: {
-                    select: { id: true, businessName: true } // Fetch seller info
+                    select: { id: true, businessName: true }
                   }
                 },
               },
@@ -78,8 +79,7 @@ router.post(
         0
       );
       
-      // Apply coupon if provided (Global Coupon for now)
-      // TODO: Support seller-specific coupons
+      // Apply coupon if provided
       let discountInPesewas = 0;
       if (orderData.couponCode) {
         const coupon = await prisma.coupon.findUnique({
@@ -109,11 +109,11 @@ router.post(
         }
       }
       
-      const shippingFeeInPesewas = 0;  // Free shipping for now (Global)
-      const taxInPesewas = 0;  // No tax for now
+      const shippingFeeInPesewas = 0;
+      const taxInPesewas = 0;
       const totalInPesewas = subtotalInPesewas - discountInPesewas + shippingFeeInPesewas + taxInPesewas;
       
-      // Generate order number (format: GH-YYYYMMDD-XXXX)
+      // Generate order number
       const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
       const orderNumber = `GH-${datePart}-${randomPart}`;
@@ -127,14 +127,12 @@ router.post(
             userId,
             status: orderData.paymentMethod === 'CASH_ON_DELIVERY' ? 'CONFIRMED' : 'PAYMENT_PENDING',
             
-            // Financials
             subtotalInPesewas,
             shippingFeeInPesewas,
             taxInPesewas,
             discountInPesewas,
             totalInPesewas,
             
-            // Shipping
             shippingFullName: orderData.shippingFullName,
             shippingPhone: orderData.shippingPhone,
             shippingRegion: orderData.shippingRegion,
@@ -143,15 +141,11 @@ router.post(
             shippingStreetAddress: orderData.shippingStreetAddress,
             shippingGpsAddress: orderData.shippingGpsAddress || null,
             
-            // Contact
             customerEmail: orderData.customerEmail,
             customerPhone: orderData.customerPhone,
             
-            // Delivery
-            // Notes
             notes: `Delivery Method: ${orderData.deliveryMethod || 'Standard'}${orderData.deliveryNotes ? `\nNotes: ${orderData.deliveryNotes}` : ''}`,
 
-            // Payment
             payment: {
               create: {
                 amountInPesewas: totalInPesewas,
@@ -166,61 +160,55 @@ router.post(
           },
         });
 
-        // 2. Create Seller Orders (Sub-orders)
+        // 2. Create Seller Orders
+        // If any products have no seller, assign them to a platform seller
+        let platformSellerId: string | null = null;
+        
         for (const [sellerId, items] of sellerGroups.entries()) {
-          // Calculate stats for this seller
           const sellerSubtotal = items.reduce((sum, item) => sum + item.product.priceInPesewas * item.quantity, 0);
           
-          // Distribute discount proportional to value? Or just applying global logic.
-          // For now, simpler to not split discount precisely per seller unless we have per-item discount.
-          // We will store "Seller Order Amount" as just the sum of items for now (ignoring global coupon impact on seller payout? Complex topic.)
-          // Decision: Seller Payout = Seller Subtotal - Commission. Coupon burn is on Platform (usually).
-          
-          let sellerOrderData: any = {
-            orderId: newOrder.id,
-            sellerId: sellerId === 'PLATFORM' ? null : sellerId, // Handle platform items if any
-            status: 'PENDING', // Will update when main order is confirmed
-            subtotalInPesewas: sellerSubtotal,
-            shippingFeeInPesewas: 0, // Assuming global free shipping
-            taxInPesewas: 0,
-            discountInPesewas: 0, // Simplified
-            totalInPesewas: sellerSubtotal, // + shipping + tax - discount
-            payoutAmountInPesewas: Math.round(sellerSubtotal * 0.95), // 5% Commission deduced (Example)
-            commissionAmountInPesewas: Math.round(sellerSubtotal * 0.05),
-          };
-
-          // Remove null sellerId if it was strictly required?
-          // Schema says `sellerId` in `SellerOrder` is `String` (from Chunk 1).
-          // Wait, `SellerOrder` model has `seller SellerProfile`. `sellerId String`.
-          // So 'PLATFORM' items (null sellerId) CANNOT create a `SellerOrder` if `sellerId` is mandatory.
-          // If product can have null sellerId, we have a problem.
-          // In Step 410, Product `sellerId` is `String?`.
-          // In Step 398 (Chunk 1), `SellerOrder` has `sellerId String`.
-          // So if we have PLATFORM products, we cannot create a `SellerOrder` for them unless we have a "Platform Seller" profile.
-          // OR, we don't create `SellerOrder` for platform items?
-          // But then `OrderItem` needs to link to `SellerOrder?`.
-          // My schema has `sellerOrder SellerOrder @relation(...)`. It became MANDATORY in Step 404 replacement?
-          // In Step 404: `sellerOrder SellerOrder @relation(...)`. MANDATORY.
-          // This implies ALL ordered items MUST belong to a Seller.
-          // So Platform MUST have a Seller Profile (e.g. "Official Store").
-          // Ideally, I should fetch the "Official Store" ID if sellerId is null.
-          // For now, I'll assume valid products have sellers (since I added `sellerId` to `Product`).
-          // If `sellerId` is null, I will skip `SellerOrder` creation for those items? No, that breaks `OrderItem` relation.
-          // I will throw error if `sellerId` is missing for now, OR I will create a "dummy" id if specific case.
-          // Since I can't query DB for "Official Store", I will error if product has no seller.
-          
+          let actualSellerId = sellerId as string;
           if (sellerId === 'PLATFORM') {
-             // Fallback: If product has no seller, currently we can't process it with this schema unless we have a placeholder.
-             // I'll skip this check assuming migration/seed ensured sellers.
-             // Actually, I'll throw error to be safe.
-             throw new ApiError(500, 'Product missing seller information.');
+            // Find or create platform seller
+            if (!platformSellerId) {
+              let platformSeller = await tx.sellerProfile.findFirst({
+                where: { businessName: 'GhanaMarket Official' },
+              });
+              
+              if (!platformSeller) {
+                // Create platform seller linked to the ordering user (or admin)
+                platformSeller = await tx.sellerProfile.create({
+                  data: {
+                    userId,
+                    businessName: 'GhanaMarket Official',
+                    slug: 'ghanamarket-official',
+                    description: 'Official GhanaMarket store',
+                    businessPhone: '0000000000',
+                    businessAddress: 'Accra, Ghana',
+                    ghanaRegion: 'Greater Accra',
+                  },
+                });
+              }
+              platformSellerId = platformSeller.id;
+            }
+            actualSellerId = platformSellerId;
           }
 
           const sellerOrder = await tx.sellerOrder.create({
-            data: sellerOrderData
+            data: {
+              orderId: newOrder.id,
+              sellerId: actualSellerId,
+              status: 'PENDING',
+              subtotalInPesewas: sellerSubtotal,
+              shippingFeeInPesewas: 0,
+              discountInPesewas: 0,
+              totalInPesewas: sellerSubtotal,
+              payoutAmountInPesewas: Math.round(sellerSubtotal * 0.95),
+              platformFeeInPesewas: Math.round(sellerSubtotal * 0.05),
+            }
           });
 
-          // 3. Create Order Items linked to both Order and SellerOrder
+          // 3. Order Items
           await tx.orderItem.createMany({
             data: items.map(item => ({
               orderId: newOrder.id,
@@ -235,7 +223,7 @@ router.post(
             }))
           });
           
-          // 4. Update Stock & Log (Per item)
+          // 4. Update Stock & Log
           for (const item of items) {
              if (item.product.trackInventory) {
               await tx.product.update({
@@ -272,7 +260,69 @@ router.post(
         
         return newOrder;
       });
+
+      // ===== PAYSTACK PAYMENT INIT (for non-COD orders) =====
+      if (orderData.paymentMethod !== 'CASH_ON_DELIVERY') {
+        try {
+          const reference = paystackService.generateReference();
+          
+          // Determine Paystack channel based on payment method
+          const channels: ('card' | 'mobile_money')[] = [];
+          if (orderData.paymentMethod === 'CARD') {
+            channels.push('card');
+          } else if (orderData.paymentMethod.startsWith('MOMO_')) {
+            channels.push('mobile_money');
+          } else {
+            channels.push('card', 'mobile_money');
+          }
+
+          const paystackResult = await paystackService.initializeTransaction({
+            email: orderData.customerEmail,
+            amount: totalInPesewas,
+            reference,
+            currency: 'GHS',
+            callback_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`,
+            metadata: { orderId: order.id, userId, orderNumber },
+            channels,
+          });
+
+          // Update payment record with Paystack reference
+          await prisma.payment.updateMany({
+            where: { orderId: order.id },
+            data: { gatewayReference: reference },
+          });
+
+          return res.status(201).json({
+            success: true,
+            message: 'Order placed! Redirecting to payment...',
+            data: {
+              order: {
+                ...order,
+                totalInCedis: order.totalInPesewas / 100,
+              },
+              paymentUrl: paystackResult.data.authorization_url,
+              reference: paystackResult.data.reference,
+            },
+          });
+        } catch (paymentError: any) {
+          console.error('Paystack init failed:', paymentError.message);
+          // Order was created but payment init failed — user can retry
+          return res.status(201).json({
+            success: true,
+            message: 'Order placed but payment initialization failed. You can retry payment from your orders page.',
+            data: {
+              order: {
+                ...order,
+                totalInCedis: order.totalInPesewas / 100,
+              },
+              paymentUrl: null,
+              reference: null,
+            },
+          });
+        }
+      }
       
+      // Cash on Delivery
       res.status(201).json({
         success: true,
         message: 'Order placed successfully!',
