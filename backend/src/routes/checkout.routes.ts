@@ -1,26 +1,23 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../config/database.js';
-import { authenticate, optionalAuth } from '../middleware/auth.middleware.js';
-import { ApiError } from '../middleware/error.middleware.js';
+import { optionalAuth } from '../middleware/auth.middleware.js';
 import { deliveryService } from '../services/delivery.service.js';
-import { paystackService } from '../services/paystack.service.js';
 import { cartService } from '../services/cart.service.js';
-import { createOrderSchema, CreateOrderInput } from '../utils/validators.js';
-import { validate } from '../middleware/validate.middleware.js';
 
 const router = Router();
 
 /**
  * POST /api/checkout/calculate
- * Calculate totals including delivery fees per seller
+ * Calculate totals including delivery fees per seller.
+ * This is purely a preview — actual order creation goes through POST /api/orders.
  */
 router.post(
   '/calculate',
   optionalAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { shippingRegion, shippingCity, currentCart } = req.body;
+      const { shippingRegion, shippingCity } = req.body;
       const userId = (req as any).user?.id || null;
       const sessionId = req.headers['x-session-id'] as string || req.body.sessionId;
       
@@ -98,205 +95,5 @@ router.post(
   }
 );
 
-/**
- * POST /api/checkout/create-order
- * Create order (requires Auth)
- */
-router.post(
-  '/create-order',
-  authenticate,
-  validate(createOrderSchema), 
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-       const orderData = req.body as CreateOrderInput;
-       const userId = (req as any).user!.id;
-
-       // 1. Get Cart
-       // We fetch from DB directly for Auth user to ensure validity
-       const cart = await prisma.cart.findUnique({
-         where: { userId },
-         include: { 
-             items: { 
-                 include: { 
-                     product: { 
-                         include: { 
-                             seller: true,
-                             images: { where: { isPrimary: true }, take: 1 } 
-                         } 
-                     } 
-                 } 
-             } 
-         }
-       });
-
-       if (!cart || cart.items.length === 0) throw new ApiError(400, "Cart empty");
-
-       // 2. Calculate Fees & Group
-       let totalShipping = 0;
-       const sellerGroups = new Map();
-
-       for (const item of cart.items) {
-           // Stock Check
-           if (!item.product.isActive) throw new ApiError(400, `Product ${item.product.name} is unavailable.`);
-           if (item.product.trackInventory && item.product.stockQuantity < item.quantity && !item.product.allowBackorder) {
-               throw new ApiError(400, `Product ${item.product.name} out of stock.`);
-           }
-
-           const sellerId = item.product.sellerId || 'PLATFORM';
-           if (!sellerGroups.has(sellerId)) {
-               sellerGroups.set(sellerId, { 
-                   items: [], 
-                   seller: item.product.seller,
-                   shippingFee: 0
-               });
-           }
-           sellerGroups.get(sellerId).items.push(item);
-       }
-
-       for (const [sellerId, group] of sellerGroups) {
-           const fee = deliveryService.calculateFee(
-               group.seller?.ghanaRegion || '',
-               null,
-               orderData.shippingRegion,
-               orderData.shippingCity
-           );
-           totalShipping += fee;
-           group.shippingFee = fee;
-       }
-
-       // 3. Totals
-       const subtotal = cart.items.reduce((sum, item) => sum + (item.product.priceInPesewas * item.quantity), 0);
-       const total = subtotal + totalShipping; 
-
-       // 4. ACID Transaction
-       const order = await prisma.$transaction(async (tx) => {
-            const newOrder = await tx.order.create({
-                data: {
-                    orderNumber: `GH-${Date.now()}-${Math.floor(Math.random()*1000)}`,
-                    userId,
-                    status: 'PAYMENT_PENDING',
-                    subtotalInPesewas: subtotal,
-                    shippingFeeInPesewas: totalShipping,
-                    totalInPesewas: total,
-                    shippingFullName: orderData.shippingFullName,
-                    shippingPhone: orderData.shippingPhone,
-                    shippingRegion: orderData.shippingRegion,
-                    shippingCity: orderData.shippingCity,
-                    shippingStreetAddress: orderData.shippingStreetAddress,
-                    customerEmail: orderData.customerEmail,
-                    customerPhone: orderData.customerPhone,
-                    payment: {
-                        create: {
-                            amountInPesewas: total,
-                            method: orderData.paymentMethod as any,
-                            status: 'PENDING',
-                            // Handle MoMo details
-                        }
-                    }
-                }
-            });
-
-            for (const [sellerId, group] of sellerGroups) {
-                const sellerSubtotal = group.items.reduce((s: number, i: any) => s + (i.product.priceInPesewas * i.quantity), 0);
-                
-                // Seller Order
-                if (sellerId !== 'PLATFORM') {
-                     const sellerOrder = await tx.sellerOrder.create({
-                        data: {
-                            orderId: newOrder.id,
-                            sellerId: sellerId,
-                            status: 'PENDING',
-                            subtotalInPesewas: sellerSubtotal,
-                            shippingFeeInPesewas: group.shippingFee,
-                            totalInPesewas: sellerSubtotal + group.shippingFee,
-                            platformFeeInPesewas: Math.round(sellerSubtotal * 0.05), // 5% fee
-                            payoutAmountInPesewas: Math.round(sellerSubtotal * 0.95),
-                        }
-                    });
-
-                    // Order Items
-                    await tx.orderItem.createMany({
-                        data: group.items.map((item: any) => ({
-                            orderId: newOrder.id,
-                            sellerOrderId: sellerOrder.id,
-                            productId: item.productId,
-                            productName: item.product.name,
-                            productImage: item.product.images?.[0]?.url,
-                            quantity: item.quantity,
-                            unitPriceInPesewas: item.product.priceInPesewas,
-                            totalPriceInPesewas: item.product.priceInPesewas * item.quantity
-                        }))
-                    });
-                } else {
-                    // Platform items (no SellerOrder? or PlatformSellerOrder?)
-                    // Schema requires sellerOrderId? 
-                    // Step 320: `sellerOrderId String?` (Nullable).
-                    // So we can have items without sellerOrder if they are platform items.
-                    await tx.orderItem.createMany({
-                        data: group.items.map((item: any) => ({
-                            orderId: newOrder.id,
-                            sellerOrderId: null,
-                            productId: item.productId,
-                            productName: item.product.name,
-                            productImage: item.product.images?.[0]?.url,
-                            quantity: item.quantity,
-                            unitPriceInPesewas: item.product.priceInPesewas,
-                            totalPriceInPesewas: item.product.priceInPesewas * item.quantity
-                        }))
-                    });
-                }
-
-                // Inventory Update (ForAll items)
-                for (const item of group.items) {
-                    if (item.product.trackInventory) {
-                         await tx.product.update({
-                            where: { id: item.productId },
-                            data: { stockQuantity: { decrement: item.quantity } }
-                        });
-                        
-                        // Inventory Log (Optional, skipping for brevity but recommended)
-                    }
-                }
-            }
-            
-            // Clear Cart
-            await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-
-            return newOrder;
-       }, { timeout: 10000 }); // Increase timeout for complex transaction
-
-       // 5. Paystack
-       if (orderData.paymentMethod !== 'CASH_ON_DELIVERY') {
-           try {
-              const reference = paystackService.generateReference();
-              const paymentInit = await paystackService.initializeTransaction({
-                email: orderData.customerEmail,
-                amount: total,
-                reference,
-                currency: 'GHS',
-                metadata: { orderId: order.id, userId },
-                channels: ['card', 'mobile_money'],
-              });
-              
-              return res.json({
-                success: true,
-                data: { order, paymentUrl: paymentInit.data.authorization_url, reference: paymentInit.data.reference }
-              });
-           } catch(e) {
-               console.error("Payment Init Failed", e);
-               // Order created but payment failed init.
-               // User can retry payment later?
-               // Return order but warn about payment.
-               return res.json({ success: true, message: "Order created but payment initialization failed.", data: { order } });
-           }
-       }
-
-       res.status(201).json({ success: true, data: { order } });
-
-    } catch (error) {
-       next(error);
-    }
-  }
-);
-
 export default router;
+
