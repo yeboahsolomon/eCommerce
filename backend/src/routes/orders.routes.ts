@@ -4,15 +4,14 @@ import { validate } from '../middleware/validate.middleware.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { createOrderSchema, CreateOrderInput } from '../utils/validators.js';
-import { paystackService } from '../services/paystack.service.js';
+import { orderService } from '../services/order.service.js';
 
 const router = Router();
 
 /**
  * POST /api/orders
  * Create new order from cart (ACID Transaction)
- * Supports Multi-Vendor: Splits order into SellerOrders
- * Initializes Paystack payment for non-COD orders
+ * Delegates to OrderService for all business logic.
  */
 router.post(
   '/',
@@ -22,315 +21,22 @@ router.post(
     try {
       const orderData = req.body as CreateOrderInput;
       const userId = req.user!.id;
-      
-      // Get user's cart with items
-      const cart = await prisma.cart.findUnique({
-        where: { userId },
-        include: {
-          items: {
-            include: {
-              product: {
-                include: {
-                  images: {
-                    where: { isPrimary: true },
-                    take: 1,
-                  },
-                  seller: {
-                    select: { id: true, businessName: true }
-                  }
-                },
-              },
-            },
-          },
-        },
-      });
-      
-      if (!cart || cart.items.length === 0) {
-        throw new ApiError(400, 'Your cart is empty. Add items before checkout.');
-      }
-      
-      // Verify all products are active and in stock
-      for (const item of cart.items) {
-        if (!item.product.isActive) {
-          throw new ApiError(400, `"${item.product.name}" is no longer available.`);
-        }
-        
-        if (item.product.trackInventory && 
-            item.product.stockQuantity < item.quantity && 
-            !item.product.allowBackorder) {
-          throw new ApiError(400, `"${item.product.name}" only has ${item.product.stockQuantity} items in stock.`);
-        }
-      }
 
-      // Group items by Seller
-      const sellerGroups = new Map<string | 'PLATFORM', typeof cart.items>();
-      
-      for (const item of cart.items) {
-        const sellerId = item.product.sellerId || 'PLATFORM';
-        if (!sellerGroups.has(sellerId)) {
-          sellerGroups.set(sellerId, []);
-        }
-        sellerGroups.get(sellerId)!.push(item);
-      }
-      
-      // Calculate totals (in pesewas)
-      const subtotalInPesewas = cart.items.reduce(
-        (sum, item) => sum + item.product.priceInPesewas * item.quantity,
-        0
-      );
-      
-      // Apply coupon if provided
-      let discountInPesewas = 0;
-      if (orderData.couponCode) {
-        const coupon = await prisma.coupon.findUnique({
-          where: { code: orderData.couponCode.toUpperCase() },
-        });
-        
-        if (coupon && coupon.isActive) {
-          const now = new Date();
-          if (coupon.expiresAt && coupon.expiresAt < now) {
-            throw new ApiError(400, 'This coupon has expired.');
-          }
-          if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
-            throw new ApiError(400, 'This coupon has reached its usage limit.');
-          }
-          if (coupon.minOrderInPesewas && subtotalInPesewas < coupon.minOrderInPesewas) {
-            throw new ApiError(400, `Minimum order of ₵${(coupon.minOrderInPesewas / 100).toFixed(2)} required for this coupon.`);
-          }
-          
-          if (coupon.discountType === 'percentage') {
-            discountInPesewas = Math.round(subtotalInPesewas * coupon.discountValue / 100);
-            if (coupon.maxDiscountInPesewas) {
-              discountInPesewas = Math.min(discountInPesewas, coupon.maxDiscountInPesewas);
-            }
-          } else {
-            discountInPesewas = coupon.discountValue;
-          }
-        }
-      }
-      
-      const shippingFeeInPesewas = 0;
-      const taxInPesewas = 0;
-      const totalInPesewas = subtotalInPesewas - discountInPesewas + shippingFeeInPesewas + taxInPesewas;
-      
-      // Generate order number
-      const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const orderNumber = `GH-${datePart}-${randomPart}`;
-      
-      // ===== ACID TRANSACTION =====
-      const order = await prisma.$transaction(async (tx) => {
-        // 1. Create Parent Order
-        const newOrder = await tx.order.create({
-          data: {
-            orderNumber,
-            userId,
-            status: orderData.paymentMethod === 'CASH_ON_DELIVERY' ? 'CONFIRMED' : 'PAYMENT_PENDING',
-            
-            subtotalInPesewas,
-            shippingFeeInPesewas,
-            taxInPesewas,
-            discountInPesewas,
-            totalInPesewas,
-            
-            shippingFullName: orderData.shippingFullName,
-            shippingPhone: orderData.shippingPhone,
-            shippingRegion: orderData.shippingRegion,
-            shippingCity: orderData.shippingCity,
-            shippingArea: orderData.shippingArea,
-            shippingStreetAddress: orderData.shippingStreetAddress,
-            shippingGpsAddress: orderData.shippingGpsAddress || null,
-            
-            customerEmail: orderData.customerEmail,
-            customerPhone: orderData.customerPhone,
-            
-            notes: `Delivery Method: ${orderData.deliveryMethod || 'Standard'}${orderData.deliveryNotes ? `\nNotes: ${orderData.deliveryNotes}` : ''}`,
+      const result = await orderService.createOrder(userId, orderData);
 
-            payment: {
-              create: {
-                amountInPesewas: totalInPesewas,
-                method: orderData.paymentMethod,
-                status: 'PENDING',
-                momoPhoneNumber: orderData.momoPhoneNumber,
-                momoNetwork: orderData.paymentMethod.startsWith('MOMO_') 
-                  ? orderData.paymentMethod.replace('MOMO_', '') 
-                  : null,
-              },
-            },
-          },
-        });
+      const message = result.paymentUrl
+        ? 'Order placed! Redirecting to payment...'
+        : result.reference === null && orderData.paymentMethod !== 'CASH_ON_DELIVERY'
+          ? 'Order placed but payment initialization failed. You can retry payment from your orders page.'
+          : 'Order placed successfully!';
 
-        // 2. Create Seller Orders
-        // If any products have no seller, assign them to a platform seller
-        let platformSellerId: string | null = null;
-        
-        for (const [sellerId, items] of sellerGroups.entries()) {
-          const sellerSubtotal = items.reduce((sum, item) => sum + item.product.priceInPesewas * item.quantity, 0);
-          
-          let actualSellerId = sellerId as string;
-          if (sellerId === 'PLATFORM') {
-            // Find or create platform seller
-            if (!platformSellerId) {
-              let platformSeller = await tx.sellerProfile.findFirst({
-                where: { businessName: 'GhanaMarket Official' },
-              });
-              
-              if (!platformSeller) {
-                // Create platform seller linked to the ordering user (or admin)
-                platformSeller = await tx.sellerProfile.create({
-                  data: {
-                    userId,
-                    businessName: 'GhanaMarket Official',
-                    slug: 'ghanamarket-official',
-                    description: 'Official GhanaMarket store',
-                    businessPhone: '0000000000',
-                    businessAddress: 'Accra, Ghana',
-                    ghanaRegion: 'Greater Accra',
-                  },
-                });
-              }
-              platformSellerId = platformSeller.id;
-            }
-            actualSellerId = platformSellerId;
-          }
-
-          const sellerOrder = await tx.sellerOrder.create({
-            data: {
-              orderId: newOrder.id,
-              sellerId: actualSellerId,
-              status: 'PENDING',
-              subtotalInPesewas: sellerSubtotal,
-              shippingFeeInPesewas: 0,
-              discountInPesewas: 0,
-              totalInPesewas: sellerSubtotal,
-              payoutAmountInPesewas: Math.round(sellerSubtotal * 0.95),
-              platformFeeInPesewas: Math.round(sellerSubtotal * 0.05),
-            }
-          });
-
-          // 3. Order Items
-          await tx.orderItem.createMany({
-            data: items.map(item => ({
-              orderId: newOrder.id,
-              sellerOrderId: sellerOrder.id,
-              productId: item.productId,
-              productName: item.product.name,
-              productSku: item.product.sku,
-              productImage: item.product.images[0]?.url || null,
-              quantity: item.quantity,
-              unitPriceInPesewas: item.product.priceInPesewas,
-              totalPriceInPesewas: item.product.priceInPesewas * item.quantity,
-            }))
-          });
-          
-          // 4. Update Stock & Log
-          for (const item of items) {
-             if (item.product.trackInventory) {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: { stockQuantity: { decrement: item.quantity } },
-              });
-              
-              await tx.inventoryLog.create({
-                data: {
-                  productId: item.productId,
-                  action: 'SALE',
-                  quantityChange: -item.quantity,
-                  previousQuantity: item.product.stockQuantity,
-                  newQuantity: item.product.stockQuantity - item.quantity,
-                  orderId: newOrder.id,
-                  userId,
-                },
-              });
-            }
-          }
-        }
-
-        // 5. Update Coupon & Clear Cart
-        if (orderData.couponCode && discountInPesewas > 0) {
-          await tx.coupon.update({
-            where: { code: orderData.couponCode.toUpperCase() },
-            data: { usageCount: { increment: 1 } },
-          });
-        }
-        
-        await tx.cartItem.deleteMany({
-          where: { cartId: cart.id },
-        });
-        
-        return newOrder;
-      });
-
-      // ===== PAYSTACK PAYMENT INIT (for non-COD orders) =====
-      if (orderData.paymentMethod !== 'CASH_ON_DELIVERY') {
-        try {
-          const reference = paystackService.generateReference();
-          
-          // Determine Paystack channel based on payment method
-          const channels: ('card' | 'mobile_money')[] = [];
-          if (orderData.paymentMethod === 'CARD') {
-            channels.push('card');
-          } else if (orderData.paymentMethod.startsWith('MOMO_')) {
-            channels.push('mobile_money');
-          } else {
-            channels.push('card', 'mobile_money');
-          }
-
-          const paystackResult = await paystackService.initializeTransaction({
-            email: orderData.customerEmail,
-            amount: totalInPesewas,
-            reference,
-            currency: 'GHS',
-            callback_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`,
-            metadata: { orderId: order.id, userId, orderNumber },
-            channels,
-          });
-
-          // Update payment record with Paystack reference
-          await prisma.payment.updateMany({
-            where: { orderId: order.id },
-            data: { gatewayReference: reference },
-          });
-
-          return res.status(201).json({
-            success: true,
-            message: 'Order placed! Redirecting to payment...',
-            data: {
-              order: {
-                ...order,
-                totalInCedis: order.totalInPesewas / 100,
-              },
-              paymentUrl: paystackResult.data.authorization_url,
-              reference: paystackResult.data.reference,
-            },
-          });
-        } catch (paymentError: any) {
-          console.error('Paystack init failed:', paymentError.message);
-          // Order was created but payment init failed — user can retry
-          return res.status(201).json({
-            success: true,
-            message: 'Order placed but payment initialization failed. You can retry payment from your orders page.',
-            data: {
-              order: {
-                ...order,
-                totalInCedis: order.totalInPesewas / 100,
-              },
-              paymentUrl: null,
-              reference: null,
-            },
-          });
-        }
-      }
-      
-      // Cash on Delivery
       res.status(201).json({
         success: true,
-        message: 'Order placed successfully!',
+        message,
         data: {
-          order: {
-            ...order,
-            totalInCedis: order.totalInPesewas / 100,
-          },
+          order: result.order,
+          paymentUrl: result.paymentUrl,
+          reference: result.reference,
         },
       });
     } catch (error) {

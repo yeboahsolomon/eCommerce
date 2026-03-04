@@ -778,4 +778,293 @@ router.get('/methods', (req: Request, res: Response) => {
   });
 });
 
+// ==================== REFUNDS ====================
+
+const refundSchema = z.object({
+  reason: z.string().min(5, 'Refund reason must be at least 5 characters'),
+  amountInPesewas: z.number().int().positive().optional(), // Optional: partial refund amount
+});
+
+/**
+ * POST /api/payments/refund/:orderId
+ * Initiate a refund (admin only)
+ */
+router.post('/refund/:orderId', authMiddleware, validate(refundSchema), async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const user = (req as any).user;
+
+    // Only admin can issue refunds
+    if (user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payment: true,
+        sellerOrders: {
+          include: {
+            seller: { include: { wallet: true } },
+          },
+        },
+        items: true,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (!order.payment || order.payment.status !== 'SUCCESS') {
+      return res.status(400).json({ success: false, message: 'No successful payment to refund' });
+    }
+
+    const { reason, amountInPesewas } = req.body;
+    const refundAmount = amountInPesewas || order.payment.amountInPesewas; // Full refund by default
+
+    // Check for existing refunds to prevent over-refunding
+    const existingRefunds = await prisma.refund.aggregate({
+      where: { paymentId: order.payment.id, status: { in: ['PENDING', 'SUCCESS'] } },
+      _sum: { amountInPesewas: true },
+    });
+    const totalRefunded = existingRefunds._sum.amountInPesewas || 0;
+    const maxRefundable = order.payment.amountInPesewas - totalRefunded;
+
+    if (refundAmount > maxRefundable) {
+      return res.status(400).json({
+        success: false,
+        message: `Maximum refundable amount is ₵${(maxRefundable / 100).toFixed(2)}`,
+      });
+    }
+
+    // Create refund record
+    const refund = await prisma.refund.create({
+      data: {
+        paymentId: order.payment.id,
+        amountInPesewas: refundAmount,
+        reason,
+        status: 'PENDING',
+      },
+    });
+
+    // Call Paystack refund if gateway reference exists
+    let gatewaySuccess = false;
+    if (order.payment.gatewayReference && order.payment.gatewayProvider === 'paystack') {
+      gatewaySuccess = await paystackService.createRefund(
+        order.payment.gatewayReference,
+        refundAmount,
+      );
+    } else {
+      // For dev/sandbox or non-Paystack, auto-succeed
+      gatewaySuccess = true;
+    }
+
+    if (gatewaySuccess) {
+      await prisma.$transaction(async (tx) => {
+        // Mark refund as successful
+        await tx.refund.update({
+          where: { id: refund.id },
+          data: {
+            status: 'SUCCESS',
+            processedAt: new Date(),
+            gatewayReference: order.payment?.gatewayReference || null,
+          },
+        });
+
+        // If full refund, cancel the order
+        if (refundAmount >= order.payment!.amountInPesewas) {
+          await tx.order.update({
+            where: { id: orderId },
+            data: { status: 'REFUNDED' },
+          });
+          await tx.sellerOrder.updateMany({
+            where: { orderId },
+            data: { status: 'REFUNDED' },
+          });
+        }
+
+        // Debit seller wallets proportionally
+        for (const sellerOrder of order.sellerOrders) {
+          if (!sellerOrder.seller?.wallet) continue;
+
+          const sellerRefundPortion = Math.round(
+            (refundAmount * sellerOrder.payoutAmountInPesewas) / order.totalInPesewas,
+          );
+
+          if (sellerRefundPortion > 0) {
+            const wallet = sellerOrder.seller.wallet;
+            await tx.sellerWallet.update({
+              where: { id: wallet.id },
+              data: {
+                pendingBalance: { decrement: Math.min(sellerRefundPortion, wallet.pendingBalance) },
+                totalEarned: { decrement: sellerRefundPortion },
+              },
+            });
+
+            await tx.transaction.create({
+              data: {
+                walletId: wallet.id,
+                type: 'REFUND',
+                amount: -sellerRefundPortion,
+                balanceBefore: wallet.pendingBalance,
+                balanceAfter: wallet.pendingBalance - sellerRefundPortion,
+                description: `Refund for order #${order.orderNumber}: ${reason}`,
+                referenceId: refund.id,
+              },
+            });
+          }
+        }
+
+        // Restore inventory for full refunds
+        if (refundAmount >= order.payment!.amountInPesewas) {
+          for (const item of order.items) {
+            const product = await tx.product.findUnique({ where: { id: item.productId } });
+            if (product?.trackInventory) {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stockQuantity: { increment: item.quantity } },
+              });
+              await tx.inventoryLog.create({
+                data: {
+                  productId: item.productId,
+                  action: 'RETURN',
+                  quantityChange: item.quantity,
+                  previousQuantity: product.stockQuantity,
+                  newQuantity: product.stockQuantity + item.quantity,
+                  orderId,
+                  userId: user.id,
+                  notes: `Refund: ${reason}`,
+                },
+              });
+            }
+          }
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'Refund processed successfully',
+        data: {
+          refundId: refund.id,
+          amountInCedis: refundAmount / 100,
+          status: 'SUCCESS',
+        },
+      });
+    } else {
+      // Gateway refund failed
+      await prisma.refund.update({
+        where: { id: refund.id },
+        data: { status: 'FAILED' },
+      });
+
+      res.status(500).json({
+        success: false,
+        message: 'Refund processing failed at payment gateway. Please try again.',
+      });
+    }
+  } catch (error: any) {
+    console.error('Refund error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Refund failed' });
+  }
+});
+
+/**
+ * GET /api/payments/refunds/:orderId
+ * Get refunds for a specific order
+ */
+router.get('/refunds/:orderId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    const user = (req as any).user;
+
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        ...(user.role !== 'ADMIN' ? { userId: user.id } : {}),
+      },
+      include: { payment: true },
+    });
+
+    if (!order || !order.payment) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const refunds = await prisma.refund.findMany({
+      where: { paymentId: order.payment.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        refunds: refunds.map((r) => ({
+          id: r.id,
+          amountInCedis: r.amountInPesewas / 100,
+          reason: r.reason,
+          status: r.status,
+          processedAt: r.processedAt,
+          createdAt: r.createdAt,
+        })),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to get refunds' });
+  }
+});
+
+/**
+ * GET /api/payments/refunds
+ * Admin: list all refunds (paginated)
+ */
+router.get('/refunds', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+
+    const [refunds, total] = await Promise.all([
+      prisma.refund.findMany({
+        include: {
+          payment: {
+            select: {
+              orderId: true,
+              method: true,
+              order: { select: { orderNumber: true, customerEmail: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: (page - 1) * limit,
+      }),
+      prisma.refund.count(),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        refunds: refunds.map((r) => ({
+          id: r.id,
+          orderNumber: r.payment.order.orderNumber,
+          customerEmail: r.payment.order.customerEmail,
+          amountInCedis: r.amountInPesewas / 100,
+          reason: r.reason,
+          status: r.status,
+          paymentMethod: r.payment.method,
+          processedAt: r.processedAt,
+          createdAt: r.createdAt,
+        })),
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to get refunds' });
+  }
+});
+
 export default router;
