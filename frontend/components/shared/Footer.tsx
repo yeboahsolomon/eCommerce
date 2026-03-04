@@ -243,9 +243,9 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} GhanaMarket. Serving Jaman South with pride.
           </p>
           <div className="flex items-center gap-6 text-xs text-slate-500 font-medium">
-            <Link href="#" className="hover:text-yellow-400 transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-yellow-400 transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-yellow-400 transition-colors">Sitemap</Link>
+            <Link href="/privacy" className="hover:text-yellow-400 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-yellow-400 transition-colors">Terms</Link>
+            <Link href="/returns" className="hover:text-yellow-400 transition-colors">Returns</Link>
           </div>
         </div>
 
