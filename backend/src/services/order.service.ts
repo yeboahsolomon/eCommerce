@@ -20,6 +20,9 @@ import { deliveryService } from './delivery.service.js';
 import { paystackService } from './paystack.service.js';
 import { emailService } from './email.service.js';
 import { CreateOrderInput } from '../utils/validators.js';
+import { cartService } from './cart.service.js';
+import bcrypt from 'bcrypt';
+import { config } from '../config/env.js';
 
 // ━━━━━━━━━━━━━━━━━━━━━━ Types ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -49,52 +52,36 @@ class OrderService {
    * This is the *only* place where orders are born.
    */
   async createOrder(
-    userId: string,
+    userId: string | null,
+    sessionId: string,
     orderData: CreateOrderInput,
   ): Promise<CreateOrderResult> {
     // ────────── 1. Load & validate cart ──────────
 
-    const cart = await prisma.cart.findUnique({
-      where: { userId },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: {
-                images: { where: { isPrimary: true }, take: 1 },
-                seller: {
-                  select: {
-                    id: true,
-                    businessName: true,
-                    ghanaRegion: true,
-                    businessAddress: true,
-                    commissionRate: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    const cart = await cartService.getCart(userId, sessionId);
 
     if (!cart || cart.items.length === 0) {
       throw new ApiError(400, 'Your cart is empty. Add items before checkout.');
     }
-
     // Stock & availability checks
     for (const item of cart.items) {
       if (!item.product.isActive) {
         throw new ApiError(400, `"${item.product.name}" is no longer available.`);
       }
+
+      const trackInventory = item.product.trackInventory;
+      const stockQuantity = item.variant ? item.variant.stockQuantity : item.product.stockQuantity;
+      const allowBackorder = item.product.allowBackorder;
+
       if (
-        item.product.trackInventory &&
-        item.product.stockQuantity < item.quantity &&
-        !item.product.allowBackorder
+        trackInventory &&
+        stockQuantity < item.quantity &&
+        !allowBackorder
       ) {
+        const nameDisplay = item.variant ? `${item.product.name} (${item.variant.name})` : `"${item.product.name}"`;
         throw new ApiError(
           400,
-          `"${item.product.name}" only has ${item.product.stockQuantity} items in stock.`,
+          `${nameDisplay} only has ${stockQuantity} items in stock.`,
         );
       }
     }
@@ -137,7 +124,7 @@ class OrderService {
     // ────────── 4. Subtotals ──────────
 
     const subtotalInPesewas = cart.items.reduce(
-      (sum, item) => sum + item.product.priceInPesewas * item.quantity,
+      (sum: number, item: any) => sum + ((item.variant?.priceInPesewas || item.product.priceInPesewas) * item.quantity),
       0,
     );
 
@@ -181,11 +168,50 @@ class OrderService {
     const totalInPesewas =
       subtotalInPesewas - discountInPesewas + totalShippingFeeInPesewas + taxInPesewas;
 
-    // ────────── 6. Generate order number ──────────
+    // ────────── 6. Generate order number & resolve user ──────────
 
     const orderNumber = generateOrderNumber();
 
+    let finalUserId = userId;
+    if (!finalUserId) {
+        // Create a guest user
+        const guestEmail = orderData.customerEmail;
+        const guestPhone = orderData.customerPhone;
+        const guestName = orderData.shippingFullName.split(' ');
+        const firstName = guestName[0];
+        const lastName = guestName.slice(1).join(' ') || 'Guest';
+        const randomPassword = crypto.randomBytes(8).toString('hex');
+        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+        // Check if a user with this email already exists
+        let existingUser = await prisma.user.findUnique({ where: { email: guestEmail } });
+        if (existingUser) {
+           finalUserId = existingUser.id;
+        } else {
+           const newUser = await prisma.user.create({
+              data: {
+                  email: guestEmail,
+                  phone: guestPhone,
+                  firstName,
+                  lastName,
+                  password: hashedPassword,
+                  role: 'BUYER'
+              }
+           });
+           finalUserId = newUser.id;
+        }
+    }
+
     // ────────── 7. ACID transaction ──────────
+
+    const lowStockAlerts: Array<{
+      to: string;
+      sellerName: string;
+      productName: string;
+      variantName?: string;
+      currentStock: number;
+      threshold: number;
+    }> = [];
 
     const order = await prisma.$transaction(
       async (tx) => {
@@ -193,7 +219,7 @@ class OrderService {
         const newOrder = await tx.order.create({
           data: {
             orderNumber,
-            userId,
+            userId: finalUserId!,
             status:
               orderData.paymentMethod === 'CASH_ON_DELIVERY'
                 ? 'CONFIRMED'
@@ -239,34 +265,41 @@ class OrderService {
 
         for (const [sellerId, group] of sellerGroups.entries()) {
           const sellerSubtotal = group.items.reduce(
-            (sum, item) => sum + item.product.priceInPesewas * item.quantity,
+            (sum: number, item: any) => sum + ((item.variant?.priceInPesewas || item.product.priceInPesewas) * item.quantity),
             0,
           );
 
           // Resolve actual seller ID (create platform seller fallback if needed)
-          let actualSellerId = sellerId;
-          if (sellerId === 'PLATFORM') {
-            if (!platformSellerId) {
-              let platformSeller = await tx.sellerProfile.findFirst({
-                where: { businessName: 'GhanaMarket Official' },
-              });
-              if (!platformSeller) {
-                platformSeller = await tx.sellerProfile.create({
-                  data: {
-                    userId,
-                    businessName: 'GhanaMarket Official',
-                    slug: 'ghanamarket-official',
-                    description: 'Official GhanaMarket store',
-                    businessPhone: '0000000000',
-                    businessAddress: 'Accra, Ghana',
-                    ghanaRegion: 'Greater Accra',
-                  },
+            let actualSellerId = sellerId;
+            let actualSellerEmail = group.seller?.businessEmail;
+            let actualSellerName = group.seller?.businessName;
+
+            if (sellerId === 'PLATFORM') {
+              if (!platformSellerId) {
+                let platformSeller = await tx.sellerProfile.findFirst({
+                  where: { businessName: 'GhanaMarket Official' },
                 });
+                if (!platformSeller) {
+                  platformSeller = await tx.sellerProfile.create({
+                    data: {
+                      userId: finalUserId!, // This fallback relies on the current user, or an admin
+                      businessName: 'GhanaMarket Official',
+                      slug: 'ghanamarket-official',
+                      description: 'Official GhanaMarket store',
+                      businessPhone: '0000000000',
+                      businessAddress: 'Accra, Ghana',
+                      ghanaRegion: 'Greater Accra',
+                    },
+                  });
+                }
+                platformSellerId = platformSeller.id;
               }
-              platformSellerId = platformSeller.id;
+              actualSellerId = platformSellerId;
+              // Add safe defaults for platform if we didn't have group.seller 
+              // (usually we don't for platform seeded products)
+              actualSellerEmail = actualSellerEmail || config.adminEmail;
+              actualSellerName = actualSellerName || 'GhanaMarket Official';
             }
-            actualSellerId = platformSellerId;
-          }
 
           // Commission: use per-seller rate if set, else default 5%
           const commissionRate = group.seller?.commissionRate
@@ -291,36 +324,68 @@ class OrderService {
 
           // 7c. Order Items
           await tx.orderItem.createMany({
-            data: group.items.map((item) => ({
-              orderId: newOrder.id,
-              sellerOrderId: sellerOrder.id,
-              productId: item.productId,
-              productName: item.product.name,
-              productSku: item.product.sku || null,
-              productImage: item.product.images[0]?.url || null,
-              quantity: item.quantity,
-              unitPriceInPesewas: item.product.priceInPesewas,
-              totalPriceInPesewas: item.product.priceInPesewas * item.quantity,
-            })),
+            data: group.items.map((item) => {
+              const unitPrice = item.variant?.priceInPesewas || item.product.priceInPesewas;
+              return {
+                orderId: newOrder.id,
+                sellerOrderId: sellerOrder.id,
+                productId: item.productId,
+                variantId: item.variant?.id || null,
+                productName: item.product.name,
+                variantName: item.variant?.name || null,
+                productSku: item.variant?.sku || item.product.sku || null,
+                productImage: item.product.images[0]?.url || null,
+                quantity: item.quantity,
+                unitPriceInPesewas: unitPrice,
+                totalPriceInPesewas: unitPrice * item.quantity,
+              };
+            }),
           });
 
           // 7d. Inventory deduction + audit log
           for (const item of group.items) {
             if (item.product.trackInventory) {
-              await tx.product.update({
-                where: { id: item.productId },
-                data: { stockQuantity: { decrement: item.quantity } },
-              });
+              const isVariant = !!item.variant;
+              const prevStock = isVariant ? item.variant.stockQuantity : item.product.stockQuantity;
+              const lowStockThreshold = item.product.lowStockThreshold || 5;
+              let newQuantity = 0;
+
+              if (isVariant) {
+                const updated = await tx.productVariant.update({
+                  where: { id: item.variant.id },
+                  data: { stockQuantity: { decrement: item.quantity } },
+                });
+                newQuantity = updated.stockQuantity;
+              } else {
+                const updated = await tx.product.update({
+                  where: { id: item.productId },
+                  data: { stockQuantity: { decrement: item.quantity } },
+                });
+                newQuantity = updated.stockQuantity;
+              }
+
+              // Queue low stock email if threshold crossed
+              if (prevStock > lowStockThreshold && newQuantity <= lowStockThreshold && actualSellerEmail) {
+                lowStockAlerts.push({
+                   to: actualSellerEmail,
+                   sellerName: actualSellerName || 'Seller',
+                   productName: item.product.name,
+                   variantName: item.variant?.name,
+                   currentStock: newQuantity,
+                   threshold: lowStockThreshold
+                });
+              }
 
               await tx.inventoryLog.create({
                 data: {
                   productId: item.productId,
                   action: 'SALE',
                   quantityChange: -item.quantity,
-                  previousQuantity: item.product.stockQuantity,
-                  newQuantity: item.product.stockQuantity - item.quantity,
+                  previousQuantity: prevStock,
+                  newQuantity: newQuantity,
                   orderId: newOrder.id,
-                  userId,
+                  userId: finalUserId!,
+                  notes: isVariant ? `Variant: ${item.variant.name} sold` : undefined,
                 },
               });
             }
@@ -336,12 +401,17 @@ class OrderService {
         }
 
         // 7f. Clear cart
-        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+        await cartService.clearCart(userId, sessionId);
 
         return newOrder;
       },
       { timeout: 15000 },
     );
+
+    // ────────── 7.5 Process Low Stock Alerts asynchronously ──────────
+    Promise.all(lowStockAlerts.map(alert => emailService.sendLowStockAlertEmail(alert))).catch(err => {
+      console.error('Failed to send low stock alert emails:', err);
+    });
 
     // ────────── 8. Paystack payment init (non-COD) ──────────
 
@@ -367,7 +437,7 @@ class OrderService {
           reference,
           currency: 'GHS',
           callback_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`,
-          metadata: { orderId: order.id, userId, orderNumber },
+          metadata: { orderId: order.id, userId: finalUserId!, orderNumber },
           channels,
         });
 
@@ -412,7 +482,7 @@ class OrderService {
     const items = cartItems.map((item) => ({
       name: item.product.name,
       quantity: item.quantity,
-      price: `₵${((item.product.priceInPesewas * item.quantity) / 100).toFixed(2)}`,
+      price: `₵${(((item.variant?.priceInPesewas || item.product.priceInPesewas) * item.quantity) / 100).toFixed(2)}`,
       image: item.product.images?.[0]?.url || undefined,
       sellerName: item.product.seller?.businessName || 'GhanaMarket',
     }));

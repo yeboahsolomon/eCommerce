@@ -331,13 +331,12 @@ router.post(
           continue;
         }
 
-        // Check if already in cart
-        const existingCartItem = await prisma.cartItem.findUnique({
+        // Check if already in cart (without variant)
+        const existingCartItem = await prisma.cartItem.findFirst({
           where: {
-            cartId_productId: {
-              cartId: cart.id,
-              productId: item.productId,
-            },
+            cartId: cart.id,
+            productId: item.productId,
+            variantId: null,
           },
         });
 

@@ -113,6 +113,16 @@ export const createProductSchema = z.object({
   isFeatured: z.boolean().optional().default(false),
   weightInGrams: z.number().int().positive().optional(),
   images: z.array(z.string()).optional(),
+  variants: z.array(z.object({
+    name: z.string().min(1, 'Variant name is required'),
+    sku: z.string().optional(),
+    priceInPesewas: z.number().int().positive().optional(),
+    comparePriceInPesewas: z.number().int().positive().optional(),
+    stockQuantity: z.number().int().nonnegative().optional().default(0),
+    lowStockThreshold: z.number().int().nonnegative().optional().default(5),
+    weightInGrams: z.number().int().positive().optional(),
+    options: z.record(z.string()).optional(),
+  })).optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();
@@ -134,6 +144,7 @@ export const productQuerySchema = z.object({
 
 export const addToCartSchema = z.object({
   productId: z.string().cuid('Invalid product ID'),
+  variantId: z.string().cuid('Invalid variant ID').optional(),
   quantity: z.number().int().positive('Quantity must be at least 1').optional().default(1),
 });
 

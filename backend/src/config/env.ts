@@ -39,6 +39,10 @@ export const config = {
 
   // Uploads
   uploadsBaseUrl: process.env.UPLOADS_BASE_URL || 'http://localhost:3001',
+
+  // Social Auth
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
 } as const;
 
 // Validate required env vars

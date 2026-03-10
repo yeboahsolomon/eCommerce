@@ -15,6 +15,11 @@ const createReviewSchema = z.object({
   comment: z.string().min(10, 'Review must be at least 10 characters').max(1000).optional(),
 });
 
+const createSellerReviewSchema = z.object({
+  rating: z.number().int().min(1).max(5, 'Rating must be between 1 and 5'),
+  comment: z.string().min(5, 'Comment must be at least 5 characters').max(1000).optional(),
+});
+
 const updateReviewSchema = z.object({
   rating: z.number().int().min(1).max(5).optional(),
   title: z.string().min(3).max(100).optional(),
@@ -407,5 +412,121 @@ router.get('/my-reviews', authMiddleware, async (req: Request, res: Response) =>
     });
   }
 });
+
+// ==================== SELLER REVIEWS ====================
+
+// Get reviews for a seller
+router.get(
+  '/seller/:sellerId',
+  async (req: Request, res: Response) => {
+    try {
+      const { sellerId } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+      const [reviews, total, stats] = await Promise.all([
+        prisma.sellerReview.findMany({
+          where: { sellerId },
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.sellerReview.count({ where: { sellerId } }),
+        prisma.sellerReview.aggregate({
+          where: { sellerId },
+          _avg: { rating: true },
+        }),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          reviews: reviews.map((r) => ({
+            id: r.id,
+            rating: r.rating,
+            comment: r.comment,
+            createdAt: r.createdAt,
+            user: {
+              id: r.user.id,
+              name: `${r.user.firstName} ${r.user.lastName.charAt(0)}.`,
+              avatar: r.user.avatarUrl,
+            },
+          })),
+          summary: {
+            averageRating: stats._avg.rating || 0,
+            totalReviews: total,
+          },
+          pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+        },
+      });
+    } catch (error: any) {
+      console.error('Get seller reviews error:', error);
+      res.status(500).json({ success: false, message: 'Failed to get seller reviews' });
+    }
+  }
+);
+
+// Submit a review for a seller (auth required)
+router.post(
+  '/seller/:sellerId',
+  authMiddleware,
+  validate(createSellerReviewSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user.id;
+      const { sellerId } = req.params;
+      const { rating, comment } = req.body;
+
+      // Check seller exists
+      const seller = await prisma.sellerProfile.findUnique({
+        where: { id: sellerId },
+        select: { id: true },
+      });
+
+      if (!seller) {
+        return res.status(404).json({ success: false, message: 'Seller not found' });
+      }
+
+      // Check if user already reviewed this seller
+      const existingReview = await prisma.sellerReview.findFirst({
+        where: { sellerId, userId },
+      });
+
+      if (existingReview) {
+        return res.status(400).json({ success: false, message: 'You have already reviewed this seller' });
+      }
+
+      // Check if user has purchased from this seller
+      const hasPurchased = await prisma.sellerOrder.findFirst({
+        where: {
+          sellerId,
+          order: { userId, status: 'DELIVERED' },
+        },
+      });
+
+      if (!hasPurchased) {
+        return res.status(403).json({ success: false, message: 'You can only review sellers you have purchased from and received the order.' });
+      }
+
+      const review = await prisma.sellerReview.create({
+        data: { sellerId, userId, rating, comment },
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Seller review submitted successfully',
+        data: review,
+      });
+    } catch (error: any) {
+      console.error('Create seller review error:', error);
+      res.status(500).json({ success: false, message: 'Failed to submit seller review' });
+    }
+  }
+);
 
 export default router;

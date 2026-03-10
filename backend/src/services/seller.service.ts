@@ -1,6 +1,7 @@
 import prisma from '../config/database.js';
 import { CreateSellerProfileInput, UpdateSellerProfileInput } from '../utils/validators.js';
 import { ApiError } from '../middleware/error.middleware.js';
+import { paystackService } from './paystack.service.js';
 
 export class SellerService {
   
@@ -278,10 +279,46 @@ export class SellerService {
       throw new ApiError(404, 'Order not found');
     }
 
-    // cast status to any or validate against enum
-    return await prisma.sellerOrder.update({
-      where: { id: orderId },
-      data: { status: status as any },
+    if (order.status === status) {
+      return order; // No change needed
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.sellerOrder.update({
+        where: { id: orderId },
+        data: { status: status as any },
+        include: { seller: { include: { wallet: true } }, order: true }
+      });
+
+      // Move pending to current balance when DELIVERED
+      if (status === 'DELIVERED') {
+         const payoutAmount = updatedOrder.payoutAmountInPesewas;
+         const wallet = updatedOrder.seller?.wallet;
+         if (wallet && payoutAmount > 0) {
+            await tx.sellerWallet.update({
+              where: { id: wallet.id },
+              data: {
+                pendingBalance: { decrement: payoutAmount },
+                currentBalance: { increment: payoutAmount }
+              }
+            });
+
+            // Create a transaction record for this clearance
+            await tx.transaction.create({
+              data: {
+                walletId: wallet.id,
+                type: 'SALE_CLEARED',
+                amount: payoutAmount,
+                balanceBefore: wallet.currentBalance,
+                balanceAfter: wallet.currentBalance + payoutAmount,
+                description: `Payment cleared for delivered order #${updatedOrder.order.orderNumber}`,
+                referenceId: updatedOrder.id
+              }
+            });
+         }
+      }
+
+      return updatedOrder;
     });
   }
 
@@ -395,12 +432,35 @@ export class SellerService {
 
     const amountInPesewas = Math.round(amount * 100);
 
+    // Initial check outside transaction
+    const walletCheck = await prisma.sellerWallet.findUnique({ where: { sellerId: profile.id } });
+    if (!walletCheck) throw new ApiError(404, 'Wallet not found');
+
+    if (walletCheck.currentBalance < amountInPesewas) {
+      throw new ApiError(400, 'Insufficient balance');
+    }
+
+    // Step 1: Create Paystack transfer recipient
+    const bankCode = paystackService.getMomoProviderCode(provider);
+    const recipient = await paystackService.createTransferRecipient({
+      name: profile.businessName,
+      accountNumber: profile.mobileMoneyNumber || '0000000000',
+      bankCode,
+      type: 'mobile_money',
+    });
+
+    // Step 2: Initiate the transfer
+    const transfer = await paystackService.initiateTransfer({
+      amountInPesewas,
+      recipientCode: recipient.recipientCode,
+      reason: `GhanaMarket seller payout for ${profile.businessName}`,
+    });
+
+    // Step 3: Execute DB transaction to record the payout and debit
     return await prisma.$transaction(async (tx) => {
       const wallet = await tx.sellerWallet.findUnique({ where: { sellerId: profile.id } });
-      if (!wallet) throw new ApiError(404, 'Wallet not found');
-
-      if (wallet.currentBalance < amountInPesewas) {
-        throw new ApiError(400, 'Insufficient balance');
+      if (!wallet || wallet.currentBalance < amountInPesewas) {
+        throw new ApiError(400, 'Insufficient balance during transaction');
       }
 
       // Create Payout Request
@@ -408,11 +468,13 @@ export class SellerService {
         data: {
           sellerId: profile.id,
           amount: amountInPesewas,
-          status: 'PENDING',
+          status: 'PROCESSING',
           destinationType: 'MOMO',
           destinationNetwork: provider,
           destinationNumber: profile.mobileMoneyNumber || 'N/A',
           destinationName: profile.businessName,
+          transactionReference: transfer.transferCode,
+          processedAt: new Date(),
         }
       });
 
@@ -422,7 +484,10 @@ export class SellerService {
 
       await tx.sellerWallet.update({
         where: { id: wallet.id },
-        data: { currentBalance: balanceAfter }
+        data: { 
+          currentBalance: balanceAfter,
+          totalWithdrawn: { increment: amountInPesewas }
+        }
       });
 
       // Create Transaction Record

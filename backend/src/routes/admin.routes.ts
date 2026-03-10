@@ -1288,10 +1288,55 @@ router.put('/orders/:orderId/status', async (req: Request, res: Response) => {
     }
     if (notes) updateData.notes = notes;
 
-    const order = await prisma.order.update({
-      where: { id: orderId },
-      data: updateData,
-      select: { id: true, orderNumber: true, status: true },
+    const order = await prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: updateData,
+        select: { id: true, orderNumber: true, status: true },
+      });
+
+      if (status === 'DELIVERED') {
+        // Find all non-delivered seller orders
+        const sellerOrders = await tx.sellerOrder.findMany({
+          where: { orderId, status: { not: 'DELIVERED' } },
+          include: { seller: { include: { wallet: true } } }
+        });
+
+        // Mark them all as delivered and clear funds
+        for (const sellerOrder of sellerOrders) {
+          await tx.sellerOrder.update({
+            where: { id: sellerOrder.id },
+            data: { status: 'DELIVERED' }
+          });
+
+          const payoutAmount = sellerOrder.payoutAmountInPesewas;
+          const wallet = sellerOrder.seller?.wallet;
+          
+          if (wallet && payoutAmount > 0) {
+            await tx.sellerWallet.update({
+              where: { id: wallet.id },
+              data: {
+                pendingBalance: { decrement: payoutAmount },
+                currentBalance: { increment: payoutAmount }
+              }
+            });
+
+            await tx.transaction.create({
+              data: {
+                walletId: wallet.id,
+                type: 'SALE_CLEARED',
+                amount: payoutAmount,
+                balanceBefore: wallet.currentBalance,
+                balanceAfter: wallet.currentBalance + payoutAmount,
+                description: `Payment cleared for delivered order #${updatedOrder.orderNumber}`,
+                referenceId: sellerOrder.id
+              }
+            });
+          }
+        }
+      }
+
+      return updatedOrder;
     });
 
     logAdminActivity({

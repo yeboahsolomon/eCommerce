@@ -62,16 +62,17 @@ model User {
   avatarUrl String?
 
   // Relations
-  addresses     Address[]
-  cart          Cart?
-  orders        Order[]
-  reviews       Review[]
-  wishlist      Wishlist?
-  sellerProfile SellerProfile?
-  refreshTokens          RefreshToken[]
+  addresses               Address[]
+  cart                    Cart?
+  orders                  Order[]
+  reviews                 Review[]
+  wishlist                Wishlist?
+  sellerProfile           SellerProfile?
+  refreshTokens           RefreshToken[]
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens     PasswordResetToken[]
   sellerApplications      SellerApplication[]
+  notifications           Notification[]
 
   // Timestamps
   createdAt    DateTime       @default(now())
@@ -85,9 +86,9 @@ model User {
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
 
   token     String   @unique // Hashed token
   expiresAt DateTime
@@ -95,15 +96,15 @@ model RefreshToken {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([userId])
   @@index([token])
 }
 
 model EmailVerificationToken {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
 
   token     String   @unique // SHA-256 hash of the actual token
   expiresAt DateTime
@@ -115,9 +116,9 @@ model EmailVerificationToken {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
 
   token     String   @unique // SHA-256 hash
   expiresAt DateTime
@@ -150,8 +151,8 @@ model SellerApplication {
   ghanaRegion     String
 
   // Ghana Card Verification
-  ghanaCardNumber   String
-  ghanaCardImageUrl String?
+  ghanaCardNumber       String
+  ghanaCardImageUrl     String?
   ghanaCardBackImageUrl String?
 
   // Business Registration (required for BUSINESS type)
@@ -164,7 +165,7 @@ model SellerApplication {
   // Admin Review
   rejectionReason String?
   adminNotes      String?
-  reviewedBy      String?   // Admin user ID
+  reviewedBy      String? // Admin user ID
   reviewedAt      DateTime?
 
   createdAt DateTime @default(now())
@@ -217,13 +218,13 @@ model SellerProfile {
   userId String @unique
 
   // Business Info
-  businessName  String
-  slug          String  @unique // For shop URL: /shop/my-store
-  businessPhone String
-  businessEmail String?
-  description   String?
-  logoUrl       String?
-  bannerUrl     String?
+  businessName    String
+  slug            String  @unique // For shop URL: /shop/my-store
+  businessPhone   String
+  businessEmail   String?
+  description     String?
+  logoUrl         String?
+  bannerUrl       String?
   businessAddress String?
   ghanaRegion     String?
 
@@ -288,6 +289,7 @@ model SellerWallet {
 
 enum TransactionType {
   SALE // + Credit from order
+  SALE_CLEARED // + Moves pending to current
   REFUND // - Debit for refund
   PAYOUT // - Debit for withdrawal
   COMMISSION // - Debit platform fee
@@ -440,11 +442,15 @@ model Product {
   reviewCount   Int     @default(0)
 
   // Stats
-  views         Int     @default(0)
-  salesCount    Int     @default(0)
+  views      Int @default(0)
+  salesCount Int @default(0)
 
   // Physical properties (for shipping)
   weightInGrams Int?
+
+  // Variants
+  hasVariants Boolean          @default(false)
+  variants    ProductVariant[]
 
   // Relations
   cartItems     CartItem[]
@@ -469,17 +475,44 @@ model ProductImage {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
 
-  url       String
+  url        String
   storageKey String? @unique // Nullable for existing local images
-  altText   String?
-  fileSize  Int?
-  mimeType  String?
-  sortOrder Int     @default(0)
-  isPrimary Boolean @default(false)
+  altText    String?
+  fileSize   Int?
+  mimeType   String?
+  sortOrder  Int     @default(0)
+  isPrimary  Boolean @default(false)
 
   createdAt DateTime @default(now())
 
   @@index([productId])
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+
+  // Specifics
+  name                  String // e.g., "Red / Large"
+  sku                   String? @unique
+  priceInPesewas        Int? // Optional override of base product price
+  comparePriceInPesewas Int?
+  stockQuantity         Int     @default(0)
+  lowStockThreshold     Int     @default(5)
+  weightInGrams         Int?
+
+  // JSON key-value pairs (e.g., {"Color": "Red", "Size": "Large"})
+  options Json?
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([sku])
 }
 
 model Review {
@@ -561,6 +594,9 @@ model CartItem {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
 
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  variantId String?
+
   quantity Int @default(1)
 
   // Price at time of adding (for price change notifications)
@@ -569,9 +605,9 @@ model CartItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([cartId, productId])
   @@index([cartId])
   @@index([productId])
+  @@index([variantId])
 }
 
 // =================================================================
@@ -708,8 +744,12 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
   productId String
 
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  variantId String?
+
   // ===== SNAPSHOT DATA =====
   productName  String
+  variantName  String?
   productSku   String?
   productImage String?
 
@@ -838,18 +878,48 @@ model InventoryLog {
   @@index([createdAt])
 }
 
+// =================================================================
+// NOTIFICATIONS
+// =================================================================
+
+enum NotificationType {
+  SYSTEM
+  ORDER
+  PROMOTION
+  ALERT
+}
+
+model Notification {
+  id      String @id @default(cuid())
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+
+  title   String
+  message String
+  type    NotificationType @default(SYSTEM)
+  read    Boolean          @default(false)
+  linkUrl String?          // Optional deep link
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
 // Admin audit trail - logs all admin actions
 model AdminActivityLog {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   adminId    String
   adminEmail String
-  action     String   // "APPROVE_APPLICATION", "REJECT_APPLICATION", "SUSPEND_SELLER", etc.
-  entityType String   // "seller_application", "seller", "user", "order", "product"
+  action     String // "APPROVE_APPLICATION", "REJECT_APPLICATION", "SUSPEND_SELLER", etc.
+  entityType String // "seller_application", "seller", "user", "order", "product"
   entityId   String
-  details    Json?    // Additional context (reason, notes, previous values, etc.)
+  details    Json? // Additional context (reason, notes, previous values, etc.)
   ipAddress  String?
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([adminId])
   @@index([entityType, entityId])
@@ -893,12 +963,12 @@ model Coupon {
 // =================================================================
 
 model EmailLog {
-  id        String @id @default(cuid())
+  id String @id @default(cuid())
 
   recipient String
   subject   String
-  template  String   // Template name used (e.g., "order-confirmation")
-  messageId String?  // SMTP message ID for tracking
+  template  String // Template name used (e.g., "order-confirmation")
+  messageId String? // SMTP message ID for tracking
 
   status       String  @default("queued") // queued, sent, failed, bounced
   errorMessage String?

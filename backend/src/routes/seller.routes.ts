@@ -480,4 +480,93 @@ router.get(
   }
 );
 
+/**
+ * GET /api/seller/:slug/products
+ * Public: get products for a seller's shop page
+ */
+router.get(
+  '/:slug/products',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { slug } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+      const sort = (req.query.sort as string) || 'newest';
+      const search = req.query.search as string;
+      const category = req.query.category as string;
+
+      // Find seller by slug
+      const seller = await prisma.sellerProfile.findUnique({
+        where: { slug },
+        select: { id: true },
+      });
+
+      if (!seller) {
+        return res.status(404).json({ success: false, message: 'Seller not found' });
+      }
+
+      // Build product query
+      const where: any = {
+        sellerId: seller.id,
+        isActive: true,
+      };
+
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+
+      if (category) {
+        where.category = { slug: category };
+      }
+
+      // Sort options
+      let orderBy: any = { createdAt: 'desc' };
+      switch (sort) {
+        case 'price_asc': orderBy = { priceInPesewas: 'asc' }; break;
+        case 'price_desc': orderBy = { priceInPesewas: 'desc' }; break;
+        case 'popular': orderBy = { salesCount: 'desc' }; break;
+        case 'rating': orderBy = { averageRating: 'desc' }; break;
+        case 'newest':
+        default: orderBy = { createdAt: 'desc' }; break;
+      }
+
+      const [products, total] = await Promise.all([
+        prisma.product.findMany({
+          where,
+          include: {
+            category: { select: { id: true, name: true, slug: true } },
+            images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+            seller: { select: { id: true, businessName: true, slug: true } },
+          },
+          orderBy,
+          take: limit,
+          skip: (page - 1) * limit,
+        }),
+        prisma.product.count({ where }),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          products: products.map((p) => ({
+            ...p,
+            image: p.images[0]?.url || null,
+          })),
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;
