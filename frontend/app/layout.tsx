@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
 import MobileNav from "@/components/shared/MobileNav";
+import BottomNav from "@/components/shared/BottomNav";
 import Providers from "./providers";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -35,6 +36,7 @@ export default function RootLayout({
 
             {/* Bottom Nav (Mobile Only) */}
             <MobileNav />
+            <BottomNav />
         </Providers>
       </body>
     </html>

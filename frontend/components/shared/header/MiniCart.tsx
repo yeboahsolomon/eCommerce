@@ -110,10 +110,13 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                         <div className="flex-1 flex flex-col justify-between">
                             <div>
                                 <h4 className="text-sm font-medium text-slate-900 line-clamp-2 leading-tight">
-                                    <Link href={`/products/${item.product.slug}`} onClick={onClose} className="hover:text-blue-600 transition-colors">
+                                    <Link href={`/product/${item.product.id}`} onClick={onClose} className="hover:text-blue-600 transition-colors">
                                         {item.product.name}
                                     </Link>
                                 </h4>
+                                {item.variant && (
+                                    <p className="text-xs text-slate-500 mt-0.5">{item.variant.name}</p>
+                                )}
                                 <p className="text-sm font-bold text-slate-900 mt-1">
                                     ₵{((item.product.priceInPesewas / 100)).toLocaleString()}
                                 </p>
@@ -121,7 +124,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                             <div className="flex items-center justify-between mt-2">
                                 <div className="flex items-center border border-slate-200 rounded-lg">
                                     <button 
-                                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                         className="p-1 px-2 hover:bg-slate-50 text-slate-500 disabled:opacity-50"
                                         disabled={item.quantity <= 1}
                                     >
@@ -129,14 +132,14 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                                     </button>
                                     <span className="text-xs font-semibold w-6 text-center">{item.quantity}</span>
                                     <button 
-                                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                         className="p-1 px-2 hover:bg-slate-50 text-slate-500"
                                     >
                                         <Plus className="h-3 w-3" />
                                     </button>
                                 </div>
                                 <button 
-                                    onClick={() => removeItem(item.productId)}
+                                    onClick={() => removeItem(item.id)}
                                     className="text-slate-400 hover:text-red-500 transition-colors"
                                     title="Remove item"
                                 >

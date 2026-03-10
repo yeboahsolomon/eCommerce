@@ -17,9 +17,11 @@ import {
   ChevronLeft,
   FileText,
   ShoppingBag,
-  BarChart3,
   Bell,
   Menu,
+  Activity,
+  BarChart3,
+  Wallet,
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -29,6 +31,8 @@ const sidebarLinks = [
   { href: "/admin/orders", label: "Orders", icon: ClipboardList },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/payouts", label: "Payouts", icon: Wallet },
+  { href: "/admin/audit-logs", label: "Audit Logs", icon: Activity },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
@@ -40,6 +44,8 @@ const breadcrumbMap: Record<string, string> = {
   orders: "Orders",
   products: "Products",
   users: "Users",
+  payouts: "Payouts",
+  "audit-logs": "Audit Logs",
   analytics: "Analytics",
   settings: "Settings",
 };

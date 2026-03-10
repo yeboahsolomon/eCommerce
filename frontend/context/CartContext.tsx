@@ -127,11 +127,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // --- ACTIONS ---
 
-  const addItem = async (productId: string, quantity: number = 1, product?: Product) => {
+  const addItem = async (productId: string, quantity: number = 1, product?: Product, variantId?: string) => {
     // If authenticated, API call
     if (isAuthenticated) {
       try {
-        const res = await api.addToCart(productId, quantity);
+        const res = await api.addToCart(productId, quantity, variantId);
         if (res.success && res.data?.cart) {
            setCart(normalizeCart(res.data.cart));
            toast.success("Added to cart");
@@ -159,17 +159,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               const newItems = currentCart?.items ? currentCart.items.map(item => ({ ...item })) : [];
               const newCart = currentCart ? { ...currentCart, items: newItems } : { id: `local-${Date.now()}`, items: newItems as any[], itemCount: 0, subtotalInCedis: 0 };
               
-              const existingItemIndex = newCart.items.findIndex(i => i.productId === productId);
+              const existingItemIndex = newCart.items.findIndex(i => i.productId === productId && i.variantId === (variantId || undefined));
               
               if (existingItemIndex > -1) {
                   newCart.items[existingItemIndex].quantity += quantity;
               } else {
                   // Ensure price is handled correctly
-                  const price = (productToAdd!.priceInPesewas / 100) || 0;
+                  let priceRes = productToAdd!.priceInPesewas;
+                  let variantRes = undefined;
+                  if (variantId && productToAdd!.variants) {
+                      const v = productToAdd!.variants.find(v => v.id === variantId);
+                      if (v) {
+                          variantRes = v;
+                          priceRes = v.priceInPesewas || priceRes;
+                      }
+                  }
+                  const price = (priceRes / 100) || 0;
                   
                   newCart.items.push({
-                      id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                      id: `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                       productId,
+                      variantId,
+                      variant: variantRes ? { ...variantRes, priceInCedis: variantRes.priceInPesewas ? variantRes.priceInPesewas / 100 : undefined } : undefined,
                       quantity,
                       priceAtAddInCedis: price,
                       product: {
@@ -205,19 +216,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const removeItem = async (productId: string) => {
+  const removeItem = async (itemId: string) => {
      if (isAuthenticated) {
-        // Need CartItemID? The new API implementation in api.ts might handle productId?
-        // Let's check api.ts line 134: request... /cart/items/${productId}
-        // It seems the API expects productId or itemId. 
-        // Previously it was using item.id. Let's assume the API was updated or we need to find the item.
-        // In Step 261 line 136 it used item.id. 
-        // I will use item.id for safety if authenticated.
         if (!cart) return;
-        const item = cart.items.find((i) => i.productId === productId);
+        const item = cart.items.find((i) => i.id === itemId);
         if (item) {
             try {
-                const res = await api.removeFromCart(productId); 
+                const res = await api.removeFromCart(itemId); 
                 if (res.success && res.data?.cart) {
                      setCart(normalizeCart(res.data.cart));
                 } else {
@@ -234,7 +239,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCart((currentCart) => {
               if (!currentCart) return null;
               
-              const newItems = currentCart.items.filter(i => i.productId !== productId);
+              const newItems = currentCart.items.filter(i => i.id !== itemId);
               
               if (newItems.length === currentCart.items.length) {
                   return currentCart;
@@ -255,18 +260,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateQuantity = async (productId: string, quantity: number) => {
+  const updateQuantity = async (itemId: string, quantity: number) => {
     if (quantity < 1) {
-        removeItem(productId);
+        removeItem(itemId);
         return;
     }
     
     if (isAuthenticated) {
         if (!cart) return;
-        const item = cart.items.find((i) => i.productId === productId);
+        const item = cart.items.find((i) => i.id === itemId);
         if (item) {
             try {
-             const res = await api.updateCartItem(productId, quantity);
+             const res = await api.updateCartItem(itemId, quantity);
              if (res.success && res.data?.cart) {
                  setCart(normalizeCart(res.data.cart));
              }
@@ -279,7 +284,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               if (!currentCart) return null;
               
               const newItems = [...currentCart.items];
-              const index = newItems.findIndex(i => i.productId === productId);
+              const index = newItems.findIndex(i => i.id === itemId);
               
               if (index === -1) return currentCart;
               

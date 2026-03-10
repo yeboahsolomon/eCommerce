@@ -71,6 +71,8 @@ async function request<T>(
 // ==================== API OBJECT ====================
 
 export const api = {
+  request,
+
   // ==================== AUTH ====================
   
   async register(data: RegisterData) {
@@ -79,6 +81,10 @@ export const api = {
 
   async login(email: string, password: string, rememberMe?: boolean) {
     return request<{ user: User; token: string }>('POST', '/auth/login', { email, password, rememberMe });
+  },
+
+  async googleLogin(credential: string) {
+    return request<{ user: User; token: string }>('POST', '/auth/google', { credential });
   },
 
   async logout() {
@@ -127,23 +133,23 @@ export const api = {
     return request<{ cart: Cart }>('GET', '/cart');
   },
 
-  async addToCart(productId: string, quantity = 1) {
-    return request<{ cart: Cart }>('POST', '/cart/items', { productId, quantity });
+  async addToCart(productId: string, quantity = 1, variantId?: string) {
+    return request<{ cart: Cart }>('POST', '/cart/items', { productId, quantity, variantId });
   },
 
-  async updateCartItem(productId: string, quantity: number) {
-    return request<{ cart: Cart }>('PUT', `/cart/items/${productId}`, { quantity });
+  async updateCartItem(itemId: string, quantity: number) {
+    return request<{ cart: Cart }>('PUT', `/cart/items/${itemId}`, { quantity });
   },
 
-  async removeFromCart(productId: string) {
-    return request<{ cart: Cart }>('DELETE', `/cart/items/${productId}`);
+  async removeFromCart(itemId: string) {
+    return request<{ cart: Cart }>('DELETE', `/cart/items/${itemId}`);
   },
 
   async clearCart() {
     return request<{ cart: Cart }>('DELETE', '/cart');
   },
 
-  async mergeCart(localCart: { items: { productId: string; quantity: number }[] }) {
+  async mergeCart(localCart: { items: { productId: string; quantity: number; variantId?: string; }[] }) {
     return request<{ cart: Cart }>('POST', '/cart/merge', { items: localCart.items });
   },
 
@@ -176,7 +182,7 @@ export const api = {
   },
 
   async createOrder(data: CreateOrderInput) {
-    return request<{ order: Order }>('POST', '/orders', data);
+    return request<{ order: Order; paymentUrl?: string; reference?: string | null }>('POST', '/orders', data);
   },
 
   async getOrders(params?: { page?: number; limit?: number; status?: string }) {
@@ -238,7 +244,7 @@ export const api = {
   },
 
   async getPopularSearches() {
-    return request<{ popular: string[] }>('GET', '/search/popular');
+    return request<{ popular: { text: string; slug: string }[] }>('GET', '/search/popular');
   },
 
   // ==================== UPLOADS ====================
@@ -400,6 +406,19 @@ export const api = {
     return request<any>('GET', '/admin/activity-logs', undefined, { params });
   },
 
+  // Admin Payouts
+  async getAdminPayouts(params?: { page?: number; limit?: number; status?: string }) {
+    return request<any>('GET', '/payouts/admin/all', undefined, { params });
+  },
+
+  async approvePayout(id: string) {
+    return request<any>('POST', `/payouts/${id}/approve`);
+  },
+
+  async cancelPayout(id: string, reason?: string) {
+    return request<any>('POST', `/payouts/${id}/cancel`, { reason });
+  },
+
   async deleteProduct(productId: string) {
     return request<void>('DELETE', `/products/${productId}`);
   },
@@ -464,11 +483,56 @@ export const api = {
   },
 
   async getSellerWallet() {
-    return request<{ wallet: any; transactions: any[]; history: any[] }>('GET', '/seller/wallet');
+    return request<{ wallet: any; history: any[] }>('GET', '/seller/wallet');
   },
 
-  async requestPayout(amount: number, provider: string) {
-    return request<{ payout: any }>('POST', '/seller/payouts/request', { amount, provider });
+  async requestPayout(amountInCedis: number, profile: any) {
+    return request<{ payout: any }>('POST', '/payouts/request', { 
+      amount: Math.round(amountInCedis * 100),
+      mobileMoneyProvider: profile.mobileMoneyProvider || 'MTN',
+      mobileMoneyNumber: profile.mobileMoneyNumber || '0000000000',
+      mobileMoneyName: profile.businessName || 'Seller'
+    });
+  },
+
+  async getPayouts(params?: { page?: number; limit?: number; status?: string }) {
+    // Assuming createQueryString is defined elsewhere or will be added
+    // For now, directly pass params as the 4th argument to request
+    return request<any>('GET', `/seller/payouts`, undefined, { params });
+  },
+
+  // ==================== PUBLIC SELLER SHOP ====================
+
+  async getSellerBySlug(slug: string) {
+    return request<{ profile: any }>('GET', `/seller/${slug}`);
+  },
+
+  async getSellerShopProducts(slug: string, params?: { page?: number; limit?: number; sort?: string; search?: string; category?: string }) {
+    return request<{ products: Product[]; pagination: Pagination }>('GET', `/seller/${slug}/products`, undefined, { params });
+  },
+
+  // ==================== ORDER TRACKING ====================
+
+  async trackOrder(orderNumber: string) {
+    return request<{ order: any }>('GET', `/orders/track/${orderNumber}`);
+  },
+
+  // ==================== ADMIN COUPONS ====================
+
+  async getAdminCoupons(params?: { page?: number; limit?: number; search?: string; status?: string }) {
+    return request<{ coupons: any[]; pagination: Pagination }>('GET', '/admin/coupons', undefined, { params });
+  },
+
+  async createCoupon(data: any) {
+    return request<{ coupon: any }>('POST', '/admin/coupons', data);
+  },
+
+  async updateCoupon(id: string, data: any) {
+    return request<{ coupon: any }>('PUT', `/admin/coupons/${id}`, data);
+  },
+
+  async deleteCoupon(id: string) {
+    return request<void>('DELETE', `/admin/coupons/${id}`);
   },
 };
 

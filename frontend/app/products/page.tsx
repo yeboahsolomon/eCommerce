@@ -6,8 +6,8 @@ import { PRODUCTS } from "@/lib/dummy-data";
 import { Product } from "@/types";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
+import Breadcrumbs from "@/components/shared/Breadcrumbs";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -39,10 +39,8 @@ export default function ProductsPage() {
   return (
     <div className="bg-slate-50 min-h-screen pb-24 md:pb-12">
       {/* Breadcrumb */}
-      <div className="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center text-sm text-slate-500 gap-2">
-        <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
-        <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />
-        <span className="text-slate-900 font-medium">All Products</span>
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        <Breadcrumbs />
       </div>
 
       <div className="max-w-7xl mx-auto px-4">
@@ -61,7 +59,7 @@ export default function ProductsPage() {
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
-            {products.length === 0 && (
+            {products.length === 0 && !isLoading && (
                 <div className="col-span-full text-center py-10 text-slate-500">
                     No products found.
                 </div>

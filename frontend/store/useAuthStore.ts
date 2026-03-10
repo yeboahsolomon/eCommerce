@@ -9,6 +9,7 @@ interface AuthState {
   
   // Actions
   login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message?: string }>;
+  googleLogin: (credential: string) => Promise<{ success: boolean; message?: string }>;
   register: (data: RegisterData) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<{ success: boolean }>;
@@ -47,6 +48,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         return { success: true };
       }
       return { success: false, message: response.message || 'Login failed' };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'An error occurred' };
+    }
+  },
+
+  googleLogin: async (credential) => {
+    try {
+      const response = await api.googleLogin(credential);
+      if (response.success && response.data) {
+        set({ user: response.data.user, isAuthenticated: true });
+        return { success: true };
+      }
+      return { success: false, message: response.message || 'Google login failed' };
     } catch (error: any) {
       return { success: false, message: error.message || 'An error occurred' };
     }
