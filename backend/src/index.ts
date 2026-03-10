@@ -3,15 +3,20 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
+// @ts-ignore
+import csurf from 'csurf';
 import morgan from 'morgan';
 import path from 'path';
 import { config } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { generalLimiter, authLimiter } from './middleware/rate-limit.middleware.js';
 import { sanitizeBody } from './middleware/sanitize.middleware.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
+import googleAuthRoutes from './routes/google.auth.routes.js';
 import productRoutes from './routes/products.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import cartRoutes from './routes/cart.routes.js';
@@ -22,12 +27,16 @@ import uploadRoutes from './routes/upload.routes.js';
 import wishlistRoutes from './routes/wishlist.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import adminAuditRoutes from './routes/admin.audit.routes.js';
 import searchRoutes from './routes/search.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
 import sellerAnalyticsRoutes from './routes/seller-analytics.routes.js';
 import userRoutes from './routes/user.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import payoutRoutes from './routes/payout.routes.js';
+import couponRoutes from './routes/coupon.routes.js';
+import notificationRoutes from './routes/notifications.routes.js';
+import { startCartRecoveryJob } from './jobs/cart-recovery.job.js';
 
 const app = express();
 
@@ -61,7 +70,7 @@ app.use(cors({
   origin: config.corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
 }));
 
 // Body parsing
@@ -70,6 +79,29 @@ app.use(express.urlencoded({ extended: true }));
 
 // Sanitize all string inputs (XSS prevention)
 app.use(sanitizeBody);
+
+// CSRF Protection
+// We need to exclude webhooks from CSRF because external services (like Paystack)
+// send POST requests without our CSRF token.
+const csrfProtection = csurf({
+  cookie: {
+    httpOnly: true,
+    secure: config.nodeEnv === 'production',
+    sameSite: config.nodeEnv === 'production' ? 'none' : 'lax', // Must be none/lax for cross-origin setups
+  },
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/webhook')) {
+    return next();
+  }
+  csrfProtection(req, res, next);
+});
+
+// Endpoint for frontend to fetch the CSRF token
+app.get('/api/csrf-token', (req: any, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 
 // Serve static files (uploaded images)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -103,6 +135,7 @@ app.get('/api/health', (req, res) => {
 
 // Auth routes (stricter rate limit)
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth', authLimiter, googleAuthRoutes);
 app.use('/api/user', authLimiter, userRoutes);
 
 // Core API routes
@@ -119,16 +152,25 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Admin routes
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/audit-logs', adminAuditRoutes);
+app.use('/api/admin/coupons', couponRoutes);
 
 // Seller analytics routes (mounted BEFORE /api/seller to avoid /:slug catch-all)
 app.use('/api/seller/analytics', sellerAnalyticsRoutes);
 
 // Seller routes
 app.use('/api/seller', sellerRoutes);
+
+// API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'GhanaMarket API Documentation',
+}));
 
 // ==================== ERROR HANDLING ====================
 
@@ -166,5 +208,8 @@ app.listen(config.port, () => {
 ╚═══════════════════════════════════════════════════════════╝
   `);
 });
+
+// Start Background Jobs
+startCartRecoveryJob();
 
 export default app;

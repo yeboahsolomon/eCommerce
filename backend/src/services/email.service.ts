@@ -390,6 +390,16 @@ class EmailService {
 
   // ==================== ORDER LIFECYCLE EMAILS ====================
 
+  async sendAbandonedCartEmail(to: string, name: string, checkoutUrl: string): Promise<void> {
+    await this.sendTemplateEmail({
+       to,
+       subject: "Your cart misses you! 🛒 — GhanaMarket",
+       template: "abandoned-cart",
+       context: { name, checkoutUrl },
+       metadata: { type: "abandoned_cart" },
+    });
+  }
+
   async sendOrderConfirmationEmail(params: {
     to: string;
     customerName: string;
@@ -474,6 +484,24 @@ class EmailService {
       template: 'new-order-seller',
       context: params,
       metadata: { type: 'new_order_seller', orderNumber: params.orderNumber },
+    });
+  }
+
+  async sendLowStockAlertEmail(params: {
+    to: string;
+    sellerName: string;
+    productName: string;
+    variantName?: string;
+    currentStock: number;
+    threshold: number;
+  }): Promise<void> {
+    const itemName = params.variantName ? `${params.productName} (${params.variantName})` : params.productName;
+    await this.sendTemplateEmail({
+       to: params.to,
+       subject: `Low Stock Alert: ${itemName} — GhanaMarket`,
+       template: "low-stock-alert",
+       context: { ...params, itemName },
+       metadata: { type: "low_stock_alert", productName: params.productName },
     });
   }
 

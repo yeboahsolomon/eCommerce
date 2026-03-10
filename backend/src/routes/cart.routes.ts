@@ -49,7 +49,7 @@ router.post(
   validate(addToCartSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { productId, quantity = 1 } = req.body as AddToCartInput;
+      const { productId, variantId, quantity = 1 } = req.body as AddToCartInput;
       const userId = (req as any).user?.id || null;
       const sessionId = req.headers['x-session-id'] as string || req.body.sessionId;
 
@@ -62,7 +62,7 @@ router.post(
       if (!product || !product.isActive) throw new ApiError(404, 'Product not found');
 
       // Add to cart via Service
-      const cart = await cartService.addItem(userId, sessionId, { productId, quantity });
+      const cart = await cartService.addItem(userId, sessionId, { productId, variantId, quantity });
 
       res.status(201).json({
         success: true,

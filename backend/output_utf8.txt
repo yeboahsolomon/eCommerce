@@ -1,0 +1,935 @@
+﻿Looking for seller profile: jonhwick@yahoo.com...
+Found seller: Xyla Wilkins. Finding categories...
+Starting insertion of 15 products to DB...
+Γ¥î [1/15] Failed: Samsung Galaxy S24 Ultra
+node : PrismaClientKnow
+nRequestError: 
+At line:1 char:1
++ node seed-direct.js 
+> output.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (PrismaClientK   
+ nownRequestError:     
+:String) [], Remot    
+eException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [2/15] Failed: Apple MacBook Pro M3 14-inch
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [3/15] Failed: Sony WH-1000XM5 Noise Cancelling Headphones
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [4/15] Failed: Nike Air Max 270 React
+Γ¥î [5/15] Failed: Nespresso Vertuo Next Coffee Machine
+Γ¥î [6/15] Failed: Apple Watch Series 9 GPS, 45mm
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [7/15] Failed: Dyson V15 Detect Absolute Vacuum
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [8/15] Failed: Minimalist Wooden Dining Chair
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [9/15] Failed: LG 65-inch C3 OLED 4K Smart TV
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+Γ¥î [10/15] Failed: Hydro Flask Insulated Water Bottle (32oz)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [11/15] Failed: Anker PowerCore 20100mAh Portable Charger
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [12/15] Failed: Bose QuietComfort Earbuds II
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [13/15] Failed: Classic Men's Automatic Watch
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [14/15] Failed: Yeti Rambler 20 oz Tumbler
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+Γ¥î [15/15] Failed: DJI Mini 3 Pro Drone with Controller
+PrismaClientKnownReques
+tError: 
+Invalid `prisma.product
+.create()` invocation 
+in
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\seed-dir
+ect.js:304:50
+
+  301 const category = 
+categories[Math.floor(M
+ath.random() * 
+categories.length)];
+  302 
+  303 // Create 
+product using Prisma 
+directly
+ΓåÆ 304 const created 
+= await 
+prisma.product.create(
+Foreign key constraint 
+violated: 
+`Product_sellerId_fkey 
+(index)`
+    at 
+$n.handleRequestError (
+C:\Users\Hp\Desktop\eCo
+mmerce\backend\node_mod
+ules\@prisma\client\run
+time\library.js:121:731
+5)
+    at $n.handleAndLogR
+equestError (C:\Users\H
+p\Desktop\eCommerce\bac
+kend\node_modules\@pris
+ma\client\runtime\libra
+ry.js:121:6623)
+    at $n.request (C:\U
+sers\Hp\Desktop\eCommer
+ce\backend\node_modules
+\@prisma\client\runtime
+\library.js:121:6307)
+    at async l (C:\User
+s\Hp\Desktop\eCommerce\
+backend\node_modules\@p
+risma\client\runtime\li
+brary.js:130:9633)
+    at async 
+seedProductsDir (C:\Use
+rs\Hp\Desktop\eCommerce
+\backend\seed-direct.js
+:304:29) {
+  code: 'P2003',
+  clientVersion: 
+'5.22.0',
+  meta: { modelName: 
+'Product', field_name: 
+'Product_sellerId_fkey 
+(index)' }
+}
+
+≡ƒÄë Process complete: Added 0/15 products to DB directly.

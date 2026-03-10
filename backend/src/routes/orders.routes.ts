@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../config/database.js';
 import { validate } from '../middleware/validate.middleware.js';
-import { authenticate } from '../middleware/auth.middleware.js';
+import { authenticate, optionalAuth } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { createOrderSchema, CreateOrderInput } from '../utils/validators.js';
 import { orderService } from '../services/order.service.js';
@@ -15,14 +15,15 @@ const router = Router();
  */
 router.post(
   '/',
-  authenticate,
+  optionalAuth,
   validate(createOrderSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const orderData = req.body as CreateOrderInput;
-      const userId = req.user!.id;
+      const userId = (req as any).user?.id || null;
+      const sessionId = req.headers['x-session-id'] as string || req.body.sessionId;
 
-      const result = await orderService.createOrder(userId, orderData);
+      const result = await orderService.createOrder(userId, sessionId, orderData);
 
       const message = result.paymentUrl
         ? 'Order placed! Redirecting to payment...'
@@ -38,6 +39,80 @@ router.post(
           paymentUrl: result.paymentUrl,
           reference: result.reference,
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/orders/track/:orderNumber
+ * Public: track an order by order number (no auth required)
+ */
+router.get(
+  '/track/:orderNumber',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { orderNumber } = req.params;
+
+      const order = await prisma.order.findUnique({
+        where: { orderNumber },
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          totalInPesewas: true,
+          subtotalInPesewas: true,
+          shippingFeeInPesewas: true,
+          shippingFullName: true,
+          shippingStreetAddress: true,
+          shippingCity: true,
+          shippingRegion: true,
+          shippingPhone: true,
+          createdAt: true,
+          updatedAt: true,
+          items: {
+            select: {
+              id: true,
+              productId: true,
+              productName: true,
+              variantName: true,
+              quantity: true,
+              unitPriceInPesewas: true,
+              product: {
+                select: {
+                  slug: true,
+                  images: { orderBy: { sortOrder: 'asc' as const }, take: 1, select: { url: true } },
+                },
+              },
+            },
+          },
+          payment: {
+            select: { status: true, method: true },
+          },
+        },
+      });
+
+      if (!order) {
+        throw new ApiError(404, 'Order not found. Please check the order number and try again.');
+      }
+
+      // Map product images
+      const orderWithImages = {
+        ...order,
+        items: order.items.map((item: any) => ({
+          ...item,
+          product: {
+            ...item.product,
+            image: item.product?.images?.[0]?.url || null,
+          },
+        })),
+      };
+
+      res.json({
+        success: true,
+        data: { order: orderWithImages },
       });
     } catch (error) {
       next(error);

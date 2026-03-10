@@ -18,8 +18,35 @@ const router = Router();
 const CACHE_TTL = 3600; // 1 hour
 
 /**
- * GET /api/products
- * List products with filtering, sorting, and pagination
+ * @openapi
+ * /products:
+ *   get:
+ *     summary: Retrieve a list of products
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Number of items per page
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         description: Category ID or slug to filter by
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search query for product name or description
+ *     responses:
+ *       200:
+ *         description: A paginated list of products
  */
 router.get(
   '/',
@@ -129,6 +156,7 @@ router.get(
               orderBy: { sortOrder: 'asc' },
               take: 5,
             },
+            variants: true,
             seller: {
               select: {
                 id: true,
@@ -233,6 +261,7 @@ router.get(
             images: {
               orderBy: { sortOrder: 'asc' },
             },
+            variants: true,
             reviews: {
               where: { isApproved: true },
               include: {
@@ -357,7 +386,7 @@ router.post(
   validate(createProductSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { images, ...productData } = req.body as CreateProductInput & { images?: string[] };
+      const { images, variants, ...productData } = req.body as CreateProductInput & { images?: string[], variants?: any[] };
       
       // Assign Seller ID
       let sellerId = productData.sellerId;
@@ -400,10 +429,15 @@ router.post(
               sortOrder: index,
             }))
           } : undefined,
+          hasVariants: variants && variants.length > 0 ? true : false,
+          variants: variants && variants.length > 0 ? {
+            create: variants
+          } : undefined,
         },
         include: {
           category: true,
           images: { orderBy: { sortOrder: 'asc' } },
+          variants: true,
         },
       });
       
@@ -503,7 +537,7 @@ router.put(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const { images, ...updateData } = req.body as UpdateProductInput & { images?: string[] };
+      const { images, variants, ...updateData } = req.body as UpdateProductInput & { images?: string[], variants?: any[] };
       
       // Check product exists
       const existingProduct = await prisma.product.findUnique({ where: { id } });
@@ -570,10 +604,27 @@ router.put(
         }
       }
 
+      // Handle variants update if provided
+      if (variants !== undefined) {
+        // Simple approach: delete all existing variants and recreate
+        await prisma.productVariant.deleteMany({ where: { productId: id } });
+        if (variants.length > 0) {
+          await prisma.productVariant.createMany({
+            data: variants.map(v => ({
+              productId: id,
+              ...v
+            }))
+          });
+          (updateData as any).hasVariants = true;
+        } else {
+          (updateData as any).hasVariants = false;
+        }
+      }
+
       const product = await prisma.product.update({
         where: { id },
         data: updateData,
-        include: { category: true, images: { orderBy: { sortOrder: 'asc' } } },
+        include: { category: true, images: { orderBy: { sortOrder: 'asc' } }, variants: true },
       });
 
       // Invalidate caches

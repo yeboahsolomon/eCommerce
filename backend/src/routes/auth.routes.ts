@@ -56,6 +56,42 @@ const setAuthCookies = (res: Response, accessToken: string, refreshToken: string
 // Create a new user account + send verification email
 // ============================================================
 
+/**
+ * @openapi
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Account created successfully
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Account with this email already exists
+ */
 const registerHandler = [
   validate(registerSchema),
   async (req: Request, res: Response, next: NextFunction) => {
@@ -154,6 +190,36 @@ router.post('/signup', ...registerHandler);
 // Authenticate user and return JWTs
 // ============================================================
 
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     summary: Authenticate a user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               rememberMe:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Invalid credentials
+ *       403:
+ *         description: Account suspended
+ */
 router.post(
   '/login',
   loginLimiter,

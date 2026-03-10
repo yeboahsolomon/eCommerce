@@ -1,11 +1,13 @@
 
 import prisma from '../config/database.js';
 import { redisService } from './redis.service.js';
+import crypto from 'crypto';
 
 const GUEST_CART_TTL = 60 * 60 * 24 * 7; // 7 days
 
 export interface CartItemInput {
   productId: string;
+  variantId?: string;
   quantity: number;
 }
 
@@ -36,28 +38,22 @@ export class CartService {
   /**
    * Update item quantity
    */
-  async updateItem(userId: string | null, sessionId: string, productId: string, quantity: number) {
+  async updateItem(userId: string | null, sessionId: string, cartItemId: string, quantity: number) {
     if (userId) {
-        // DB logic handled in controller usually, but can be here
-        // For now, controller does direct DB access. I should refactor to use this service?
-        // Let's keep controller logic for DB for now to avoid refactoring everything, 
-        // OR move DB logic here. Moving here is better for "Hybrid" abstraction.
-        // But `cart.routes.ts` already has DB logic. 
-        // I will implement DB helpers here and update controller to use them.
-        return this.updateDbItem(userId, productId, quantity);
+        return this.updateDbItem(userId, cartItemId, quantity);
     } else {
-        return this.updateRedisItem(sessionId, productId, quantity);
+        return this.updateRedisItem(sessionId, cartItemId, quantity);
     }
   }
 
   /**
    * Remove item
    */
-  async removeItem(userId: string | null, sessionId: string, productId: string) {
+  async removeItem(userId: string | null, sessionId: string, cartItemId: string) {
     if (userId) {
-        return this.removeDbItem(userId, productId);
+        return this.removeDbItem(userId, cartItemId);
     } else {
-        return this.removeRedisItem(sessionId, productId);
+        return this.removeRedisItem(sessionId, cartItemId);
     }
   }
 
@@ -87,8 +83,8 @@ export class CartService {
 
     // Merge items
     for (const guestItem of guestCart.items) {
-        const existingItem = await prisma.cartItem.findUnique({
-            where: { cartId_productId: { cartId: dbCart.id, productId: guestItem.productId } }
+        const existingItem = await prisma.cartItem.findFirst({
+            where: { cartId: dbCart.id, productId: guestItem.productId, variantId: guestItem.variantId || null }
         });
 
         if (existingItem) {
@@ -103,8 +99,9 @@ export class CartService {
                 data: {
                     cartId: dbCart.id,
                     productId: guestItem.productId,
+                    variantId: guestItem.variantId || null,
                     quantity: guestItem.quantity,
-                    priceAtAddInPesewas: guestItem.price,
+                    priceAtAddInPesewas: guestItem.price || 0,
                 }
             });
         }
@@ -132,7 +129,8 @@ export class CartService {
         select: {
             id: true, name: true, slug: true, priceInPesewas: true, 
             stockQuantity: true, isActive: true,
-            images: { where: { isPrimary: true }, take: 1, select: { url: true } }
+            images: { where: { isPrimary: true }, take: 1, select: { url: true } },
+            variants: true
         }
     });
 
@@ -140,14 +138,24 @@ export class CartService {
     const enrichedItems = cart.items.map((item: any) => {
         const product = products.find(p => p.id === item.productId);
         if (!product) return null; // Product deleted?
+        
+        let variant = null;
+        if (item.variantId && product.variants) {
+           variant = product.variants.find((v: any) => v.id === item.variantId);
+        }
+        
+        const price = variant && variant.priceInPesewas ? variant.priceInPesewas : product.priceInPesewas;
+        
         return {
             ...item,
+            id: item.id || crypto.randomUUID(),
             product: {
                 ...product,
                 priceInCedis: product.priceInPesewas / 100,
-                image: product.images[0]?.url
+                image: product.images[0]?.url,
             },
-            totalPrice: (product.priceInPesewas * item.quantity) / 100
+            variant: variant ? { ...variant, priceInCedis: variant.priceInPesewas ? variant.priceInPesewas / 100 : undefined } : null,
+            totalPrice: (price * item.quantity) / 100
         };
     }).filter(Boolean);
 
@@ -161,24 +169,32 @@ export class CartService {
     const key = `cart:guest:${sessionId}`;
     let cart = await redisService.get<any>(key) || { items: [] };
     
-    const existingIndex = cart.items.findIndex((i: any) => i.productId === item.productId);
+    // Ensure all items have IDs retroactively if updating legacy session
+    cart.items.forEach((i: any) => { if (!i.id) i.id = crypto.randomUUID(); });
+    
+    const existingIndex = cart.items.findIndex((i: any) => i.productId === item.productId && i.variantId === item.variantId);
     if (existingIndex >= 0) {
         cart.items[existingIndex].quantity += item.quantity;
     } else {
-        // Fetch price for snapshot? Optional for guest, but good for consistency
-        cart.items.push({ productId: item.productId, quantity: item.quantity, addedAt: new Date() });
+        cart.items.push({ 
+            id: crypto.randomUUID(), 
+            productId: item.productId, 
+            variantId: item.variantId || null, 
+            quantity: item.quantity, 
+            addedAt: new Date() 
+        });
     }
     
     await redisService.set(key, cart, GUEST_CART_TTL);
     return this.getRedisCart(sessionId);
   }
 
-  private async updateRedisItem(sessionId: string, productId: string, quantity: number) {
+  private async updateRedisItem(sessionId: string, cartItemId: string, quantity: number) {
     const key = `cart:guest:${sessionId}`;
     let cart = await redisService.get<any>(key);
     if (!cart) return null;
 
-    const index = cart.items.findIndex((i: any) => i.productId === productId);
+    const index = cart.items.findIndex((i: any) => i.id === cartItemId || i.productId === cartItemId);
     if (index >= 0) {
         if (quantity > 0) {
             cart.items[index].quantity = quantity;
@@ -190,8 +206,8 @@ export class CartService {
     return this.getRedisCart(sessionId);
   }
 
-  private async removeRedisItem(sessionId: string, productId: string) {
-    return this.updateRedisItem(sessionId, productId, 0);
+  private async removeRedisItem(sessionId: string, cartItemId: string) {
+    return this.updateRedisItem(sessionId, cartItemId, 0);
   }
 
   private async clearRedisCart(sessionId: string) {
@@ -217,51 +233,78 @@ export class CartService {
   }
 
   private async addItemToDb(userId: string, item: CartItemInput) {
-     // Check product validity first (controller should handle? or service?)
-     // Service should handle business logic.
      const product = await prisma.product.findUnique({ where: { id: item.productId } });
      if (!product) throw new Error("Product not found");
 
      let cart = await prisma.cart.findUnique({ where: { userId } });
      if (!cart) cart = await prisma.cart.create({ data: { userId } });
+     else await prisma.cart.update({ where: { id: cart.id }, data: { lastActivityAt: new Date() } });
 
-     await prisma.cartItem.upsert({
-         where: { cartId_productId: { cartId: cart.id, productId: item.productId } },
-         update: { quantity: { increment: item.quantity } },
-         create: {
-             cartId: cart.id,
-             productId: item.productId,
-             quantity: item.quantity,
-             priceAtAddInPesewas: product.priceInPesewas
-         }
+     const existingItem = await prisma.cartItem.findFirst({
+         where: { cartId: cart.id, productId: item.productId, variantId: item.variantId || null }
      });
+
+     if (existingItem) {
+          await prisma.cartItem.update({
+              where: { id: existingItem.id },
+              data: { quantity: { increment: item.quantity } }
+          });
+     } else {
+          await prisma.cartItem.create({
+              data: {
+                  cartId: cart.id,
+                  productId: item.productId,
+                  variantId: item.variantId || null,
+                  quantity: item.quantity,
+                  priceAtAddInPesewas: product.priceInPesewas
+              }
+          });
+     }
      
      return this.getDbCart(userId);
   }
 
-  private async updateDbItem(userId: string, productId: string, quantity: number) {
+  private async updateDbItem(userId: string, cartItemId: string, quantity: number) {
       const cart = await prisma.cart.findUnique({ where: { userId } });
       if (!cart) return null;
 
-      // We need cartItemId, but we assume we find by productId for consistency
-      const item = await prisma.cartItem.findUnique({
-          where: { cartId_productId: { cartId: cart.id, productId } }
+      const item = await prisma.cartItem.findFirst({
+          where: { OR: [ { id: cartItemId }, { productId: cartItemId } ], cartId: cart.id }
       });
       if (!item) return null;
 
-      await prisma.cartItem.update({
-          where: { id: item.id },
-          data: { quantity }
-      });
+      await prisma.$transaction([
+          prisma.cartItem.update({
+              where: { id: item.id },
+              data: { quantity }
+          }),
+          prisma.cart.update({
+              where: { id: cart.id },
+              data: { lastActivityAt: new Date() }
+          })
+      ]);
       return this.getDbCart(userId);
   }
 
-  private async removeDbItem(userId: string, productId: string) {
+  private async removeDbItem(userId: string, cartItemId: string) {
       const cart = await prisma.cart.findUnique({ where: { userId } });
       if (!cart) return;
-      await prisma.cartItem.deleteMany({
-          where: { cartId: cart.id, productId }
+
+      const item = await prisma.cartItem.findFirst({
+          where: { OR: [ { id: cartItemId }, { productId: cartItemId } ], cartId: cart.id }
       });
+      
+      if (item) {
+          await prisma.$transaction([
+              prisma.cartItem.delete({
+                  where: { id: item.id }
+              }),
+              prisma.cart.update({
+                  where: { id: cart.id },
+                  data: { lastActivityAt: new Date() }
+              })
+          ]);
+      }
       return this.getDbCart(userId);
   }
 
