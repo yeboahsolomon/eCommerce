@@ -17,6 +17,18 @@ export interface User {
   lastLoginAt?: string;
 }
 
+export interface ProductVariant {
+  id: string;
+  name: string;
+  sku?: string;
+  priceInPesewas?: number;
+  comparePriceInPesewas?: number;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  weightInGrams?: number;
+  options?: Record<string, string>;
+}
+
 // ==================== PRODUCTS ====================
 
 export interface Product {
@@ -35,6 +47,10 @@ export interface Product {
   stockQuantity?: number;
   isFeatured: boolean;
   isActive?: boolean;
+  hasVariants?: boolean;
+  variants?: ProductVariant[];
+  metaTitle?: string;
+  metaDescription?: string;
   seller?: {
     id: string;
     businessName: string;
@@ -69,6 +85,8 @@ export interface Category {
 export interface CartItem {
   id: string;
   productId: string;
+  variantId?: string;
+  variant?: Partial<ProductVariant> & { priceInCedis?: number; };
   quantity: number;
   priceAtAddInCedis: number;
   product: {
@@ -136,6 +154,8 @@ export type OrderStatus =
 export interface OrderItem {
   id: string;
   productId: string;
+  variantId?: string;
+  variantName?: string;
   productName: string;
   productSlug: string;
   productImage?: string;
@@ -210,8 +230,8 @@ export interface SearchResult {
   name: string;
   slug: string;
   description?: string;
-  priceInPesewas: number;
-  comparePriceInPesewas?: number;
+  priceInCedis: number;
+  comparePriceInCedis?: number | null;
   image: string | null;
   category: Category;
   averageRating: number;
@@ -226,6 +246,61 @@ export interface SearchSuggestion {
   text: string;
   slug: string;
   description: string;
+}
+
+// ==================== COUPONS ====================
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minOrderInPesewas: number | null;
+  maxDiscountInPesewas: number | null;
+  usageLimit: number | null;
+  usageCount: number;
+  startsAt: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+  sellerId: string | null;
+  seller?: { businessName: string; slug: string } | null;
+  createdAt: string;
+}
+
+// ==================== ORDER TRACKING ====================
+
+export interface TrackingOrderItem {
+  id: string;
+  productName: string;
+  variantName?: string;
+  quantity: number;
+  priceInPesewas: number;
+  product?: {
+    slug: string;
+    image: string | null;
+  };
+}
+
+export interface TrackingOrder {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  totalInPesewas: number;
+  subtotalInPesewas: number;
+  shippingFeeInPesewas: number;
+  createdAt: string;
+  updatedAt: string;
+  items: TrackingOrderItem[];
+  deliveryName?: string;
+  deliveryAddress?: string;
+  deliveryCity?: string;
+  deliveryRegion?: string;
+  deliveryPhone?: string;
+  paymentMethod?: string;
+  payment?: {
+    status: string;
+    method: string;
+  };
 }
 
 // ==================== PAGINATION ====================
@@ -277,9 +352,9 @@ export interface RegisterData {
 export interface CartContextType {
   cart: Cart | null;
   isLoading: boolean;
-  addItem: (productId: string, quantity?: number, product?: Product) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => Promise<void>;
-  removeItem: (productId: string) => Promise<void>;
+  addItem: (productId: string, quantity?: number, product?: Product, variantId?: string) => Promise<void>;
+  updateQuantity: (itemId: string, quantity: number) => Promise<void>;
+  removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   itemCount: number;
   subtotal: number;

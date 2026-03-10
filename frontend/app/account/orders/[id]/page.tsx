@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 
 interface OrderItem {
   id: string;
+  productId: string;
   productName: string;
   productImage: string | null;
   quantity: number;
@@ -57,6 +58,15 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+  
+  // Review Modal State
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewProductId, setReviewProductId] = useState<string | null>(null);
+  const [reviewProductName, setReviewProductName] = useState("");
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
   const router = useRouter();
 
   const fetchOrder = async () => {
@@ -114,6 +124,44 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       setIsCancelling(false);
     }
   };
+
+  const handleOpenReview = (productId: string, productName: string) => {
+    setReviewProductId(productId);
+    setReviewProductName(productName);
+    setRating(5);
+    setComment("");
+    setReviewModalOpen(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewProductId) return;
+    if (comment.length > 0 && comment.length < 10) {
+      toast.error("Review comment must be at least 10 characters");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const payload = {
+        rating,
+        title: `${rating} Star Review`,
+        comment: comment.trim() || undefined,
+      };
+      
+      const res = await api.request('POST', `/reviews/product/${reviewProductId}`, payload, true);
+      if (res.success) {
+        toast.success("Review submitted successfully!");
+        setReviewModalOpen(false);
+      } else {
+        toast.error(res.message || "Failed to submit review. You may have already reviewed this item.");
+      }
+    } catch (error) {
+      toast.error("Failed to submit review");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
 
   // Helper to determine timeline state
   const getCurrentStepIndex = (status: string) => {
@@ -230,23 +278,41 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           </h2>
           <div className="divide-y divide-slate-100">
             {order.items.map((item) => (
-              <div key={item.id} className="flex gap-4 py-4 first:pt-0 last:pb-0">
-                <div className="h-16 w-16 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                  {item.productImage ? (
-                    <Image src={item.productImage} alt={item.productName} width={64} height={64} className="object-cover h-full w-full" />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-slate-300">
-                      <Package className="h-6 w-6" />
-                    </div>
+              <div key={item.id} className="flex flex-col sm:flex-row gap-4 py-4 first:pt-0 last:pb-0">
+                <div className="flex gap-4 flex-1">
+                  <div className="h-16 w-16 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
+                    {item.productImage ? (
+                      <Image src={item.productImage} alt={item.productName} width={64} height={64} className="object-cover h-full w-full" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-slate-300">
+                        <Package className="h-6 w-6" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Link href={`/product/${item.productId}`} className="font-medium text-slate-900 hover:text-blue-600 transition">
+                      {item.productName}
+                    </Link>
+                    <p className="text-sm text-slate-500">Qty: {item.quantity}</p>
+                    <p className="font-medium text-slate-900 sm:hidden mt-1">
+                      ₵{((item.priceInPesewas * item.quantity) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3">
+                  <p className="font-medium text-slate-900 hidden sm:block">
+                    ₵{((item.priceInPesewas * item.quantity) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                  {order.status === 'DELIVERED' && item.productId && (
+                     <button 
+                        onClick={() => handleOpenReview(item.productId, item.productName)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition"
+                     >
+                       Write a Review
+                     </button>
                   )}
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-slate-900">{item.productName}</p>
-                  <p className="text-sm text-slate-500">Qty: {item.quantity}</p>
-                </div>
-                <p className="font-medium text-slate-900">
-                  ₵{((item.priceInPesewas * item.quantity) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </p>
               </div>
             ))}
           </div>
@@ -303,6 +369,76 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           </div>
         </div>
       </div>
+
+      {/* Write Review Modal */}
+      {reviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xl font-bold text-slate-900">Write a Review</h3>
+                <button onClick={() => setReviewModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+              <p className="text-slate-600 text-sm mb-6">
+                How was <span className="font-semibold text-slate-800">{reviewProductName}</span>? Share your experience!
+              </p>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Overall Rating</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className="focus:outline-none transition-transform hover:scale-110"
+                    >
+                      <svg
+                        className={`w-8 h-8 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200 fill-current'}`}
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Written Review <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="What did you like or dislike?"
+                  rows={4}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setReviewModalOpen(false)}
+                  className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 font-medium rounded-xl hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitReview}
+                  disabled={isSubmittingReview}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                >
+                  {isSubmittingReview ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

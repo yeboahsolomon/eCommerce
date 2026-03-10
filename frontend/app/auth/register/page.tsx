@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 
 // Define the Validation Schema
 const registerSchema = z
@@ -35,7 +36,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, googleLogin } = useAuth();
 
   const {
     register,
@@ -167,6 +168,41 @@ export default function RegisterPage() {
             "Create Account"
           )}
         </button>
+
+        <div className="relative my-4 flex flex-col gap-4">
+          <div className="relative flex justify-center text-xs uppercase pt-2">
+            <span className="bg-white px-2 text-slate-500 z-10">Or sign up with</span>
+            <div className="absolute inset-0 flex items-center top-[calc(50%+4px)]">
+               <span className="w-full border-t border-slate-300" />
+            </div>
+          </div>
+          
+          <div className="flex justify-center w-full">
+            <GoogleLogin
+              onSuccess={async (credentialResponse: CredentialResponse) => {
+                if (credentialResponse.credential) {
+                  setIsLoading(true);
+                  try {
+                    const response = await googleLogin(credentialResponse.credential);
+                    if (response.success) {
+                      toast.success("Account created securely with Google!");
+                      router.push("/");
+                    } else {
+                      toast.error(response.message || "Google signup failed");
+                    }
+                  } catch(e) {
+                      toast.error("Unexpected error occurred with Google login");
+                  } finally {
+                      setIsLoading(false);
+                  }
+                }
+              }}
+              onError={() => {
+                toast.error("Google Signup Failed");
+              }}
+            />
+          </div>
+        </div>
       </form>
 
       {/* Footer / Login Link */}

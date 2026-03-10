@@ -3,7 +3,8 @@
 import { memo, useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingCart, Star, ImageOff, Heart, Eye, MapPin, BadgeCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ShoppingCart, Star, ImageOff, Heart, Eye, MapPin, BadgeCheck, SlidersHorizontal } from "lucide-react";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ function ProductCard({ product }: ProductCardProps) {
   const { addItem, cart } = useCart(); 
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const router = useRouter();
 
   const discount = product.comparePriceInPesewas
     ? Math.round(((product.comparePriceInPesewas - product.priceInPesewas) / product.comparePriceInPesewas) * 100)
@@ -31,8 +33,12 @@ function ProductCard({ product }: ProductCardProps) {
 
   const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation
+    if (product.hasVariants) {
+      router.push(`/product/${product.id}`);
+      return;
+    }
     await addItem(product.id, 1, product);
-  }, [addItem, product]);
+  }, [addItem, product, router]);
 
   const handleWishlist = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -114,8 +120,17 @@ function ProductCard({ product }: ProductCardProps) {
                 onClick={handleAddToCart}
                 className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-2"
             >
-                <ShoppingCart className="h-4 w-4" />
-                Add to Cart
+                {product.hasVariants ? (
+                  <>
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Options
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-4 w-4" />
+                    Add to Cart
+                  </>
+                )}
             </button>
         </div>
       </Link>
@@ -172,8 +187,13 @@ function ProductCard({ product }: ProductCardProps) {
            <button 
             onClick={handleAddToCart}
             className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600 md:hidden active:scale-95"
+            title={product.hasVariants ? "Select Options" : "Add to Cart"}
           >
-            <ShoppingCart className="h-4 w-4" />
+            {product.hasVariants ? (
+              <SlidersHorizontal className="h-4 w-4" />
+            ) : (
+              <ShoppingCart className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>

@@ -17,6 +17,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/dashboard/NotificationBell";
 
 export default function SellerDashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -128,20 +129,24 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        {/* Mobile Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:hidden">
+        {/* Universal Header */}
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8">
            <div className="flex items-center gap-3">
               <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg lg:hidden"
               >
                  <Menu className="w-6 h-6" />
               </button>
-              <span className="font-bold text-slate-900">Dashboard</span>
+              <span className="font-bold text-slate-900 lg:hidden">Dashboard</span>
            </div>
-           <Link href="/" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
-              <Store className="w-5 h-5" />
-           </Link>
+           
+           <div className="flex items-center gap-2 lg:gap-4 ml-auto">
+              <NotificationBell />
+              <Link href="/" className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                 <Store className="w-5 h-5" />
+              </Link>
+           </div>
         </header>
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">

@@ -69,9 +69,8 @@ export default function SellerPayoutsPage() {
 
     setRequesting(true);
     try {
-      // Ensure we use the provider from their profile
-      const provider = sellerProfile?.mobileMoneyProvider || "MOMO";
-      const res = await api.requestPayout(Number(amount), provider);
+      // Send the whole profile so api.ts can extract necessary fields for payout.routes.ts
+      const res = await api.requestPayout(Number(amount), sellerProfile);
       if (res.success) {
         toast.success("Payout request submitted successfully");
         setAmount("");

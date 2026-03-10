@@ -10,6 +10,47 @@ export const axiosInstance = axios.create({
   },
 });
 
+let csrfToken: string | null = null;
+let isFetchingCsrfToken = false;
+let csrfTokenPromise: Promise<string> | null = null;
+
+export const fetchCsrfToken = async () => {
+  if (csrfToken) return csrfToken;
+  
+  if (isFetchingCsrfToken && csrfTokenPromise) {
+    return csrfTokenPromise;
+  }
+
+  isFetchingCsrfToken = true;
+  csrfTokenPromise = axios
+    .get(`${API_URL}/csrf-token`, { withCredentials: true })
+    .then((res) => {
+      csrfToken = res.data.csrfToken;
+      return csrfToken as string;
+    })
+    .catch((err) => {
+      console.error('Failed to fetch CSRF token', err);
+      return '';
+    })
+    .finally(() => {
+      isFetchingCsrfToken = false;
+    });
+
+  return csrfTokenPromise;
+};
+
+// Request interceptor to attach CSRF token
+axiosInstance.interceptors.request.use(async (config) => {
+  const method = config.method?.toUpperCase();
+  if (method === 'POST' || method === 'PUT' || method === 'DELETE' || method === 'PATCH') {
+    const token = await fetchCsrfToken();
+    if (token) {
+      config.headers['X-CSRF-Token'] = token;
+    }
+  }
+  return config;
+});
+
 // Response interceptor for global error handling
 axiosInstance.interceptors.response.use(
   (response) => response,
