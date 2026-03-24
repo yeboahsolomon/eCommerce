@@ -475,10 +475,13 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 px-4 rounded-xl border border-dashed border-slate-200">
+                    <div className="text-center py-12 px-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
                       <Star className="h-12 w-12 text-slate-300 mx-auto mb-3" />
                       <h4 className="text-lg font-medium text-slate-900 mb-2">No reviews yet</h4>
-                      <p className="text-slate-500 text-sm">Be the first to review this product!</p>
+                      <p className="text-slate-500 text-sm mb-6">Be the first to review this product and help other shoppers!</p>
+                      <button className="bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition active:scale-95 shadow-sm inline-flex items-center justify-center gap-2">
+                         Write a Review
+                      </button>
                     </div>
                   )}
             </div>
@@ -553,18 +556,7 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
 
       </div>
 
-      {/* Sticky Mobile Add to Cart */}
-      <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-slate-200 p-4 md:hidden z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-        <div className="flex items-center gap-4 max-w-7xl mx-auto">
-             <div className="flex-1">
-                <p className="text-xs text-slate-500">Total Price</p>
-                <p className="text-xl font-bold text-slate-900">₵{(currentPrice / 100).toLocaleString()}</p>
-             </div>
-             <div className="w-40">
-               <AddToCartButton className="w-full" />
-             </div>
-         </div>
-      </div>
+
 
 
 

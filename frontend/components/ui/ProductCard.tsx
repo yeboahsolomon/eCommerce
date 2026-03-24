@@ -78,11 +78,11 @@ function ProductCard({ product }: ProductCardProps) {
         </div>
         
         {/* Action Buttons (Right Side) */}
-        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 transition-all duration-300 translate-x-10 group-hover:translate-x-0 opacity-0 group-hover:opacity-100">
+        <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             {/* Wishlist */}
             <button
             onClick={handleWishlist}
-            className={`flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md transition-all duration-200 hover:scale-110 ${
+            className={`flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white shadow-md transition-all duration-200 hover:scale-110 ${
                 isWishlisted ? "text-red-500" : "text-slate-400 hover:text-red-500"
             }`}
             title="Add to Wishlist"
@@ -92,7 +92,7 @@ function ProductCard({ product }: ProductCardProps) {
             {/* Quick View */}
             <button
             onClick={handleQuickView}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-md transition-all duration-200 hover:scale-110 hover:text-blue-600"
+            className="flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-md transition-all duration-200 hover:scale-110 hover:text-blue-600"
             title="Quick View"
             >
             <Eye className="h-4 w-4" />
@@ -113,26 +113,6 @@ function ProductCard({ product }: ProductCardProps) {
             <ImageOff className="h-10 w-10 text-slate-300" />
           </div>
         )}
-
-        {/* Add to Cart Overlay (Desktop) */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full transition-transform duration-300 group-hover:translate-y-0 hidden md:block">
-            <button
-                onClick={handleAddToCart}
-                className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95 flex items-center justify-center gap-2"
-            >
-                {product.hasVariants ? (
-                  <>
-                    <SlidersHorizontal className="h-4 w-4" />
-                    Options
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="h-4 w-4" />
-                    Add to Cart
-                  </>
-                )}
-            </button>
-        </div>
       </Link>
 
       {/* Details Section */}
@@ -178,21 +158,34 @@ function ProductCard({ product }: ProductCardProps) {
                 ₵{(product.comparePriceInPesewas / 100).toLocaleString()}
               </span>
             )}
-            <span className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
-              ₵{(product.priceInPesewas / 100).toLocaleString()}
+            <span className="text-lg sm:text-xl font-extrabold text-slate-900 leading-none tracking-tight">
+               <span className="text-[13px] font-semibold mr-[1px]">₵</span>
+              {(product.priceInPesewas / 100).toLocaleString()}
             </span>
+          </div>
+
+          {/* Desktop Persistent Button (moved into layout flow so it's not hidden behind hover completely on some screens) */}
+          <div className="hidden md:block">
+             <button
+                onClick={handleAddToCart}
+                className="rounded-lg bg-slate-900 text-white px-3 py-1.5 text-[11px] font-bold shadow-sm transition-colors hover:bg-blue-600 flex items-center gap-1.5"
+                title={product.hasVariants ? "Options" : "Add"}
+             >
+                {product.hasVariants ? <SlidersHorizontal className="h-3 w-3" /> : <ShoppingCart className="h-3 w-3" />}
+                {product.hasVariants ? "Options" : "Add"}
+             </button>
           </div>
 
           {/* Mobile Only Add Button */}
            <button 
             onClick={handleAddToCart}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600 md:hidden active:scale-95"
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 md:hidden active:scale-95 border border-blue-100"
             title={product.hasVariants ? "Select Options" : "Add to Cart"}
           >
             {product.hasVariants ? (
-              <SlidersHorizontal className="h-4 w-4" />
+              <SlidersHorizontal className="h-5 w-5" />
             ) : (
-              <ShoppingCart className="h-4 w-4" />
+              <ShoppingCart className="h-5 w-5" />
             )}
           </button>
         </div>

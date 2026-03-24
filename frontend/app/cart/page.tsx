@@ -118,18 +118,7 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* MOBILE STICKY CHECKOUT */}
-      <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-slate-200 p-4 md:hidden z-40">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <p className="text-xs text-slate-500">Total</p>
-            <p className="text-lg font-bold text-slate-900">₵{totalPrice.toLocaleString()}</p>
-          </div>
-          <Link href="/checkout" className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold shadow-md">
-            Checkout
-          </Link>
-        </div>
-      </div>
+
 
     </div>
   );

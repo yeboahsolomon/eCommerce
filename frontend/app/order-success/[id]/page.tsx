@@ -6,7 +6,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { 
   CheckCircle2, Package, MapPin, CreditCard, 
-  ArrowRight, Loader2, ShoppingBag, Copy, Check
+  ArrowRight, Loader2, ShoppingBag, Copy, Check, Truck
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -144,18 +144,44 @@ export default function OrderSuccessPage({ params }: { params: Promise<{ id: str
                 </div>
               </div>
 
-              {/* Delivery Address */}
+              {/* Delivery Address & ETA */}
               {order.shippingAddress && (
-                <div>
-                  <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-blue-600" />
-                    Delivery Address
-                  </h3>
-                  <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 space-y-1">
-                    <p className="font-medium text-slate-900">{order.shippingAddress.fullName}</p>
-                    <p>{order.shippingAddress.streetAddress}</p>
-                    <p>{order.shippingAddress.city}, {order.shippingAddress.region}</p>
-                    <p>{order.shippingAddress.phone}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-blue-600" />
+                      Delivery Address
+                    </h3>
+                    <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600 space-y-1 h-[calc(100%-2.5rem)]">
+                      <p className="font-bold text-slate-900">{order.shippingAddress.fullName}</p>
+                      <p>{order.shippingAddress.streetAddress}</p>
+                      <p>{order.shippingAddress.city}, {order.shippingAddress.region}</p>
+                      <p>{order.shippingAddress.phone}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                      <Truck className="h-5 w-5 text-blue-600" />
+                      Estimated Delivery
+                    </h3>
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 flex items-center gap-4 h-[calc(100%-2.5rem)]">
+                      <div className="bg-white shadow-sm p-3 rounded-full flex-shrink-0">
+                        <Package className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        {(() => {
+                           const today = new Date();
+                           today.setDate(today.getDate() + 3);
+                           return (
+                             <p className="text-lg font-extrabold text-blue-600">
+                               {today.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })}
+                             </p>
+                           );
+                        })()}
+                        <p className="text-xs text-slate-500 font-medium mt-1">Between 8:00 AM - 6:00 PM</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
