@@ -1,6 +1,7 @@
 "use client";
 
 import ProductCard from "@/components/ui/ProductCard";
+import VirtualProductGrid from "@/components/ui/VirtualProductGrid";
 import { api } from "@/lib/api";
 import { Product } from "@/types";
 import { Loader2 } from "lucide-react";
@@ -51,16 +52,7 @@ export default function ProductsPage() {
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-            {products.length === 0 && !isLoading && (
-                <div className="col-span-full text-center py-10 text-slate-500">
-                    No products found.
-                </div>
-            )}
-          </div>
+          <VirtualProductGrid products={products} />
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import Image from 'next/image';
 import type { TrackingOrder, TrackingOrderItem } from '@/types';
 import {
   ArrowLeft, Package, Truck, CheckCircle2, CreditCard,
@@ -189,9 +190,9 @@ export default function OrderTrackingPage() {
                   <div className="space-y-3">
                     {order.items.map((item: TrackingOrderItem) => (
                       <div key={item.id} className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
+                        <div className="relative w-12 h-12 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
                           {item.product?.image ? (
-                            <img src={item.product.image} alt={item.productName} className="w-full h-full object-cover" />
+                            <Image src={item.product.image} alt={item.productName} fill sizes="48px" className="object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-300">
                               <Package className="h-5 w-5" />

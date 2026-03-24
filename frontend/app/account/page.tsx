@@ -10,6 +10,7 @@ import {
   UserCircle, LogIn, Package, MapPin, Heart, Settings,
   ChevronRight, Loader2, ShoppingBag, Star, Clock, Truck, CheckCircle2
 } from "lucide-react";
+import Image from "next/image";
 
 const ORDER_STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   PENDING: { label: "Pending", color: "text-amber-600 bg-amber-50", icon: Clock },
@@ -101,9 +102,9 @@ export default function AccountPage() {
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 h-24 md:h-32"></div>
           <div className="px-6 pb-6 -mt-10 md:-mt-12">
             <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-              <div className="h-20 w-20 md:h-24 md:w-24 rounded-2xl bg-white border-4 border-white shadow-lg flex items-center justify-center text-2xl md:text-3xl font-extrabold text-blue-600 flex-shrink-0">
+              <div className="relative overflow-hidden h-20 w-20 md:h-24 md:w-24 rounded-2xl bg-white border-4 border-white shadow-lg flex items-center justify-center text-2xl md:text-3xl font-extrabold text-blue-600 flex-shrink-0">
                 {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.firstName} className="h-full w-full rounded-xl object-cover" />
+                  <Image src={user.avatarUrl} alt={user.firstName} fill sizes="96px" className="object-cover" unoptimized />
                 ) : (
                   initials
                 )}

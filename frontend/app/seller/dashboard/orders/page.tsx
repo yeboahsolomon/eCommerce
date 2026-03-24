@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import Image from "next/image";
 
 const formatCurrency = (amountInPesewas: number | undefined) => {
   return typeof amountInPesewas === 'number' 
@@ -173,9 +174,9 @@ export default function SellerOrdersPage() {
                                  <div className="space-y-3">
                                     {Array.isArray(order.items) ? order.items.map((item: any) => (
                                        <div key={item.id} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-slate-200">
-                                          <div className="w-12 h-12 bg-slate-100 rounded-md overflow-hidden shrink-0">
+                                          <div className="relative w-12 h-12 bg-slate-100 rounded-md overflow-hidden shrink-0">
                                              {item.product?.images?.[0] && (
-                                                <img src={item.product?.images?.[0]} alt={item.product?.name || 'Product'} className="w-full h-full object-cover" />
+                                                <Image src={item.product?.images?.[0]} alt={item.product?.name || 'Product'} fill sizes="48px" className="object-cover" />
                                              )}
                                           </div>
                                           <div className="flex-1 min-w-0">

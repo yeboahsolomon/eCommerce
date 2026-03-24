@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Product } from "@/types";
 import Link from "next/link";
+import Image from "next/image";
 import { useDebounce } from "use-debounce";
 import { toast } from "sonner";
 import { 
@@ -172,9 +173,9 @@ export default function SellerProductsPage() {
                {filteredProducts.map((product: any) => (
                   <div key={product.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-4">
                      <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-lg bg-slate-100 overflow-hidden shrink-0">
+                        <div className="relative w-16 h-16 rounded-lg bg-slate-100 overflow-hidden shrink-0">
                            {product.images?.[0] ? (
-                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                              <Image src={product.images[0]} alt={product.name} fill sizes="64px" className="object-cover" />
                            ) : (
                               <div className="w-full h-full flex items-center justify-center text-slate-300">
                                  <Package className="w-6 h-6" />
@@ -243,9 +244,9 @@ export default function SellerProductsPage() {
                            <tr key={product.id} className="hover:bg-slate-50 transition">
                               <td className="px-6 py-4">
                                  <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0">
+                                    <div className="relative w-12 h-12 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0">
                                        {product.images?.[0] ? (
-                                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                                          <Image src={product.images[0]} alt={product.name} fill sizes="48px" className="object-cover" />
                                        ) : (
                                           <div className="w-full h-full flex items-center justify-center text-slate-300">
                                              <Package className="w-5 h-5" />

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Loader2, Check, ChevronRight, ChevronLeft, Upload, CreditCard, Building2, User, FileText } from "lucide-react";
 import { useDropzone } from "react-dropzone";
+import Image from "next/image";
 
 // ==================== SCHEMAS ====================
 
@@ -462,7 +463,7 @@ function Step3Form({ defaultValues, onBack, onNext }: { defaultValues: any, onBa
              <input {...getInputGhana()} />
              {ghanaCardPreview ? (
                <div className="relative h-40 w-full max-w-sm mx-auto">
-                 <img src={ghanaCardPreview} alt="Ghana Card Front" className="h-full w-full object-contain rounded-lg" />
+                 <Image src={ghanaCardPreview} alt="Ghana Card Front" fill className="object-contain rounded-lg" unoptimized />
                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-lg">
                    <p className="text-white font-medium">Click to change</p>
                  </div>
@@ -485,7 +486,7 @@ function Step3Form({ defaultValues, onBack, onNext }: { defaultValues: any, onBa
              <input {...getInputGhanaBack()} />
              {ghanaCardBackPreview ? (
                <div className="relative h-40 w-full max-w-sm mx-auto">
-                 <img src={ghanaCardBackPreview} alt="Ghana Card Back" className="h-full w-full object-contain rounded-lg" />
+                 <Image src={ghanaCardBackPreview} alt="Ghana Card Back" fill className="object-contain rounded-lg" unoptimized />
                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-lg">
                    <p className="text-white font-medium">Click to change</p>
                  </div>
@@ -511,7 +512,7 @@ function Step3Form({ defaultValues, onBack, onNext }: { defaultValues: any, onBa
                  <div className="relative h-40 w-full max-w-sm mx-auto flex items-center justify-center bg-slate-100 rounded-lg border border-slate-200">
                    {/* If it's an image, show it. If PDF, show icon */}
                    {typeof certFile === 'string' || (certFile as File).type.startsWith('image/') ? (
-                      <img src={certPreview} alt="Certificate" className="h-full w-full object-contain rounded-lg" />
+                      <Image src={certPreview} alt="Certificate" fill className="object-contain rounded-lg" unoptimized />
                    ) : (
                       <div className="flex flex-col items-center p-4">
                         <FileText className="w-12 h-12 text-red-500 mb-2" />

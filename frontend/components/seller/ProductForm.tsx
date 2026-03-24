@@ -17,7 +17,7 @@ import {
   Image as ImageIcon 
 } from "lucide-react";
 import { Category } from "@/types";
-// Removed ReactQuill imports
+import Image from "next/image";
 
 const productSchema = z.object({
   name: z.string().min(3, "Product name is required"),
@@ -218,7 +218,7 @@ export default function ProductForm({ initialData, categories: initialCategories
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                      {images.map((url, index) => (
                         <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200">
-                           <img src={url} alt={`Product ${index + 1}`} className="w-full h-full object-cover" />
+                           <Image src={url} alt={`Product ${index + 1}`} fill className="object-cover" unoptimized />
                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                               <button type="button" onClick={() => removeImage(index)} className="p-2 bg-white rounded-full text-red-600 hover:bg-red-50">
                                  <X className="w-4 h-4" />

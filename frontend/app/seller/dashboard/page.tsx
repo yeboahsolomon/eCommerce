@@ -6,7 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { DollarSign, ShoppingBag, Package, Star, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { StatsCard } from "./components/StatsCard";
-import { SalesChart } from "./components/SalesChart";
+import dynamic from "next/dynamic";
+const SalesChart = dynamic(() => import("./components/SalesChart").then(mod => ({ default: mod.SalesChart })), { ssr: false });
 import { RecentOrders } from "./components/RecentOrders";
 
 const formatCurrency = (amountInPesewas: number) => {

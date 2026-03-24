@@ -1,5 +1,6 @@
 import { Lock } from "lucide-react";
 import { CartItem } from "@/types"; // Make sure CartItem is imported correctly
+import Image from "next/image";
 
 interface OrderSummarySidebarProps {
   itemCount: number;
@@ -53,7 +54,7 @@ export default function CheckoutSummarySidebar({
                 {group.items.map((item) => (
                   <div key={item.id} className="flex gap-3">
                     <div className="relative h-12 w-12 rounded bg-slate-100 overflow-hidden flex-shrink-0">
-                      {item.product.image && <img src={item.product.image} alt={item.product.name} className="object-cover h-full w-full" />}
+                      {item.product.image && <Image src={item.product.image} alt={item.product.name} fill sizes="48px" className="object-cover" />}
                       <span className="absolute bottom-0 right-0 bg-slate-800 text-white text-[10px] px-1">{item.quantity}</span>
                     </div>
                     <div className="flex-1 min-w-0">

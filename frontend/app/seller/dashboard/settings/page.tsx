@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2, Save, Upload, User, Store } from "lucide-react";
 import { useDropzone } from "react-dropzone";
+import Image from "next/image";
 
 const settingsSchema = z.object({
   businessName: z.string().min(3, "Store name is required"),
@@ -151,7 +152,7 @@ export default function SellerSettingsPage() {
                  <div {...getLogoProps()} className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition aspect-square w-40 relative overflow-hidden bg-slate-50">
                     <input {...getLogoInput()} />
                     {logoUrl ? (
-                       <img src={logoUrl} alt="Logo" className="absolute inset-0 w-full h-full object-cover" />
+                       <Image src={logoUrl} alt="Logo" fill className="object-cover" unoptimized />
                     ) : (
                        <div className="text-center">
                           {logoUploading ? <Loader2 className="w-6 h-6 animate-spin text-blue-600 mb-2" /> : <Store className="w-8 h-8 text-slate-300 mb-2 mx-auto" />}
@@ -166,7 +167,7 @@ export default function SellerSettingsPage() {
                  <div {...getBannerProps()} className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition h-40 w-full relative overflow-hidden bg-slate-50">
                     <input {...getBannerInput()} />
                     {bannerUrl ? (
-                       <img src={bannerUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+                       <Image src={bannerUrl} alt="Banner" fill className="object-cover" unoptimized />
                     ) : (
                        <div className="text-center">
                           {bannerUploading ? <Loader2 className="w-6 h-6 animate-spin text-blue-600 mb-2" /> : <Upload className="w-8 h-8 text-slate-300 mb-2 mx-auto" />}

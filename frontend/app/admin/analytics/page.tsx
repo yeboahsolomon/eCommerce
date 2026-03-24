@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 import {
   Loader2, BarChart3, TrendingUp, Calendar,
 } from "lucide-react";
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar,
-} from "recharts";
+import dynamic from "next/dynamic";
+
+const DualAxisLineChart = dynamic(() => import("@/components/admin/charts/DualAxisLineChart"), { ssr: false });
+const OrderStatusPieChart = dynamic(() => import("@/components/admin/charts/OrderStatusPieChart"), { ssr: false });
+const TopCategoriesBarChart = dynamic(() => import("@/components/admin/charts/TopCategoriesBarChart"), { ssr: false });
+const SalesByRegionBarChart = dynamic(() => import("@/components/admin/charts/SalesByRegionBarChart"), { ssr: false });
 
 const PIE_COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#ec4899", "#14b8a6"];
 
@@ -108,27 +110,7 @@ export default function AdminAnalyticsPage() {
         </h2>
         <div className="h-80">
           {salesChart.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={salesChart}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis
-                  dataKey="date" stroke="#64748b" tick={{ fontSize: 11 }}
-                  tickFormatter={(v) => new Date(v).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                />
-                <YAxis yAxisId="revenue" stroke="#64748b" tick={{ fontSize: 11 }} tickFormatter={(v) => `₵${v}`} />
-                <YAxis yAxisId="orders" orientation="right" stroke="#64748b" tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
-                  labelFormatter={(v) => new Date(v).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
-                  formatter={(v: any, name: any) => [
-                    name === "revenue" ? `₵${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : v,
-                    name === "revenue" ? "Revenue" : "Orders"
-                  ]}
-                />
-                <Line yAxisId="revenue" type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} dot={false} name="revenue" />
-                <Line yAxisId="orders" type="monotone" dataKey="orders" stroke="#10b981" strokeWidth={2} dot={false} name="orders" />
-              </LineChart>
-            </ResponsiveContainer>
+              <DualAxisLineChart data={salesChart} />
           ) : (
             <div className="h-full flex items-center justify-center text-slate-500">No data for this period</div>
           )}
@@ -141,27 +123,7 @@ export default function AdminAnalyticsPage() {
           <h2 className="font-semibold text-white mb-4">Orders by Status</h2>
           <div className="h-64">
             {ordersByStatus.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={ordersByStatus}
-                    dataKey="count"
-                    nameKey="status"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={85}
-                    innerRadius={55}
-                    paddingAngle={2}
-                  >
-                    {ordersByStatus.map((_, idx) => (
-                      <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <OrderStatusPieChart data={ordersByStatus} />
             ) : (
               <div className="h-full flex items-center justify-center text-slate-500">No data</div>
             )}
@@ -182,18 +144,7 @@ export default function AdminAnalyticsPage() {
           <h2 className="font-semibold text-white mb-4">Top Selling Categories</h2>
           <div className="h-64">
             {topCategories.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topCategories} layout="vertical" margin={{ left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
-                  <XAxis type="number" stroke="#64748b" tick={{ fontSize: 11 }} tickFormatter={(v) => `₵${v}`} />
-                  <YAxis dataKey="name" type="category" stroke="#64748b" tick={{ fontSize: 11 }} width={90} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
-                    formatter={(v: any) => [`₵${Number(v).toLocaleString()}`, "Revenue"]}
-                  />
-                  <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <TopCategoriesBarChart data={topCategories} />
             ) : (
               <div className="h-full flex items-center justify-center text-slate-500">No data</div>
             )}
@@ -206,21 +157,7 @@ export default function AdminAnalyticsPage() {
         <h2 className="font-semibold text-white mb-4">Sales by Region</h2>
         <div className="h-72">
           {salesByRegion.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={salesByRegion}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="region" stroke="#64748b" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" height={60} />
-                <YAxis stroke="#64748b" tick={{ fontSize: 11 }} tickFormatter={(v) => `₵${v}`} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", color: "#fff" }}
-                  formatter={(v: any, name: any) => [
-                    name === "revenue" ? `₵${Number(v).toLocaleString()}` : v,
-                    name === "revenue" ? "Revenue" : "Orders"
-                  ]}
-                />
-                <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} name="revenue" />
-              </BarChart>
-            </ResponsiveContainer>
+              <SalesByRegionBarChart data={salesByRegion} />
           ) : (
             <div className="h-full flex items-center justify-center text-slate-500">No region data yet</div>
           )}

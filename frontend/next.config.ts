@@ -23,6 +23,10 @@ const nextConfig = {
         hostname: 'pub-4fec403f8065446fb49800a3ad118b14.r2.dev',
         pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
 };

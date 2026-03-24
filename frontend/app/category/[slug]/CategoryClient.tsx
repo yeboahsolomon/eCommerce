@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import ProductCard from "@/components/ui/ProductCard";
+import VirtualProductGrid from "@/components/ui/VirtualProductGrid";
 import ProductCardSkeleton from "@/components/ui/ProductCardSkeleton";
 import Breadcrumbs from "@/components/shared/Breadcrumbs";
 
@@ -56,11 +57,7 @@ export default function CategoryClient() {
           ))}
         </div>
       ) : products.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <VirtualProductGrid products={products} />
       ) : (
         <div className="text-center py-12">
           <p className="text-lg text-muted-foreground">No products found in this category.</p>

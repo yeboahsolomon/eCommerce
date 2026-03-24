@@ -9,6 +9,7 @@ import {
   ArrowRight, Loader2, ShoppingBag, Copy, Check
 } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 export default function OrderSuccessPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -125,8 +126,8 @@ export default function OrderSuccessPage({ params }: { params: Promise<{ id: str
                           {group.items.map((item) => (
                             <div key={item.id} className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-lg bg-white border border-slate-100 overflow-hidden flex-shrink-0">
-                                  {item.productImage && <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />}
+                                <div className="relative h-10 w-10 rounded-lg bg-white border border-slate-100 overflow-hidden flex-shrink-0">
+                                  {item.productImage && <Image src={item.productImage} alt={item.productName} fill sizes="40px" className="object-cover" />}
                                 </div>
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium text-slate-900 line-clamp-1">{item.productName}</p>

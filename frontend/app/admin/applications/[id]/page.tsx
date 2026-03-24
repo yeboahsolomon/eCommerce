@@ -11,6 +11,7 @@ import {
   Shield, Clock, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
@@ -498,7 +499,9 @@ export default function ApplicationReviewPage() {
             <button onClick={() => setViewingImage(null)} className="absolute -top-10 right-0 text-white/70 hover:text-white">
               <X className="h-6 w-6" />
             </button>
-            <img src={viewingImage} alt="Document" className="max-w-full max-h-[80vh] rounded-lg object-contain" />
+            <div className="relative w-[80vw] h-[80vh] max-w-4xl max-h-[80vh]">
+              <Image src={viewingImage} alt="Document" fill className="object-contain rounded-lg" unoptimized />
+            </div>
             <div className="mt-3 flex justify-center">
               <a href={viewingImage} target="_blank" rel="noopener noreferrer"
                 className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
@@ -519,7 +522,7 @@ function DocumentCard({ label, url, onView }: { label: string; url: string; onVi
     <div className="bg-slate-700/30 border border-slate-600/50 rounded-lg p-3">
       <p className="text-xs text-slate-400 mb-2">{label}</p>
       <div className="aspect-[4/3] bg-slate-900 rounded overflow-hidden cursor-pointer relative group" onClick={onView}>
-        <img src={url} alt={label} className="w-full h-full object-cover" />
+        <Image src={url} alt={label} fill sizes="300px" className="object-cover" />
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
           <ZoomIn className="h-6 w-6 text-white" />
         </div>
