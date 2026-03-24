@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { Order, Address, Pagination, CreateOrderInput, CreateAddressInput } from '../../types';
+import type { Order, Address, Pagination, CreateOrderInput, CreateAddressInput, TrackingOrder } from '../../types';
 
 export const ordersApi = {
   async calculateCheckout(data: { shippingRegion?: string; shippingCity?: string; currentCart: any }) {
@@ -23,7 +23,7 @@ export const ordersApi = {
   },
 
   async trackOrder(orderNumber: string) {
-    return request<{ order: any }>('GET', `/orders/track/${orderNumber}`);
+    return request<{ order: TrackingOrder }>('GET', `/orders/track/${orderNumber}`);
   },
 };
 

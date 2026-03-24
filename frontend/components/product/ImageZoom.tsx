@@ -1,28 +1,19 @@
 'use client';
 
-<<<<<<< HEAD
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ZoomIn, X, Maximize2 } from 'lucide-react';
-=======
-import { useState, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 
 interface ImageZoomProps {
   images: { url: string; alt?: string }[];
   productName: string;
 }
 
-<<<<<<< HEAD
 type SlideDirection = 'left' | 'right' | 'none';
 
-=======
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 export default function ImageZoom({ images, productName }: ImageZoomProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
-<<<<<<< HEAD
   const [showGallery, setShowGallery] = useState(false);
   const [slideDirection, setSlideDirection] = useState<SlideDirection>('none');
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -76,12 +67,6 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
   }, [activeIndex, images.length, goToImage]);
 
   // --- Mouse zoom (desktop) ---
-=======
-  const imageRef = useRef<HTMLDivElement>(null);
-
-  const activeImage = images[activeIndex]?.url || '';
-
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!imageRef.current) return;
     const rect = imageRef.current.getBoundingClientRect();
@@ -93,7 +78,6 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
   const handleMouseEnter = () => setIsZoomed(true);
   const handleMouseLeave = () => setIsZoomed(false);
 
-<<<<<<< HEAD
   // --- Touch swipe handlers ---
   const getTouchDistance = (touches: React.TouchList | TouchList) => {
     if (touches.length < 2) return 0;
@@ -226,10 +210,6 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
     if (slideDirection === 'right') return 'animate-slide-right';
     return 'animate-subtle-fade';
   };
-=======
-  const prevImage = () => setActiveIndex((i) => (i === 0 ? images.length - 1 : i - 1));
-  const nextImage = () => setActiveIndex((i) => (i === images.length - 1 ? 0 : i + 1));
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 
   if (images.length === 0) {
     return (
@@ -240,7 +220,6 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
   }
 
   return (
-<<<<<<< HEAD
     <>
       <style dangerouslySetInnerHTML={{ __html: cssAnimations }} />
 
@@ -491,84 +470,6 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
         </div>
       </div>
     </>
-=======
-    <div className="space-y-3">
-      {/* Main Image with Zoom */}
-      <div
-        ref={imageRef}
-        className="relative aspect-square bg-gray-50 rounded-xl overflow-hidden cursor-crosshair group"
-        onMouseMove={handleMouseMove}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <img
-          src={activeImage}
-          alt={images[activeIndex]?.alt || productName}
-          className="w-full h-full object-contain transition-opacity"
-          draggable={false}
-        />
-
-        {/* Zoom overlay (desktop only) */}
-        {isZoomed && (
-          <div
-            className="absolute inset-0 hidden md:block pointer-events-none"
-            style={{
-              backgroundImage: `url(${activeImage})`,
-              backgroundSize: '250%',
-              backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
-              backgroundRepeat: 'no-repeat',
-            }}
-          />
-        )}
-
-        {/* Zoom indicator */}
-        <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden md:flex">
-          <ZoomIn className="h-3 w-3" />
-          Hover to zoom
-        </div>
-
-        {/* Navigation arrows */}
-        {images.length > 1 && (
-          <>
-            <button
-              onClick={(e) => { e.stopPropagation(); prevImage(); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <ChevronLeft className="h-5 w-5 text-gray-700" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); nextImage(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <ChevronRight className="h-5 w-5 text-gray-700" />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Thumbnails */}
-      {images.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {images.map((img, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveIndex(i)}
-              className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                i === activeIndex
-                  ? 'border-blue-600 shadow-md'
-                  : 'border-transparent hover:border-gray-300'
-              }`}
-            >
-              <img
-                src={img.url}
-                alt={img.alt || `${productName} ${i + 1}`}
-                className="w-full h-full object-cover"
-              />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
   );
 }
+

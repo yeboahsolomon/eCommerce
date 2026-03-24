@@ -55,11 +55,7 @@ export default function AdminOrdersPage() {
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
-<<<<<<< HEAD
       await api.updateAdminOrderStatus(orderId, newStatus);
-=======
-      await api.updateOrderStatus(orderId, newStatus);
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
       setOrders(orders.map((o) => o.id === orderId ? { ...o, status: newStatus } : o));
       toast.success("Order status updated");
     } catch (err) {
@@ -179,3 +175,4 @@ export default function AdminOrdersPage() {
     </div>
   );
 }
+

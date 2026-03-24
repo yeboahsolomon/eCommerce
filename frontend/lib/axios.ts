@@ -4,6 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export const axiosInstance = axios.create({
   baseURL: API_URL,
+  timeout: 15000, // 15 seconds global timeout for variable network conditions in Ghana
   withCredentials: true, // Send cookies with requests
   headers: {
     'Content-Type': 'application/json',
@@ -56,6 +57,12 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Handle network timeouts gracefully
+    if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
+      error.message = 'Network timeout. Please check your internet connection and try again.';
+      return Promise.reject(error);
+    }
 
     // Handle 401 Unauthorized (keep silent refresh logic placeholder if needed)
     if (error.response?.status === 401 && !originalRequest._retry) {

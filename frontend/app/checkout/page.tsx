@@ -6,41 +6,18 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/Input";
-<<<<<<< HEAD
 import { checkoutSchema, CheckoutFormValues } from "@/lib/validations/schema";
-=======
-import { checkoutSchema, CheckoutFormValues } from "@/lib/validators";
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 import { CreateOrderInput } from "@/types";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
+import CheckoutDeliveryForm from "@/components/checkout/CheckoutDeliveryForm";
+import CheckoutSummarySidebar from "@/components/checkout/CheckoutSummarySidebar";
 import { api } from "@/lib/api";
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronLeft, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
-<<<<<<< HEAD
 import { GHANA_REGIONS } from "@/lib/constants";
-=======
-const GHANA_REGIONS = [
-  "Greater Accra",
-  "Ashanti",
-  "Western",
-  "Central",
-  "Eastern",
-  "Northern",
-  "Volta",
-  "Bono",
-  "Ahafo",
-  "Upper East",
-  "Upper West",
-  "Savannah",
-  "North East",
-  "Bono East",
-  "Oti",
-  "Western North",
-];
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 
 export default function CheckoutPage() {
   const { cart, subtotal, clearCart, isLoading: isCartLoading } = useCart();
@@ -237,42 +214,7 @@ export default function CheckoutPage() {
 
           <form id="checkout-form" onSubmit={handleSubmit(onSubmit)}>
             
-            {/* Contact */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 mb-6">
-              <h2 className="text-lg font-bold text-slate-900 mb-4">Contact Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Full Name" placeholder="Kwame Mensah" {...register("fullName")} error={errors.fullName?.message} />
-                <Input label="Phone Number" placeholder="054XXXXXXX" {...register("phone")} error={errors.phone?.message} />
-                <div className="md:col-span-2">
-                  <Input label="Email Address" type="email" placeholder="kwame@example.com" {...register("email")} error={errors.email?.message} />
-                </div>
-              </div>
-            </div>
-
-            {/* Shipping Address */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 mb-6">
-              <h2 className="text-lg font-bold text-slate-900 mb-4">Delivery Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Region</label>
-                    <select {...register("region")} className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Select Region</option>
-                        {GHANA_REGIONS.map((region) => (
-                          <option key={region} value={region}>{region}</option>
-                        ))}
-                    </select>
-                    {errors.region && <p className="text-xs text-red-500">{errors.region.message}</p>}
-                </div>
-                <Input label="City / Town" placeholder="Accra" {...register("city")} error={errors.city?.message} />
-                <div className="md:col-span-2">
-                   <Input label="Street Name / Landmark" placeholder="Near the Catholic Church" {...register("address")} error={errors.address?.message} />
-                </div>
-                <div className="md:col-span-2">
-                   <Input label="GhanaPost GPS (Optional)" placeholder="GA-183-8164" {...register("gpsAddress")} error={errors.gpsAddress?.message} />
-                   <p className="text-[10px] text-slate-400 mt-1">Helps our riders find you faster.</p>
-                </div>
-              </div>
-            </div>
+            <CheckoutDeliveryForm register={register} errors={errors} />
 
             {/* Payment */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
@@ -288,92 +230,17 @@ export default function CheckoutPage() {
 
         {/* RIGHT: Order Summary */}
         <div className="lg:col-span-4">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 sticky top-4">
-            <h3 className="font-bold text-slate-900 mb-4">Your Order ({items.length} item{items.length !== 1 ? 's' : ''})</h3>
-            
-            <div className="space-y-6 mb-6 max-h-[400px] overflow-y-auto pr-2">
-              {Array.from(groupedItemsMap).map(([sellerId, group], index) => {
-                // Find dynamic package shipping info from API if available
-                const pkgInfo = sellerPackages.find(p => p.sellerId === sellerId);
-                const pkgShipping = pkgInfo ? pkgInfo.shipping / 100 : 0;
-                
-                return (
-                  <div key={sellerId} className="bg-slate-50 border border-slate-100 rounded-lg p-3">
-                    <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
-                      <span className="text-xs font-bold text-slate-800">Package {index + 1}: {group.name}</span>
-                      <span className="text-xs text-slate-500">
-                        Shipping:{' '}
-                        {isCalculatingShipping ? (
-                          <span className="text-slate-400 italic">calculating...</span>
-                        ) : !watchRegion ? (
-                          <span className="text-slate-400 italic">select region</span>
-                        ) : (
-                          <span className="font-medium">₵{(pkgInfo?.shippingInCedis ?? pkgShipping).toLocaleString()}</span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="space-y-3">
-                      {group.items.map((item) => (
-                        <div key={item.id} className="flex gap-3">
-                          <div className="relative h-12 w-12 rounded bg-slate-100 overflow-hidden flex-shrink-0">
-                            {item.product.image && <img src={item.product.image} alt={item.product.name} className="object-cover h-full w-full" />}
-                            <span className="absolute bottom-0 right-0 bg-slate-800 text-white text-[10px] px-1">{item.quantity}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
-                            <p className="text-xs text-slate-500">₵{(item.product.priceInPesewas / 100).toLocaleString()}</p>
-                          </div>
-                          <p className="text-sm font-bold flex-shrink-0">₵{((item.product.priceInPesewas * item.quantity) / 100).toLocaleString()}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-slate-100 pt-4 space-y-2 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Subtotal</span>
-                <span>₵{totalPrice.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                 <span className="text-slate-500">Delivery Fee</span>
-                 {isCalculatingShipping ? (
-                   <span className="text-slate-400 italic">calculating...</span>
-                 ) : deliveryFee === 0 && !watchRegion ? (
-                   <span className="text-slate-400 italic">Select region to calculate</span>
-                 ) : (
-                   <span>₵{deliveryFee.toLocaleString()}</span>
-                 )}
-              </div>
-              
-              <div className="flex justify-between text-lg font-bold text-slate-900 pt-2">
-                <span>Total</span>
-                <span>₵{grandTotal.toLocaleString()}</span>
-              </div>
-            </div>
-
-            <button
-              form="checkout-form"
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-70 disabled:cursor-wait flex items-center justify-center gap-2"
-            >
-              {isSubmitting ? "Placing Order..." : (
-                <>
-                    <Lock className="h-4 w-4" />
-                    Pay ₵{grandTotal.toLocaleString()}
-                </>
-              )}
-            </button>
-            
-            <div className="mt-4 text-center">
-               <p className="text-xs text-slate-400">
-                 By placing this order, you agree to our Terms of Service.
-               </p>
-            </div>
-          </div>
+          <CheckoutSummarySidebar 
+            itemCount={itemCount}
+            groupedItemsMap={groupedItemsMap}
+            sellerPackages={sellerPackages}
+            isCalculatingShipping={isCalculatingShipping}
+            watchRegion={watchRegion}
+            totalPrice={totalPrice}
+            deliveryFee={deliveryFee}
+            grandTotal={grandTotal}
+            isSubmitting={isSubmitting}
+          />
         </div>
 
       </div>

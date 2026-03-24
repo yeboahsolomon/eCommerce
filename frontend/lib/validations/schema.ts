@@ -144,8 +144,6 @@ export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type PaymentCallbackInput = z.infer<typeof paymentCallbackSchema>;
-<<<<<<< HEAD
-
 // ==================== CHECKOUT SCHEMAS ====================
 
 export const checkoutSchema = z.object({
@@ -160,5 +158,3 @@ export const checkoutSchema = z.object({
 });
 
 export type CheckoutFormValues = z.infer<typeof checkoutSchema>;
-=======
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00

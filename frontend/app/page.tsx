@@ -5,7 +5,6 @@ import CategoryCard from "@/components/ui/CategoryCard";
 import CountdownTimer from "@/components/ui/CountdownTimer";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-<<<<<<< HEAD
 import { Product, Category } from "@/types";
 import Link from "next/link";
 import { 
@@ -13,15 +12,6 @@ import {
   RotateCcw, ChevronRight, Flame
 } from "lucide-react";
 import { PLATFORM_FEATURES, SELLER_PERKS } from "@/lib/constants";
-=======
-import { PRODUCTS } from "@/lib/dummy-data";
-import { Product, Category } from "@/types";
-import Link from "next/link";
-import { 
-  Loader2, ArrowRight, ShieldCheck, Truck, BadgePercent, 
-  RotateCcw, Zap, ChevronRight, Store, Flame
-} from "lucide-react";
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 import HeroCarousel from "@/components/shared/hero/HeroCarousel";
 import Greeting from "@/components/shared/hero/Greeting";
 import TrustBadges from "@/components/shared/hero/TrustBadges";
@@ -39,14 +29,8 @@ export default function Home() {
         if (res.success && res.data?.products) {
             return res.data.products;
         }
-<<<<<<< HEAD
         return [];
     },
-=======
-        return PRODUCTS.filter(p => p.isFeatured).slice(0, 8);
-    },
-    // Fallback to dummy data on error is handled in queryFn or we use initialData if we had SSR
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
   });
 
   // Fetch Categories
@@ -223,36 +207,7 @@ export default function Home() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-<<<<<<< HEAD
           {PLATFORM_FEATURES.map((feature) => (
-=======
-          {[
-            {
-              icon: Truck,
-              title: "Fast Delivery",
-              description: "Same-day delivery in Accra. 2-5 days nationwide to all 16 regions of Ghana.",
-              color: "bg-blue-100 text-blue-600",
-            },
-            {
-              icon: ShieldCheck,
-              title: "Secure MoMo Payments",
-              description: "Pay safely with MTN MoMo, Vodafone Cash, AirtelTigo Money, or card.",
-              color: "bg-green-100 text-green-600",
-            },
-            {
-              icon: BadgePercent,
-              title: "Best Prices",
-              description: "Compare prices from thousands of sellers. We guarantee the best deals in Ghana.",
-              color: "bg-amber-100 text-amber-600",
-            },
-            {
-              icon: RotateCcw,
-              title: "Easy Returns",
-              description: "Changed your mind? Free returns within 7 days. No questions asked.",
-              color: "bg-purple-100 text-purple-600",
-            },
-          ].map((feature) => (
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
             <div key={feature.title} className="bg-white rounded-2xl p-6 border border-slate-100 hover:shadow-xl hover:-translate-y-1 hover:border-slate-200 transition-all duration-300 text-center group cursor-default">
               <div className={`h-14 w-14 rounded-2xl ${feature.color} flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
                 <feature.icon className="h-7 w-7" />
@@ -281,11 +236,7 @@ export default function Home() {
               From food to electronics — sell anything, anywhere.
             </p>
             <div className={`flex flex-wrap gap-x-6 gap-y-3 text-sm ${isAuthenticated && !authLoading ? '' : 'justify-center'}`}>
-<<<<<<< HEAD
               {SELLER_PERKS.map((perk) => (
-=======
-              {["No listing fees", "Instant MoMo payouts", "Free seller dashboard"].map((perk) => (
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
                 <div key={perk} className="flex items-center gap-2 text-emerald-400">
                   <ShieldCheck className="h-4 w-4" />
                   <span className="font-medium">{perk}</span>
@@ -306,3 +257,4 @@ export default function Home() {
     </div>
   );
 }
+

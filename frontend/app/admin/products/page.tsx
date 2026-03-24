@@ -2,10 +2,6 @@
 
 import { api } from "@/lib/api";
 import { Product } from "@/types";
-<<<<<<< HEAD
-=======
-import { PRODUCTS } from "@/lib/dummy-data";
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -28,18 +24,11 @@ export default function AdminProductsPage() {
         if (res.success && res.data?.products) {
           setProducts(res.data.products as Product[]);
         } else {
-<<<<<<< HEAD
           setProducts([]);
         }
       } catch (err) {
         console.error("Failed to fetch products:", err);
         setProducts([]);
-=======
-          setProducts(PRODUCTS);
-        }
-      } catch (err) {
-        setProducts(PRODUCTS);
->>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
       } finally {
         setIsLoading(false);
       }
@@ -183,3 +172,4 @@ export default function AdminProductsPage() {
     </div>
   );
 }
+
