@@ -3,15 +3,15 @@ import type { User, RegisterData } from '../../types';
 
 export const authApi = {
   async register(data: RegisterData) {
-    return request<{ user: User; token: string }>('POST', '/auth/register', data);
+    return request<{ user: User }>('POST', '/auth/register', data);
   },
 
   async login(email: string, password: string, rememberMe?: boolean) {
-    return request<{ user: User; token: string }>('POST', '/auth/login', { email, password, rememberMe });
+    return request<{ user: User }>('POST', '/auth/login', { email, password, rememberMe });
   },
 
   async googleLogin(credential: string) {
-    return request<{ user: User; token: string }>('POST', '/auth/google', { credential });
+    return request<{ user: User }>('POST', '/auth/google', { credential });
   },
 
   async logout() {
