@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { PRODUCTS } from "@/lib/dummy-data";
 import { useCart } from "@/context/CartContext";
 import { Product, Review, ReviewSummary } from "@/types";
 import { toast } from "sonner";
@@ -52,13 +51,10 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
           };
           setProduct(normalizedProduct);
         } else {
-          // Fallback to dummy data
-          const dummyProduct = PRODUCTS.find(p => p.id === id);
-          if (dummyProduct) setProduct(dummyProduct);
+          setProduct(null);
         }
       } catch {
-        const dummyProduct = PRODUCTS.find(p => p.id === id);
-        if (dummyProduct) setProduct(dummyProduct);
+        setProduct(null);
       } finally {
         setIsLoading(false);
       }

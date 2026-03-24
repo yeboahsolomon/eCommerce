@@ -2,7 +2,6 @@
 
 import ProductCard from "@/components/ui/ProductCard";
 import { api } from "@/lib/api";
-import { PRODUCTS } from "@/lib/dummy-data";
 import { Product } from "@/types";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -20,14 +19,11 @@ export default function ProductsPage() {
         if (res.success && res.data?.products) {
           setProducts(res.data.products as Product[]);
         } else {
-          // Fallback to dummy data if API fails
-          console.log("API unavailable, using dummy data");
-          setProducts(PRODUCTS);
+          setProducts([]);
         }
       } catch (err) {
-        // Fallback to dummy data on network error
-        console.log("Network error, using dummy data");
-        setProducts(PRODUCTS);
+        console.error("Failed to fetch products:", err);
+        setProducts([]);
       } finally {
         setIsLoading(false);
       }

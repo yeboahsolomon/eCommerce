@@ -1,0 +1,32 @@
+import { request } from './client';
+import type { User, RegisterData } from '../../types';
+
+export const authApi = {
+  async register(data: RegisterData) {
+    return request<{ user: User; token: string }>('POST', '/auth/register', data);
+  },
+
+  async login(email: string, password: string, rememberMe?: boolean) {
+    return request<{ user: User; token: string }>('POST', '/auth/login', { email, password, rememberMe });
+  },
+
+  async googleLogin(credential: string) {
+    return request<{ user: User; token: string }>('POST', '/auth/google', { credential });
+  },
+
+  async logout() {
+    return request<null>('POST', '/auth/logout');
+  },
+
+  async resendVerification() {
+    return request<null>('POST', '/auth/resend-verification');
+  },
+
+  async getProfile() {
+    return request<{ user: User }>('GET', '/auth/me');
+  },
+
+  async updateProfile(data: Partial<User>) {
+    return request<{ user: User }>('PUT', '/auth/me', data);
+  },
+};

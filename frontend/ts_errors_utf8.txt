@@ -1,8 +1,0 @@
-﻿app/admin/payouts/page.tsx(15,10): error TS2305: Module '"@/lib/utils"' has no exported member 'formatCurrency'.
-app/category/[slug]/page.tsx(3,28): error TS2307: Cannot find module './CategoryClient' or its corresponding type declarations.
-app/product/[id]/page.tsx(3,27): error TS2307: Cannot find module './ProductClient' or its corresponding type declarations.
-app/product/[id]/page.tsx(20,25): error TS2339: Property 'metaTitle' does not exist on type 'Product'.
-app/product/[id]/page.tsx(21,31): error TS2551: Property 'metaDescription' does not exist on type 'Product'. Did you mean 'description'?
-app/product/[id]/page.tsx(23,27): error TS2339: Property 'metaTitle' does not exist on type 'Product'.
-app/product/[id]/page.tsx(24,33): error TS2551: Property 'metaDescription' does not exist on type 'Product'. Did you mean 'description'?
-app/shop/[slug]/page.tsx(3,24): error TS2307: Cannot find module './ShopClient' or its corresponding type declarations.

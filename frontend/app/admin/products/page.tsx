@@ -2,7 +2,6 @@
 
 import { api } from "@/lib/api";
 import { Product } from "@/types";
-import { PRODUCTS } from "@/lib/dummy-data";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -25,10 +24,11 @@ export default function AdminProductsPage() {
         if (res.success && res.data?.products) {
           setProducts(res.data.products as Product[]);
         } else {
-          setProducts(PRODUCTS);
+          setProducts([]);
         }
       } catch (err) {
-        setProducts(PRODUCTS);
+        console.error("Failed to fetch products:", err);
+        setProducts([]);
       } finally {
         setIsLoading(false);
       }

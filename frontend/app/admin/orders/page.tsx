@@ -55,7 +55,7 @@ export default function AdminOrdersPage() {
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
     try {
-      await api.updateOrderStatus(orderId, newStatus);
+      await api.updateAdminOrderStatus(orderId, newStatus);
       setOrders(orders.map((o) => o.id === orderId ? { ...o, status: newStatus } : o));
       toast.success("Order status updated");
     } catch (err) {
