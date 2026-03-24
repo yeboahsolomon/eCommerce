@@ -12,6 +12,10 @@
     "@hookform/resolvers": "^5.2.2",
     "@react-oauth/google": "^0.13.4",
     "@tanstack/react-query": "^5.90.21",
+<<<<<<< HEAD
+=======
+    "@tanstack/react-query-devtools": "^5.91.3",
+>>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
     "axios": "^1.13.5",
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",
@@ -23,6 +27,10 @@
     "react-dom": "19.2.3",
     "react-dropzone": "^15.0.0",
     "react-hook-form": "^7.71.1",
+<<<<<<< HEAD
+=======
+    "react-quill": "^2.0.0",
+>>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
     "recharts": "^3.7.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.1",

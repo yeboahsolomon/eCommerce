@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/Input";
+<<<<<<< HEAD
 import { checkoutSchema, CheckoutFormValues } from "@/lib/validations/schema";
+=======
+import { checkoutSchema, CheckoutFormValues } from "@/lib/validators";
+>>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 import { CreateOrderInput } from "@/types";
 import PaymentMethodSelector from "@/components/checkout/PaymentMethodSelector";
 import { api } from "@/lib/api";
@@ -15,7 +19,28 @@ import Link from "next/link";
 import { ChevronLeft, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
+<<<<<<< HEAD
 import { GHANA_REGIONS } from "@/lib/constants";
+=======
+const GHANA_REGIONS = [
+  "Greater Accra",
+  "Ashanti",
+  "Western",
+  "Central",
+  "Eastern",
+  "Northern",
+  "Volta",
+  "Bono",
+  "Ahafo",
+  "Upper East",
+  "Upper West",
+  "Savannah",
+  "North East",
+  "Bono East",
+  "Oti",
+  "Western North",
+];
+>>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
 
 export default function CheckoutPage() {
   const { cart, subtotal, clearCart, isLoading: isCartLoading } = useCart();

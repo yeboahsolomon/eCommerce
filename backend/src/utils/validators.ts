@@ -12,9 +12,6 @@ const ghanaPhoneSchema = z.string().regex(
 const passwordSchema = z
   .string()
   .min(6, 'Password must be at least 6 characters');
-  // .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  // .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  // .regex(/[0-9]/, 'Password must contain at least one number');
 
 // ==================== AUTH SCHEMAS ====================
 
@@ -54,7 +51,7 @@ export const changePasswordSchema = z.object({
 
 export const createAddressSchema = z.object({
   label: z.string().min(1, 'Label is required'),
-  type: z.enum(['HOME', 'WORK', 'OTHER']).optional().default('HOME'),
+  type: z.enum(['HOME', 'WORK', 'OTHER'] as const).optional().default('HOME'),
   fullName: z.string().min(2, 'Full name is required'),
   phone: z.string().regex(/^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
   region: z.string().min(1, 'Region is required'),
@@ -86,7 +83,7 @@ export const createSellerProfileSchema = z.object({
   idCardNumber: z.string().optional(),
   // Payment Details
   mobileMoneyNumber: ghanaPhoneSchema.optional(),
-  mobileMoneyProvider: z.enum(['MTN', 'TELECEL', 'AIRTELTIGO']).optional(),
+  mobileMoneyProvider: z.enum(['MTN', 'TELECEL', 'AIRTELTIGO'] as const).optional(),
 });
 
 export const updateSellerProfileSchema = createSellerProfileSchema.partial();
@@ -121,7 +118,7 @@ export const createProductSchema = z.object({
     stockQuantity: z.number().int().nonnegative().optional().default(0),
     lowStockThreshold: z.number().int().nonnegative().optional().default(5),
     weightInGrams: z.number().int().positive().optional(),
-    options: z.record(z.string()).optional(),
+    options: z.record(z.string(), z.string()).optional(),
   })).optional(),
 });
 
@@ -135,9 +132,9 @@ export const productQuerySchema = z.object({
   inStock: z.enum(['true', 'false']).optional(),
   minPrice: z.string().regex(/^\d+$/).transform(Number).optional(), // In pesewas
   maxPrice: z.string().regex(/^\d+$/).transform(Number).optional(), // In pesewas
-  sortBy: z.enum(['priceInPesewas', 'averageRating', 'createdAt', 'name']).optional(),
-  order: z.enum(['asc', 'desc']).optional(),
-  featured: z.enum(['true', 'false']).optional(),
+  sortBy: z.enum(['priceInPesewas', 'averageRating', 'createdAt', 'name'] as const).optional(),
+  order: z.enum(['asc', 'desc'] as const).optional(),
+  featured: z.enum(['true', 'false'] as const).optional(),
 });
 
 // ==================== CART SCHEMAS ====================
@@ -169,7 +166,7 @@ export const createOrderSchema = z.object({
   customerPhone: z.string().regex(/^(\+233|0)(23|24|25|54|55|59|27|57|26|56|20|50)\d{7}$/, 'Invalid Ghana phone number'),
   
   // Payment
-  paymentMethod: z.enum(['MOMO_MTN', 'MOMO_VODAFONE', 'MOMO_AIRTELTIGO', 'CARD', 'BANK_TRANSFER', 'CASH_ON_DELIVERY']),
+  paymentMethod: z.enum(['MOMO_MTN', 'MOMO_VODAFONE', 'MOMO_AIRTELTIGO', 'CARD', 'BANK_TRANSFER', 'CASH_ON_DELIVERY'] as const),
   momoPhoneNumber: z.string().optional(),
   
   // Delivery
@@ -200,8 +197,8 @@ export const sellerApplicationSchema = z.object({
   storeName: z.string()
     .min(3, 'Store name must be at least 3 characters')
     .max(100, 'Store name must be at most 100 characters'),
-  businessType: z.enum(['INDIVIDUAL', 'BUSINESS'], {
-    errorMap: () => ({ message: 'Business type must be INDIVIDUAL or BUSINESS' }),
+  businessType: z.enum(['INDIVIDUAL', 'BUSINESS'] as const, {
+    message: 'Business type must be INDIVIDUAL or BUSINESS',
   }),
   businessEmail: z.string().email('Invalid business email'),
   businessPhone: ghanaPhoneSchema,
@@ -209,8 +206,8 @@ export const sellerApplicationSchema = z.object({
   businessAddress: z.string().min(5, 'Business address must be at least 5 characters'),
   ghanaRegion: z.string().min(1, 'Region is required'),
   mobileMoneyNumber: ghanaPhoneSchema,
-  mobileMoneyProvider: z.enum(['MTN', 'TELECEL', 'AIRTELTIGO'], {
-    errorMap: () => ({ message: 'Provider must be MTN, TELECEL, or AIRTELTIGO' }),
+  mobileMoneyProvider: z.enum(['MTN', 'TELECEL', 'AIRTELTIGO'] as const, {
+    message: 'Provider must be MTN, TELECEL, or AIRTELTIGO',
   }),
   // Document URLs (optional in schema because they might be uploaded as files)
   ghanaCardImageUrl: z.string().optional(),
@@ -249,8 +246,8 @@ export const createCategorySchema = z.object({
 
 export const paymentCallbackSchema = z.object({
   reference: z.string(),
-  status: z.enum(['success', 'failed', 'cancelled']),
-  gatewayResponse: z.record(z.unknown()).optional(),
+  status: z.enum(['success', 'failed', 'cancelled'] as const),
+  gatewayResponse: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ==================== ID PARAM SCHEMA ====================

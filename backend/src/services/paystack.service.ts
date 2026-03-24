@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { config } from '../config/env.js';
 
 // ==================== PAYSTACK SERVICE ====================
 // Paystack payment gateway integration for Ghana
@@ -92,8 +93,8 @@ class PaystackService {
   private baseUrl: string;
 
   constructor() {
-    this.secretKey = process.env.PAYSTACK_SECRET_KEY || '';
-    this.publicKey = process.env.PAYSTACK_PUBLIC_KEY || '';
+    this.secretKey = config.paystack.secretKey;
+    this.publicKey = config.paystack.publicKey;
     this.baseUrl = 'https://api.paystack.co';
   }
 
@@ -236,7 +237,7 @@ class PaystackService {
 
   // Get list of supported banks (for bank transfer)
   async getBanks(): Promise<{ name: string; code: string }[]> {
-    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+    if (!this.secretKey || config.nodeEnv !== 'production') {
       // Return sample Ghana banks
       return [
         { name: 'Access Bank', code: '044' },
@@ -268,7 +269,7 @@ class PaystackService {
 
   // Create a refund
   async createRefund(reference: string, amount?: number): Promise<boolean> {
-    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+    if (!this.secretKey || config.nodeEnv !== 'production') {
       console.log('💳 [Paystack Sandbox] Refund created for:', reference);
       return true;
     }
@@ -296,7 +297,7 @@ class PaystackService {
 
   // Get public key (for frontend)
   getPublicKey(): string {
-    return this.publicKey || 'pk_test_xxxxxxxxxxxxxxxxxxxxxx';
+    return this.publicKey;
   }
 
   // ==================== MOBILE MONEY PROVIDER CODES ====================
@@ -349,7 +350,7 @@ class PaystackService {
     currency?: string;
   }): Promise<{ recipientCode: string; details: any }> {
     // Dev sandbox
-    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+    if (!this.secretKey || config.nodeEnv !== 'production') {
       const mockCode = `RCP_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       console.log('💳 [Paystack Sandbox] Created transfer recipient:', {
         name: params.name,
@@ -412,7 +413,7 @@ class PaystackService {
     const reference = params.reference || this.generateReference('PAYOUT');
 
     // Dev sandbox
-    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+    if (!this.secretKey || config.nodeEnv !== 'production') {
       const mockCode = `TRF_${Date.now()}`;
       console.log('💳 [Paystack Sandbox] Transfer initiated:', {
         amount: params.amountInPesewas / 100,
@@ -469,7 +470,7 @@ class PaystackService {
     reason: string;
   }> {
     // Dev sandbox
-    if (!this.secretKey || process.env.NODE_ENV !== 'production') {
+    if (!this.secretKey || config.nodeEnv !== 'production') {
       console.log('💳 [Paystack Sandbox] Verifying transfer:', reference);
       return {
         status: 'success',

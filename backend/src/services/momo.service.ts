@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { config } from '../config/env.js';
 
 // ==================== MTN MOMO SERVICE ====================
 // This is a simulation of MTN MoMo API for development
@@ -54,11 +55,10 @@ class MoMoService {
   private apiKey: string;
 
   constructor() {
-    // These would come from environment variables in production
-    this.apiBaseUrl = process.env.MOMO_API_URL || 'https://sandbox.momodeveloper.mtn.com';
-    this.subscriptionKey = process.env.MOMO_SUBSCRIPTION_KEY || '';
-    this.apiUser = process.env.MOMO_API_USER || '';
-    this.apiKey = process.env.MOMO_API_KEY || '';
+    this.apiBaseUrl = config.momo.apiUrl;
+    this.subscriptionKey = config.momo.subscriptionKey || '';
+    this.apiUser = config.momo.apiUser || '';
+    this.apiKey = config.momo.apiKey || '';
   }
 
   // Generate a unique reference ID for the payment
@@ -97,7 +97,7 @@ class MoMoService {
     const referenceId = this.generateReferenceId();
     
     // In development mode, simulate the API call
-    if (process.env.NODE_ENV !== 'production' || !this.subscriptionKey) {
+    if (config.nodeEnv !== 'production' || !this.subscriptionKey) {
       console.log('📱 [MoMo Sandbox] Payment request:', {
         referenceId,
         amount: request.amount / 100, // Convert pesewas to cedis for display
@@ -168,7 +168,7 @@ class MoMoService {
   // Check payment status
   async getPaymentStatus(referenceId: string): Promise<PaymentStatusResponse> {
     // In development mode, check our simulated storage
-    if (process.env.NODE_ENV !== 'production' || !this.subscriptionKey) {
+    if (config.nodeEnv !== 'production' || !this.subscriptionKey) {
       const payment = pendingPayments.get(referenceId);
       
       if (!payment) {

@@ -1,0 +1,37 @@
+﻿app/seller/dashboard/orders/page.tsx(5,10): error TS2305: Module '"@/lib/utils"' has no exported member 'formatCurrency'.
+app/seller/dashboard/page.tsx(5,10): error TS2305: Module '"@/lib/utils"' has no exported member 'formatCurrency'.
+app/seller/dashboard/payouts/page.tsx(5,10): error TS2305: Module '"@/lib/utils"' has no exported member 'formatCurrency'.
+app/seller/dashboard/payouts/page.tsx(184,23): error TS2304: Cannot find name 'Link'.
+app/seller/dashboard/payouts/page.tsx(184,130): error TS2304: Cannot find name 'Link'.
+app/seller/dashboard/products/page.tsx(5,10): error TS2305: Module '"@/lib/utils"' has no exported member 'formatCurrency'.
+app/seller/dashboard/products/page.tsx(142,32): error TS2304: Cannot find name 'Package'.
+app/seller/dashboard/products/page.tsx(161,44): error TS2304: Cannot find name 'Package'.
+app/seller/dashboard/settings/page.tsx(59,43): error TS2339: Property 'phoneNumber' does not exist on type 'User'.
+app/seller/dashboard/settings/page.tsx(75,30): error TS2339: Property 'data' does not exist on type '{ success: boolean; data: { url: string; fileId: string; publicId: string; }; message?: string | undefined; } | { success: boolean; message: any; }'.
+  Property 'data' does not exist on type '{ success: boolean; message: any; }'.
+app/seller/dashboard/settings/page.tsx(76,33): error TS2339: Property 'data' does not exist on type '{ success: boolean; data: { url: string; fileId: string; publicId: string; }; message?: string | undefined; } | { success: boolean; message: any; }'.
+  Property 'data' does not exist on type '{ success: boolean; message: any; }'.
+app/seller/dashboard/settings/page.tsx(91,30): error TS2339: Property 'data' does not exist on type '{ success: boolean; data: { url: string; fileId: string; publicId: string; }; message?: string | undefined; } | { success: boolean; message: any; }'.
+  Property 'data' does not exist on type '{ success: boolean; message: any; }'.
+app/seller/dashboard/settings/page.tsx(92,35): error TS2339: Property 'data' does not exist on type '{ success: boolean; data: { url: string; fileId: string; publicId: string; }; message?: string | undefined; } | { success: boolean; message: any; }'.
+  Property 'data' does not exist on type '{ success: boolean; message: any; }'.
+app/seller/products/[id]/edit/page.tsx(72,42): error TS2322: Type '{ initialData: Product; categories: Category[]; }' is not assignable to type 'IntrinsicAttributes & ProductFormProps'.
+  Property 'categories' does not exist on type 'IntrinsicAttributes & ProductFormProps'.
+app/seller/products/add/page.tsx(51,20): error TS2322: Type '{ categories: Category[]; }' is not assignable to type 'IntrinsicAttributes & ProductFormProps'.
+  Property 'categories' does not exist on type 'IntrinsicAttributes & ProductFormProps'.
+components/seller/ProductForm.tsx(50,5): error TS2322: Type 'Resolver<{ name: string; description: string; price: unknown; stockQuantity: unknown; categoryId: string; images: string[]; compareAtPrice?: unknown; isActive?: boolean | undefined; }, any, { name: string; description: string; ... 5 more ...; compareAtPrice?: number | undefined; }>' is not assignable to type 'Resolver<{ name: string; description: string; price: number; stockQuantity: number; categoryId: string; isActive: boolean; images: string[]; compareAtPrice?: number | undefined; }, any, { name: string; ... 6 more ...; compareAtPrice?: number | undefined; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ name: string; description: string; price: number; stockQuantity: number; categoryId: string; isActive: boolean; images: string[]; compareAtPrice?: number | undefined; }>' is not assignable to type 'ResolverOptions<{ name: string; description: string; price: unknown; stockQuantity: unknown; categoryId: string; images: string[]; compareAtPrice?: unknown; isActive?: boolean | undefined; }>'.
+      Types of property 'names' are incompatible.
+        Type 'string[] | undefined' is not assignable to type '("name" | "description" | "categoryId" | "stockQuantity" | "isActive" | "images" | "price" | "compareAtPrice")[] | undefined'.
+          Type 'string[]' is not assignable to type '("name" | "description" | "categoryId" | "stockQuantity" | "isActive" | "images" | "price" | "compareAtPrice")[]'.
+            Type 'string' is not assignable to type '"name" | "description" | "categoryId" | "stockQuantity" | "isActive" | "images" | "price" | "compareAtPrice"'.
+components/seller/ProductForm.tsx(86,43): error TS2339: Property 'data' does not exist on type '{ success: boolean; data: { url: string; fileId: string; publicId: string; }; message?: string | undefined; } | { success: boolean; message: any; }'.
+  Property 'data' does not exist on type '{ success: boolean; message: any; }'.
+components/seller/ProductForm.tsx(87,25): error TS2339: Property 'data' does not exist on type '{ success: boolean; data: { url: string; fileId: string; publicId: string; }; message?: string | undefined; } | { success: boolean; message: any; }'.
+  Property 'data' does not exist on type '{ success: boolean; message: any; }'.
+components/seller/ProductForm.tsx(139,34): error TS2345: Argument of type '(data: ProductFormData) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; description: string; price: number; stockQuantity: number; categoryId: string; isActive: boolean; images: string[]; compareAtPrice?: number | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; description: string; price: number; stockQuantity: number; categoryId: string; isActive: boolean; images: string[]; compareAtPrice?: number | undefined; }': name, description, price, stockQuantity, and 3 more.
+components/ui/ProductCard.tsx(10,32): error TS2307: Cannot find module './QuickViewModal' or its corresponding type declarations.

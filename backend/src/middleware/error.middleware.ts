@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { ApiResponseHandler } from '../utils/response.js';
+import { config } from '../config/env.js';
 
 // ============================================================
 // Base Error Class
@@ -133,7 +134,7 @@ export function errorHandler(
     statusCode = 400;
     message = 'Validation failed.';
     errorCode = 'VALIDATION_ERROR';
-    details = error.errors.map((err) => ({
+    details = error.issues.map((err: any) => ({
       field: err.path.join('.'),
       message: err.message,
     }));
@@ -184,7 +185,7 @@ export function errorHandler(
   }
 
   // Stack trace — development only
-  if (process.env.NODE_ENV === 'development') {
+  if (config.nodeEnv === 'development') {
     stack = error.stack;
   }
 
@@ -192,7 +193,7 @@ export function errorHandler(
   console.error(`[ERROR] ${statusCode} ${errorCode} — ${message}`, {
     path: req.path,
     method: req.method,
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
+    ...(config.nodeEnv === 'development' && { stack: error.stack }),
   });
 
   // Send standardized response

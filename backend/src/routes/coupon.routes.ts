@@ -140,7 +140,7 @@ router.post(
         return res.status(400).json({
           success: false,
           message: 'Validation failed',
-          errors: error.errors,
+          errors: error.issues,
         });
       }
       next(error);
@@ -218,7 +218,7 @@ router.put(
         return res.status(400).json({
           success: false,
           message: 'Validation failed',
-          errors: error.errors,
+          errors: error.issues,
         });
       }
       next(error);

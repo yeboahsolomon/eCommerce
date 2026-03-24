@@ -10,12 +10,12 @@ export class R2Service {
   private publicUrl: string;
 
   constructor() {
-    this.bucketName = process.env.R2_BUCKET_NAME || '';
-    this.publicUrl = process.env.R2_PUBLIC_URL || '';
+    this.bucketName = config.r2.bucketName;
+    this.publicUrl = config.r2.publicUrl;
 
-    const accountId = process.env.R2_ACCOUNT_ID;
-    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+    const accountId = config.r2.accountId;
+    const accessKeyId = config.r2.accessKeyId;
+    const secretAccessKey = config.r2.secretAccessKey;
 
     if (!accountId || !accessKeyId || !secretAccessKey || !this.bucketName) {
       console.warn('R2 credentials missing. Image uploads will fail.');

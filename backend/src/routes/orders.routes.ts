@@ -296,16 +296,7 @@ router.post(
              await tx.inventoryLog.create({
                 data: {
                   productId: item.productId,
-                  action: 'RETURN', // or CANCELLATION
-                  // Schema for action might vary. Assuming RETURN or ADJUSTMENT.
-                  // Let's assume 'ADJUSTMENT' if RETURN not in enum, or Check schema. 
-                  // I'll check schema later if it fails. For now 'ADJUSTMENT' is safer or just use 'SALE' with positive?
-                  // Wait, previous code used 'SALE'.
-                  // I'll check `InventoryLogAction` enum if I can.
-                  // I'll guess 'ADJUSTMENT' or 'RESTOCK'.
-                  // Let's check `inventory.routes.ts` or `products.routes.ts`?
-                  // Or just view `prisma/schema.prisma`.
-                  // I'll assume 'ADJUSTMENT' for now.
+                  action: 'RETURN', 
                   quantityChange: item.quantity,
                   previousQuantity: item.product.stockQuantity,
                   newQuantity: item.product.stockQuantity + item.quantity,

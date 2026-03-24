@@ -21,7 +21,7 @@ import { paystackService } from './paystack.service.js';
 import { emailService } from './email.service.js';
 import { CreateOrderInput } from '../utils/validators.js';
 import { cartService } from './cart.service.js';
-import bcrypt from 'bcrypt';
+import { hashPassword } from '../utils/helpers.js';
 import { config } from '../config/env.js';
 
 // ━━━━━━━━━━━━━━━━━━━━━━ Types ━━━━━━━━━━━━━━━━━━━━━━
@@ -181,7 +181,7 @@ class OrderService {
         const firstName = guestName[0];
         const lastName = guestName.slice(1).join(' ') || 'Guest';
         const randomPassword = crypto.randomBytes(8).toString('hex');
-        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+        const hashedPassword = await hashPassword(randomPassword);
 
         // Check if a user with this email already exists
         let existingUser = await prisma.user.findUnique({ where: { email: guestEmail } });
@@ -436,7 +436,7 @@ class OrderService {
           amount: totalInPesewas,
           reference,
           currency: 'GHS',
-          callback_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`,
+          callback_url: `${config.frontendUrl}/payment/callback`,
           metadata: { orderId: order.id, userId: finalUserId!, orderNumber },
           channels,
         });

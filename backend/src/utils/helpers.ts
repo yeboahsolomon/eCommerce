@@ -25,9 +25,6 @@ export async function comparePassword(
 /**
  * Generate JWT token
  */
-/**
- * Generate JWT token
- */
 export function generateToken(payload: {
   userId: string;
   email: string;
@@ -68,27 +65,4 @@ export function generateSlug(text: string): string {
     .replace(/[^\w\s-]/g, '') // Remove special characters
     .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-}
-
-/**
- * Generate unique slug by appending a random suffix if needed
- */
-export function generateUniqueSlug(text: string, existingSlug?: string): string {
-  const baseSlug = generateSlug(text);
-  
-  if (!existingSlug || existingSlug !== baseSlug) {
-    return baseSlug;
-  }
-  
-  // Add random suffix
-  const suffix = Math.random().toString(36).substring(2, 7);
-  return `${baseSlug}-${suffix}`;
-}
-
-/**
- * Format price for display (Ghana Cedi)
- */
-export function formatPrice(price: number | string): string {
-  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-  return `₵${numPrice.toLocaleString('en-GH', { minimumFractionDigits: 2 })}`;
 }

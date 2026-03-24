@@ -3,8 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-// @ts-ignore
-import csurf from 'csurf';
+import { doubleCsrf } from 'csrf-csrf';
 import morgan from 'morgan';
 import path from 'path';
 import { config } from './config/env.js';
@@ -16,7 +15,7 @@ import { swaggerSpec } from './config/swagger.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
-import googleAuthRoutes from './routes/google.auth.routes.js';
+import googleAuthRoutes from './routes/google-auth.routes.js';
 import productRoutes from './routes/products.routes.js';
 import categoryRoutes from './routes/categories.routes.js';
 import cartRoutes from './routes/cart.routes.js';
@@ -27,7 +26,7 @@ import uploadRoutes from './routes/upload.routes.js';
 import wishlistRoutes from './routes/wishlist.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import adminAuditRoutes from './routes/admin.audit.routes.js';
+import adminAuditRoutes from './routes/admin-audit.routes.js';
 import searchRoutes from './routes/search.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
 import sellerAnalyticsRoutes from './routes/seller-analytics.routes.js';
@@ -80,27 +79,35 @@ app.use(express.urlencoded({ extended: true }));
 // Sanitize all string inputs (XSS prevention)
 app.use(sanitizeBody);
 
-// CSRF Protection
+// CSRF Protection (double-submit cookie pattern)
 // We need to exclude webhooks from CSRF because external services (like Paystack)
 // send POST requests without our CSRF token.
-const csrfProtection = csurf({
-  cookie: {
+const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
+  getSecret: () => config.jwtSecret,
+  getSessionIdentifier: (req) => req.ip || 'anonymous',
+  cookieName: '__Host-psifi.x-csrf-token',
+  cookieOptions: {
     httpOnly: true,
     secure: config.nodeEnv === 'production',
-    sameSite: config.nodeEnv === 'production' ? 'none' : 'lax', // Must be none/lax for cross-origin setups
+    sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
+    path: '/',
   },
+  size: 64,
+  ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
+  getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'] as string,
 });
 
 app.use((req, res, next) => {
   if (req.path.startsWith('/webhook')) {
     return next();
   }
-  csrfProtection(req, res, next);
+  doubleCsrfProtection(req, res, next);
 });
 
 // Endpoint for frontend to fetch the CSRF token
 app.get('/api/csrf-token', (req: any, res) => {
-  res.json({ csrfToken: req.csrfToken() });
+  const csrfToken = generateCsrfToken(req, res);
+  res.json({ csrfToken });
 });
 
 // Serve static files (uploaded images)

@@ -7,7 +7,7 @@ class RedisService {
   private isConnected: boolean = false;
 
   constructor() {
-    const url = process.env.REDIS_URL || 'redis://localhost:6379';
+    const url = config.redisUrl;
     this.client = createClient({ url });
 
     this.client.on('error', (err) => {

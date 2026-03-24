@@ -1,8 +1,8 @@
-
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import prisma from '../config/database.js';
 import { emailService } from '../services/email.service.js';
+import { config } from '../config/env.js';
 
 const router = Router();
 
@@ -22,7 +22,7 @@ router.post('/paystack', async (req: Request, res: Response) => {
 
   try {
     const signature = req.headers['x-paystack-signature'] as string;
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = config.paystack.secretKey;
 
     // ── Signature verification ──
     if (secretKey) {

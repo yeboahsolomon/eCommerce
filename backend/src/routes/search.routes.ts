@@ -37,7 +37,7 @@ router.get(
         return res.status(400).json({
           success: false,
           message: 'Invalid search parameters',
-          errors: validation.error.errors,
+          errors: validation.error.issues,
         });
       }
 

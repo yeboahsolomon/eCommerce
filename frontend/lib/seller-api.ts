@@ -28,6 +28,7 @@ export const sellerApi = {
     
     // BETTER APPROACH: Add `GET /api/seller/products` in backend to list OWN products (active/inactive).
     // I will add this to backend in a bit. For now, let's define the frontend call.
+<<<<<<< HEAD
     const res = await axiosInstance.get<ApiResponse<{ products: Product[]; pagination: any }>>('/seller/products', { params });
     return res.data;
   },
@@ -45,6 +46,25 @@ export const sellerApi = {
   async deleteProduct(id: string) {
     const res = await axiosInstance.delete<ApiResponse<void>>(`/products/${id}`);
     return res.data;
+=======
+    return axiosInstance.get<ApiResponse<{ products: Product[]; pagination: any }>>('/seller/products', { params })
+      .then(res => res.data);
+  },
+
+  async createProduct(data: CreateProductInput) {
+    return axiosInstance.post<ApiResponse<{ product: Product }>>('/products', data)
+      .then(res => res.data);
+  },
+
+  async updateProduct(id: string, data: UpdateProductInput) {
+    return axiosInstance.put<ApiResponse<{ product: Product }>>(`/products/${id}`, data)
+      .then(res => res.data);
+  },
+
+  async deleteProduct(id: string) {
+    return axiosInstance.delete<ApiResponse<void>>(`/products/${id}`)
+      .then(res => res.data);
+>>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
   },
 
   // Image Management (R2)
@@ -81,8 +101,13 @@ export const sellerApi = {
   },
 
   deleteProductImage: async (imageId: string) => {
+<<<<<<< HEAD
     const res = await axiosInstance.delete<ApiResponse<void>>(`/upload/${imageId}`);
     return res.data;
+=======
+    return axiosInstance.delete<ApiResponse<void>>(`/upload/${imageId}`)
+      .then(res => res.data);
+>>>>>>> 8cce350c8841ec0f588351af62f12ab683f7ff00
   },
   
 
