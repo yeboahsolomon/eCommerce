@@ -103,15 +103,6 @@ export class AdminDashboardService {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    const orders = await prisma.order.findMany({
-      where: {
-        createdAt: { gte: startDate },
-        status: { notIn: ['CANCELLED', 'FAILED'] },
-      },
-      select: { createdAt: true, totalInPesewas: true },
-      orderBy: { createdAt: 'asc' },
-    });
-
     // Build day-by-day map
     const salesByDate: Record<string, { orders: number; revenue: number }> = {};
     for (let i = 0; i < days; i++) {
@@ -121,13 +112,33 @@ export class AdminDashboardService {
       salesByDate[key] = { orders: 0, revenue: 0 };
     }
 
-    orders.forEach((order) => {
-      const key = order.createdAt.toISOString().split('T')[0];
-      if (salesByDate[key]) {
-        salesByDate[key].orders++;
-        salesByDate[key].revenue += order.totalInPesewas;
-      }
-    });
+    let skip = 0;
+    const limit = 5000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const batch = await prisma.order.findMany({
+        where: {
+          createdAt: { gte: startDate },
+          status: { notIn: ['CANCELLED', 'FAILED'] },
+        },
+        select: { createdAt: true, totalInPesewas: true },
+        orderBy: { createdAt: 'asc' },
+        take: limit,
+        skip,
+      });
+
+      batch.forEach((order) => {
+        const key = order.createdAt.toISOString().split('T')[0];
+        if (salesByDate[key]) {
+          salesByDate[key].orders++;
+          salesByDate[key].revenue += order.totalInPesewas;
+        }
+      });
+
+      if (batch.length < limit) hasMore = false;
+      else skip += limit;
+    }
 
     const chartData = Object.entries(salesByDate)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -261,14 +272,6 @@ export class AdminDashboardService {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    const orders = await prisma.order.findMany({
-      where: {
-        createdAt: { gte: startDate },
-        status: { notIn: ['CANCELLED', 'FAILED'] },
-      },
-      select: { createdAt: true, totalInPesewas: true },
-    });
-
     const salesByDate: Record<string, { orders: number; revenue: number }> = {};
     for (let i = 0; i < days; i++) {
       const d = new Date(startDate);
@@ -276,13 +279,32 @@ export class AdminDashboardService {
       salesByDate[d.toISOString().split('T')[0]] = { orders: 0, revenue: 0 };
     }
 
-    orders.forEach((order) => {
-      const dateKey = order.createdAt.toISOString().split('T')[0];
-      if (salesByDate[dateKey]) {
-        salesByDate[dateKey].orders++;
-        salesByDate[dateKey].revenue += order.totalInPesewas;
-      }
-    });
+    let skip = 0;
+    const limit = 5000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const batch = await prisma.order.findMany({
+        where: {
+          createdAt: { gte: startDate },
+          status: { notIn: ['CANCELLED', 'FAILED'] },
+        },
+        select: { createdAt: true, totalInPesewas: true },
+        take: limit,
+        skip,
+      });
+
+      batch.forEach((order) => {
+        const dateKey = order.createdAt.toISOString().split('T')[0];
+        if (salesByDate[dateKey]) {
+          salesByDate[dateKey].orders++;
+          salesByDate[dateKey].revenue += order.totalInPesewas;
+        }
+      });
+
+      if (batch.length < limit) hasMore = false;
+      else skip += limit;
+    }
 
     const chartData = Object.entries(salesByDate)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -297,8 +319,8 @@ export class AdminDashboardService {
       days,
       chartData,
       totals: {
-        orders: orders.length,
-        revenue: orders.reduce((sum, o) => sum + o.totalInPesewas, 0) / 100,
+        orders: Object.values(salesByDate).reduce((sum, val) => sum + val.orders, 0),
+        revenue: Object.values(salesByDate).reduce((sum, val) => sum + val.revenue, 0) / 100,
       },
     };
   }

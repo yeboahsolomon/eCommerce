@@ -58,6 +58,7 @@ app.use(helmet({
     },
   },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  frameguard: { action: 'deny' },
 }));
 
 // Compression for responses

@@ -25,6 +25,11 @@ router.post('/paystack', async (req: Request, res: Response) => {
     const secretKey = config.paystack.secretKey;
 
     // ── Signature verification ──
+    if (!secretKey && config.nodeEnv === 'production') {
+      console.error('CRITICAL: PAYSTACK_SECRET_KEY missing in production. Webhook ignored for security.');
+      return;
+    }
+
     if (secretKey) {
       const hash = crypto
         .createHmac('sha512', secretKey)
@@ -36,8 +41,8 @@ router.post('/paystack', async (req: Request, res: Response) => {
         return;
       }
     } else {
-      // Dev mode: accept all webhooks but log warning
-      console.warn('⚠️ PAYSTACK_SECRET_KEY not set — accepting webhook without verification');
+      // Dev mode ONLY: accept all webhooks but log warning
+      console.warn('⚠️ PAYSTACK_SECRET_KEY not set — accepting webhook without verification IN DEV MODE');
     }
 
     const { event, data } = req.body;

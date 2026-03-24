@@ -2,6 +2,19 @@ import { prisma } from '../config/database.js';
 import { logAdminActivity } from './admin-activity.service.js';
 import { emailService } from './email.service.js';
 
+const maskGhanaCard = (idNumber: string | null | undefined) => {
+  if (!idNumber) return idNumber;
+  if (/^GHA-\d{9}-\d$/i.test(idNumber)) {
+    return idNumber.replace(/(GHA-\d{5})\d{4}(-\d)/i, '$1****$2');
+  }
+  if (idNumber.length > 8) {
+    const start = idNumber.substring(0, 4);
+    const end = idNumber.substring(idNumber.length - 2);
+    return `${start}${'*'.repeat(Math.min(idNumber.length - 6, 8))}${end}`;
+  }
+  return idNumber;
+};
+
 export class AdminSellerService {
   async getSellers(page: number = 1, limitValue: number = 20, search?: string, status?: string) {
     const limit = Math.min(limitValue, 100);
@@ -259,7 +272,13 @@ export class AdminSellerService {
       prisma.sellerApplication.count({ where }),
     ]);
 
-    return { applications, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+    return { 
+      applications: applications.map(app => ({
+        ...app,
+        ghanaCardNumber: maskGhanaCard(app.ghanaCardNumber)
+      })), 
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) } 
+    };
   }
 
   async getApplicationDetail(applicationId: string, req: any) {
@@ -307,6 +326,10 @@ export class AdminSellerService {
       orderBy: { createdAt: 'desc' },
       take: 20,
     });
+
+    if (application) {
+      application.ghanaCardNumber = maskGhanaCard(application.ghanaCardNumber) as string;
+    }
 
     return { application, activityLogs };
   }

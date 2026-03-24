@@ -55,7 +55,7 @@ const registerHandler = [
       
       return ApiResponseHandler.success(
         res,
-        { user: data.user, accessToken: data.accessToken },
+        { user: data.user },
         'Account created successfully! Please check your email to verify your account.',
         201
       );
@@ -84,7 +84,6 @@ router.post(
       
       return ApiResponseHandler.success(res, {
         user: data.user,
-        accessToken: data.accessToken,
       }, 'Login successful!');
     } catch (error) {
       next(error);
@@ -98,6 +97,7 @@ router.post(
 
 router.post(
   '/verify-email',
+  emailVerifyLimiter,
   validate(verifyEmailSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -116,6 +116,7 @@ router.post(
 
 router.post(
   '/verify-email/:token',
+  emailVerifyLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     req.body = { token: req.params.token };
     next();
@@ -183,6 +184,7 @@ router.post(
 
 router.post(
   '/reset-password',
+  passwordResetLimiter,
   validate(resetPasswordSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -197,6 +199,7 @@ router.post(
 
 router.post(
   '/reset-password/:token',
+  passwordResetLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const token = req.params.token;
@@ -223,7 +226,7 @@ router.post(
       setAuthCookies(res, data.accessToken, data.refreshToken);
       return ApiResponseHandler.success(
         res,
-        { accessToken: data.accessToken },
+        null,
         'Password changed successfully. All other sessions have been logged out.'
       );
     } catch (error) {
@@ -242,7 +245,7 @@ const refreshHandler = async (req: Request, res: Response, next: NextFunction) =
       const data = await authService.refreshToken(refreshToken);
       
       setAuthCookies(res, data.accessToken, data.refreshToken);
-      return ApiResponseHandler.success(res, { accessToken: data.accessToken }, 'Token refreshed');
+      return ApiResponseHandler.success(res, null, 'Token refreshed');
     } catch (error) {
       res.clearCookie('accessToken');
       res.clearCookie('refreshToken', { path: '/api/auth' });

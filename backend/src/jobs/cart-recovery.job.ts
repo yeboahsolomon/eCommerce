@@ -18,39 +18,52 @@ export const startCartRecoveryJob = () => {
       const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const twentyFiveHoursAgo = new Date(now.getTime() - 25 * 60 * 60 * 1000);
 
-      const abandonedCarts = await prisma.cart.findMany({
-         where: {
-            lastActivityAt: {
-                lte: twentyFourHoursAgo,
-                gt: twentyFiveHoursAgo,
-            },
-            items: {
-                some: {} // Cart must have at least one item
-            },
-            user: {
-                 email: { not: "" },
-            }
-         },
-         include: {
-             user: true,
-             items: {
-                 include: { product: true }
-             }
-         }
-      });
-
-      if (abandonedCarts.length === 0) {
-          console.log('[Cron] No new abandoned carts found.');
-          return;
+      let skip = 0;
+      const limit = 500;
+      let processedCount = 0;
+      
+      while (true) {
+        const abandonedCarts = await prisma.cart.findMany({
+           where: {
+              lastActivityAt: {
+                  lte: twentyFourHoursAgo,
+                  gt: twentyFiveHoursAgo,
+              },
+              items: {
+                  some: {} // Cart must have at least one item
+              },
+              user: {
+                   email: { not: "" },
+              }
+           },
+           include: {
+               user: true,
+               items: {
+                   include: { product: true }
+               }
+           },
+           take: limit,
+           skip
+        });
+  
+        if (abandonedCarts.length === 0) break;
+  
+        console.log(`[Cron] Processing batch of ${abandonedCarts.length} abandoned carts. Sending emails...`);
+  
+        for (const cart of abandonedCarts) {
+            if (!cart.user) continue;
+  
+            const checkoutUrl = `${config.frontendUrl}/cart`;
+            await emailService.sendAbandonedCartEmail(cart.user.email, cart.user.firstName, checkoutUrl);
+            processedCount++;
+        }
+        
+        if (abandonedCarts.length < limit) break;
+        skip += limit;
       }
-
-      console.log(`[Cron] Found ${abandonedCarts.length} abandoned carts. Sending emails...`);
-
-      for (const cart of abandonedCarts) {
-          if (!cart.user) continue;
-
-          const checkoutUrl = `${config.frontendUrl}/cart`;
-          await emailService.sendAbandonedCartEmail(cart.user.email, cart.user.firstName, checkoutUrl);
+      
+      if (processedCount === 0) {
+          console.log('[Cron] No new abandoned carts found.');
       }
 
       console.log('[Cron] Abandoned cart emails sent.');
