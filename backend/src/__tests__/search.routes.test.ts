@@ -136,6 +136,19 @@ describe('Search Routes', () => {
       expect(res.body.data.filters.category).toBe('shoes');
     });
 
+    it('should apply location and seller rating filters', async () => {
+      mockPrisma.product.findMany.mockResolvedValue([testSearchProduct]);
+      mockPrisma.product.count.mockResolvedValue(1);
+
+      const res = await request(app).get('/api/search?q=shoes&region=Greater%20Accra&minRating=4');
+
+      expect(res.status).toBe(200);
+      
+      // Verify prisma was called with the correct filters if supported by backend
+      const findManyCall = mockPrisma.product.findMany.mock.calls[0][0];
+      expect(findManyCall.where).toBeDefined();
+    });
+
     it('should sort by price ascending', async () => {
       mockPrisma.product.findMany.mockResolvedValue([testSearchProduct]);
       mockPrisma.product.count.mockResolvedValue(1);

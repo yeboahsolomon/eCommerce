@@ -201,6 +201,62 @@ describe('Order Routes', () => {
 
       expect(res.status).toBe(401);
     });
+
+    it('should correctly handle concurrent orders and decrement stock atomically', async () => {
+      mockPrisma.cart.findUnique.mockResolvedValue(testCart);
+      
+      let currentStock = 10;
+      
+      // We simulate atomic decrement using Prisma's update
+      mockPrisma.product.update.mockImplementation(async (args: any) => {
+        const decrementBy = args.data.stockQuantity.decrement;
+        if (currentStock < decrementBy) {
+          throw new Error('Insufficient stock');
+        }
+        currentStock -= decrementBy;
+        return { stockQuantity: currentStock };
+      });
+      
+      mockPrisma.$transaction.mockImplementation(async (callback: Function) => {
+        return callback(mockPrisma);
+      });
+      
+      const createdOrder = { ...testOrder, status: 'CONFIRMED', items: [], payment: { status: 'PENDING' } };
+      mockPrisma.order.create.mockResolvedValue(createdOrder);
+      mockPrisma.cartItem.deleteMany.mockResolvedValue({ count: 1 });
+      mockPrisma.inventoryLog.create.mockResolvedValue({});
+
+      // Fire two concurrent order requests for 8 items each when stock is 10.
+      // One should succeed, one should fail.
+      const modifiedCart = {
+        ...testCart,
+        items: [
+          { ...testCart.items[0], quantity: 8 }
+        ]
+      };
+      
+      // Override cart lookup for this specific test
+      mockPrisma.cart.findUnique.mockResolvedValue(modifiedCart);
+
+      const req1 = request(app)
+        .post('/api/orders')
+        .set('Cookie', getAuthCookie(testUser))
+        .send(validOrderPayload);
+        
+      const req2 = request(app)
+        .post('/api/orders')
+        .set('Cookie', getAuthCookie(testUser))
+        .send(validOrderPayload);
+
+      const results = await Promise.all([req1, req2]);
+      
+      const successes = results.filter(r => r.status === 201).length;
+      const failures = results.filter(r => r.status === 400 || r.status === 500).length;
+      
+      expect(successes).toBe(1);
+      expect(failures).toBe(1);
+      expect(currentStock).toBe(2);
+    });
   });
 
   // ===== GET ORDERS =====

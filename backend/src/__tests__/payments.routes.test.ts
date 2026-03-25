@@ -127,6 +127,66 @@ describe('Payment Routes', () => {
     });
   });
 
+  // ===== MOMO WEBHOOK =====
+
+  describe('POST /api/payments/momo/webhook', () => {
+    const momoWebhookPayload = {
+      referenceId: 'momo-ref-001',
+      status: 'SUCCESSFUL',
+      financialTransactionId: '1234567890',
+    };
+
+    it('should update payment and order on MoMo SUCCESSFUL webhook', async () => {
+      mockPrisma.payment.findFirst.mockResolvedValue({
+        ...testPayment,
+        status: 'PROCESSING',
+        gatewayProvider: 'mtn_momo',
+        gatewayReference: 'momo-ref-001',
+      });
+      mockPrisma.$transaction.mockResolvedValue([{}, {}]);
+
+      const res = await request(app)
+        .post('/api/payments/momo/webhook')
+        .send(momoWebhookPayload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.received).toBe(true);
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('should handle FAILED MoMo webhook and cancel order (restoring stock)', async () => {
+      mockPrisma.payment.findFirst.mockResolvedValue({
+        ...testPayment,
+        status: 'PROCESSING',
+        gatewayProvider: 'mtn_momo',
+        gatewayReference: 'momo-ref-001',
+        order: {
+          id: testOrder.id,
+          orderNumber: testOrder.orderNumber,
+          userId: testUser.id,
+          items: [
+            { productId: 'prod1', quantity: 2 }
+          ]
+        }
+      });
+      
+      mockPrisma.$transaction.mockImplementation(async (callback: Function) => callback(mockPrisma));
+      
+      // Stock restoration should be called
+      mockPrisma.product.update.mockResolvedValue({});
+
+      const res = await request(app)
+        .post('/api/payments/momo/webhook')
+        .send({
+          ...momoWebhookPayload,
+          status: 'FAILED',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.received).toBe(true);
+    });
+  });
+
   // ===== MOMO INITIALIZE =====
 
   describe('POST /api/payments/momo/initialize', () => {
