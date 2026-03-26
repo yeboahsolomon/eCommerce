@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../config/database.js';
 import { authenticate } from '../middleware/auth.middleware.js';
+import { requireStepUpAuth } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { ApiResponseHandler } from '../utils/response.js';
 
@@ -59,6 +60,7 @@ router.get(
 router.put(
   '/profile',
   authenticate,
+  requireStepUpAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { firstName, lastName, phone } = req.body;

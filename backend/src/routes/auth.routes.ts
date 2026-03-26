@@ -11,6 +11,7 @@ import {
   RegisterInput, LoginInput,
   VerifyEmailInput, ForgotPasswordInput,
   ResetPasswordInput, ChangePasswordInput,
+  stepUpSchema, StepUpInput,
 } from '../utils/validators.js';
 import { loginLimiter, passwordResetLimiter, emailVerifyLimiter } from '../middleware/rate-limit.middleware.js';
 
@@ -229,6 +230,34 @@ router.post(
         null,
         'Password changed successfully. All other sessions have been logged out.'
       );
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================================
+// POST /api/auth/step-up
+// ============================================================
+
+router.post(
+  '/step-up',
+  loginLimiter,
+  authenticate,
+  validate(stepUpSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { password } = req.body as StepUpInput;
+      const stepUpToken = await authService.stepUpAuth(req.user!.id, password);
+      
+      res.cookie('stepUpToken', stepUpToken, {
+        httpOnly: true,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'lax',
+        maxAge: 15 * 60 * 1000, 
+      });
+
+      return ApiResponseHandler.success(res, null, 'Step-up authentication successful.');
     } catch (error) {
       next(error);
     }

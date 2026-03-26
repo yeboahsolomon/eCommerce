@@ -47,6 +47,10 @@ export const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+export const stepUpSchema = z.object({
+  password: z.string().min(1, 'Password is required'),
+});
+
 // ==================== ADDRESS SCHEMAS ====================
 
 export const createAddressSchema = z.object({
@@ -264,6 +268,7 @@ export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type StepUpInput = z.infer<typeof stepUpSchema>;
 export type CreateAddressInput = z.infer<typeof createAddressSchema>;
 export type CreateSellerProfileInput = z.infer<typeof createSellerProfileSchema>;
 export type UpdateSellerProfileInput = z.infer<typeof updateSellerProfileSchema>;

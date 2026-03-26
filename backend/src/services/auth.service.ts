@@ -5,6 +5,7 @@ import { emailService } from './email.service.js';
 import { RegisterInput, LoginInput, ChangePasswordInput } from '../utils/validators.js';
 import { hashPassword, comparePassword, generateToken, generateRefreshToken, generateSecureToken } from '../utils/helpers.js';
 import { hashToken } from '../utils/token.helpers.js';
+import jwt from 'jsonwebtoken';
 
 export class AuthService {
   async register(input: RegisterInput) {
@@ -181,6 +182,17 @@ export class AuthService {
     });
 
     return { accessToken, refreshToken };
+  }
+
+  async stepUpAuth(userId: string, passwordInput: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, password: true } });
+    if (!user) throw new ApiError(404, 'User not found.');
+
+    const isValid = await comparePassword(passwordInput, user.password);
+    if (!isValid) throw new ApiError(401, 'Invalid password.');
+
+    const stepUpToken = jwt.sign({ userId: user.id }, config.jwtSecret, { expiresIn: '15m' });
+    return stepUpToken;
   }
 
   async refreshToken(refreshTokenCookie: string | undefined) {

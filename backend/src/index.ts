@@ -86,7 +86,7 @@ app.use(sanitizeBody);
 const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
   getSecret: () => config.jwtSecret,
   getSessionIdentifier: (req) => req.ip || 'anonymous',
-  cookieName: '__Host-psifi.x-csrf-token',
+  cookieName: config.nodeEnv === 'production' ? '__Host-psifi.x-csrf-token' : 'psifi.x-csrf-token',
   cookieOptions: {
     httpOnly: true,
     secure: config.nodeEnv === 'production',

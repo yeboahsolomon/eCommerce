@@ -131,6 +131,39 @@ export function requireSellerOrAdmin(
 }
 
 /**
+ * Middleware to require step-up authentication (recent password verification)
+ */
+export async function requireStepUpAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  if (!req.user) {
+    next(new ApiError(401, 'Authentication required.'));
+    return;
+  }
+
+  try {
+    const stepUpToken = req.cookies.stepUpToken;
+    if (!stepUpToken) {
+      next(new ApiError(401, 'STEP_UP_REQUIRED'));
+      return;
+    }
+
+    const decoded = jwt.verify(stepUpToken, config.jwtSecret) as JwtPayload;
+    
+    if (decoded.userId !== req.user.id) {
+      next(new ApiError(401, 'STEP_UP_REQUIRED'));
+      return;
+    }
+
+    next();
+  } catch (error) {
+    next(new ApiError(401, 'STEP_UP_REQUIRED'));
+  }
+}
+
+/**
  * Optional authentication - attaches user if token valid, continues otherwise
  */
 export async function optionalAuth(
