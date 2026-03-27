@@ -27,7 +27,9 @@ export default function BottomNav() {
         {NAV_ITEMS.map((item) => {
           const isActive = item.href === '/'
             ? pathname === '/'
-            : pathname.startsWith(item.href);
+            : item.href === '/account'
+              ? pathname.startsWith('/account') && !pathname.startsWith('/account/wishlist')
+              : pathname.startsWith(item.href);
 
           return (
             <Link
