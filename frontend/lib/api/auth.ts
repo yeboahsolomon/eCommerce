@@ -29,4 +29,12 @@ export const authApi = {
   async updateProfile(data: Partial<User>) {
     return request<{ user: User }>('PUT', '/auth/me', data);
   },
+
+  async forgotPassword(email: string) {
+    return request<null>('POST', '/auth/forgot-password', { email });
+  },
+
+  async resetPassword(token: string, newPassword: string) {
+    return request<null>('POST', '/auth/reset-password', { token, newPassword });
+  },
 };
