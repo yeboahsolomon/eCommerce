@@ -110,23 +110,23 @@ export default function WishlistPage() {
                 </p>
 
                 {/* Actions */}
-                <div className="flex gap-2">
+                <div className="flex gap-1.5 sm:gap-2">
                   <button
                     onClick={() => handleAddToCart(item)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                    className="flex-1 flex items-center justify-center gap-1 sm:gap-2 bg-blue-600 text-white py-1.5 sm:py-2 px-1 sm:px-3 rounded-lg text-[11px] sm:text-sm font-bold sm:font-medium hover:bg-blue-700 transition"
                   >
-                    <ShoppingCart className="h-4 w-4" />
-                    Add to Cart
+                    <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="truncate">Add to Cart</span>
                   </button>
                   <button
                     onClick={() => handleRemove(item.id)}
                     disabled={removingId === item.id}
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                    className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition flex-shrink-0"
                   >
                     {removingId === item.id ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                     ) : (
-                      <Trash2 className="h-5 w-5" />
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     )}
                   </button>
                 </div>
