@@ -290,7 +290,7 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(to: string, name: string, token: string): Promise<void> {
-    const resetUrl = `${config.frontendUrl}/reset-password?token=${token}`;
+    const resetUrl = `${config.frontendUrl}/auth/reset-password/${token}`;
     await this.sendTemplateEmail({
       to,
       subject: 'Reset your GhanaMarket password',

@@ -3,42 +3,44 @@ import { createClient, RedisClientType } from 'redis';
 import { config } from '../config/env.js';
 
 class RedisService {
-  private client: RedisClientType;
+  private client: RedisClientType | null = null;
   private isConnected: boolean = false;
 
   constructor() {
-    const url = config.redisUrl;
-    this.client = createClient({ url });
-
-    this.client.on('error', (err) => {
-      console.error('Redis Client Error', err);
-    });
-
-    this.client.on('connect', () => {
-      console.log('Redis Client Connected');
-      this.isConnected = true;
-    });
-
-    // Connect immediately
-    this.connect();
+    // Defer connection to an async init method
+    this.init();
   }
 
-  private async connect() {
-    if (!this.isConnected) {
-        try {
-            await this.client.connect();
-        } catch (error) {
-            console.error('Failed to connect to Redis:', error);
+  private async init() {
+    try {
+      const client = createClient({
+        url: config.redisUrl,
+        socket: {
+          connectTimeout: 3000,   // Fail fast: 3 seconds
+          reconnectStrategy: false // Do NOT retry automatically
         }
+      });
+
+      // Suppress noisy error events — we handle errors via try/catch
+      client.on('error', () => {});
+
+      await client.connect();
+
+      this.client = client;
+      this.isConnected = true;
+      console.log('✅ Redis connected');
+    } catch {
+      console.warn('⚠️  Redis unavailable — running without cache. This is fine for development.');
+      this.client = null;
+      this.isConnected = false;
     }
   }
 
   /**
    * Get value from cache
-   * @param key Cache key
    */
   async get<T>(key: string): Promise<T | null> {
-    if (!this.isConnected) return null;
+    if (!this.isConnected || !this.client) return null;
     try {
       const value = await this.client.get(key);
       return value ? JSON.parse(value) : null;
@@ -50,12 +52,9 @@ class RedisService {
 
   /**
    * Set value in cache
-   * @param key Cache key
-   * @param value Value to store
-   * @param ttl Time to live in seconds (default 3600 = 1 hour)
    */
   async set(key: string, value: any, ttl: number = 3600): Promise<void> {
-    if (!this.isConnected) return;
+    if (!this.isConnected || !this.client) return;
     try {
       await this.client.set(key, JSON.stringify(value), { EX: ttl });
     } catch (error) {
@@ -65,10 +64,9 @@ class RedisService {
 
   /**
    * Delete value from cache
-   * @param key Cache key
    */
   async del(key: string): Promise<void> {
-    if (!this.isConnected) return;
+    if (!this.isConnected || !this.client) return;
     try {
       await this.client.del(key);
     } catch (error) {
@@ -78,10 +76,9 @@ class RedisService {
 
   /**
    * Clear all keys matching a pattern
-   * @param pattern Pattern to match (e.g. 'products:*')
    */
   async clearPattern(pattern: string): Promise<void> {
-    if (!this.isConnected) return;
+    if (!this.isConnected || !this.client) return;
     try {
         const keys = await this.client.keys(pattern);
         if (keys.length > 0) {
