@@ -4,18 +4,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Grid3X3, ShoppingCart, Heart, User } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useWishlist } from '@/context/WishlistContext';
 
 const NAV_ITEMS = [
   { href: '/', icon: Home, label: 'Home' },
   { href: '/products', icon: Grid3X3, label: 'Shop' },
   { href: '/cart', icon: ShoppingCart, label: 'Cart', badge: true },
-  { href: '/account/wishlist', icon: Heart, label: 'Wishlist' },
+  { href: '/account/wishlist', icon: Heart, label: 'Wishlist', badge: true },
   { href: '/account', icon: User, label: 'Account' },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { itemCount } = useCart();
+  const { items: wishlistItems } = useWishlist();
 
   // Hide on dashboard/admin/seller/checkout pages
   const hiddenPaths = ['/admin', '/seller', '/checkout', '/auth'];
@@ -31,6 +33,8 @@ export default function BottomNav() {
               ? pathname.startsWith('/account') && !pathname.startsWith('/account/wishlist')
               : pathname.startsWith(item.href);
 
+          const badgeCount = item.label === 'Cart' ? itemCount : (item.label === 'Wishlist' ? wishlistItems.length : 0);
+
           return (
             <Link
               key={item.href}
@@ -41,9 +45,9 @@ export default function BottomNav() {
             >
               <div className="relative">
                 <item.icon className={`h-5 w-5 ${isActive ? 'stroke-[2.5]' : ''}`} />
-                {item.badge && itemCount > 0 && (
+                {item.badge && badgeCount > 0 && (
                   <span className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">
-                    {itemCount > 99 ? '99+' : itemCount}
+                    {badgeCount > 99 ? '99+' : badgeCount}
                   </span>
                 )}
               </div>

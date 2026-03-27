@@ -6,6 +6,7 @@ import { ShoppingBag, Menu, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 import { Category } from "@/types";
 
@@ -23,6 +24,7 @@ import MobileMenu from "@/components/shared/header/MobileMenu";
 
 export default function Header() {
   const { itemCount, subtotal } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const { isAuthenticated, isLoading } = useAuth();
   // Categories fetched via React Query below
   
@@ -151,7 +153,19 @@ export default function Header() {
 
              {/* Wishlist (Desktop) */}
              <Link href="/account/wishlist" className="hidden lg:flex items-center gap-2 p-2 hover:bg-slate-100 rounded-lg group transition-colors relative">
-                 <Heart className="h-6 w-6 text-slate-600 group-hover:text-red-500 transition-colors" />
+                 <div className="relative">
+                   <Heart className="h-6 w-6 text-slate-600 group-hover:text-red-500 transition-colors" />
+                   {wishlistItems.length > 0 && (
+                     <motion.span 
+                        key={wishlistItems.length}
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm ring-2 ring-white"
+                     >
+                        {wishlistItems.length > 99 ? '99+' : wishlistItems.length}
+                     </motion.span>
+                   )}
+                 </div>
                  <span className="hidden xl:block text-xs font-bold text-slate-600 group-hover:text-red-600">Wishlist</span>
              </Link>
 
