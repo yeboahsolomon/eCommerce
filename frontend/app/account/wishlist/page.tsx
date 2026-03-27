@@ -3,8 +3,9 @@
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { Product } from "@/types";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, Loader2, Heart, ShoppingCart, Trash2, ImageOff } from "lucide-react";
@@ -19,41 +20,13 @@ interface WishlistItem {
 export default function WishlistPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { addItem } = useCart();
-  const [items, setItems] = useState<WishlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { items, isLoading, removeFromWishlist } = useWishlist();
   const [removingId, setRemovingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchWishlist = async () => {
-      if (!isAuthenticated) return;
-      try {
-        const res = await api.getWishlist();
-        if (res.success && res.data?.items) {
-          setItems(res.data.items as unknown as WishlistItem[]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch wishlist:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (!authLoading) {
-      fetchWishlist();
-    }
-  }, [isAuthenticated, authLoading]);
 
   const handleRemove = async (itemId: string) => {
     setRemovingId(itemId);
-    try {
-      await api.removeFromWishlist(itemId);
-      setItems(items.filter((item) => item.id !== itemId));
-      toast.success("Removed from wishlist");
-    } catch (err) {
-      toast.error("Failed to remove item");
-    } finally {
-      setRemovingId(null);
-    }
+    await removeFromWishlist(itemId);
+    setRemovingId(null);
   };
 
   const handleAddToCart = async (item: WishlistItem) => {
@@ -64,17 +37,6 @@ export default function WishlistPage() {
     return (
       <div className="flex justify-center items-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-slate-500 mb-4">Please login to view your wishlist</p>
-        <Link href="/auth/login" className="text-blue-600 font-medium hover:underline">
-          Sign In
-        </Link>
       </div>
     );
   }
@@ -91,6 +53,17 @@ export default function WishlistPage() {
       </div>
 
       <h1 className="text-2xl font-bold text-slate-900 mb-6">My Wishlist</h1>
+
+      {!isAuthenticated && items.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-xl mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm font-medium text-center sm:text-left">
+            You are browsing as a guest. Create an account to save your wishlist permanently!
+          </p>
+          <Link href="/auth/register" className="whitespace-nowrap bg-blue-600 text-white text-sm font-bold px-5 py-2 rounded-lg hover:bg-blue-700 transition">
+            Create Account
+          </Link>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
@@ -129,7 +102,11 @@ export default function WishlistPage() {
                   </h3>
                 </Link>
                 <p className="text-lg font-bold text-slate-900 mb-3">
-                  ₵{(item.product.priceInPesewas / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ₵{(
+                    item.product.priceInPesewas !== undefined
+                      ? item.product.priceInPesewas / 100
+                      : (item.product as any).priceInCedis || 0
+                  ).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
 
                 {/* Actions */}

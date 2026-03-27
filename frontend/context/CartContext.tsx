@@ -165,7 +165,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                   newCart.items[existingItemIndex].quantity += quantity;
               } else {
                   // Ensure price is handled correctly
-                  let priceRes = productToAdd!.priceInPesewas;
+                  let priceRes = productToAdd!.priceInPesewas !== undefined ? productToAdd!.priceInPesewas : ((productToAdd as any).priceInCedis ? (productToAdd as any).priceInCedis * 100 : 0);
                   let variantRes = undefined;
                   if (variantId && productToAdd!.variants) {
                       const v = productToAdd!.variants.find(v => v.id === variantId);
@@ -187,7 +187,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                           id: productToAdd!.id,
                           name: productToAdd!.name,
                           slug: productToAdd!.slug,
-                          priceInPesewas: productToAdd!.priceInPesewas,
+                          priceInPesewas: productToAdd!.priceInPesewas !== undefined ? productToAdd!.priceInPesewas : ((productToAdd as any).priceInCedis ? (productToAdd as any).priceInCedis * 100 : 0),
                           image: productToAdd!.image || (productToAdd!.images && productToAdd!.images[0] ? productToAdd!.images[0].url : null),
                           inStock: productToAdd!.inStock,
                           stockQuantity: productToAdd!.stockQuantity || 0,
@@ -201,7 +201,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               
               // Recalculate totals
               newCart.itemCount = newCart.items.length;
-              newCart.subtotalInCedis = newCart.items.reduce((acc, item) => acc + ((item.product.priceInPesewas / 100) * item.quantity), 0);
+              newCart.subtotalInCedis = newCart.items.reduce((acc, item) => {
+                 const p = item.product.priceInPesewas !== undefined ? item.product.priceInPesewas : ((item.product as any).priceInCedis ? (item.product as any).priceInCedis * 100 : 0);
+                 return acc + ((p / 100) * item.quantity);
+              }, 0);
               
               return newCart;
            });
@@ -247,7 +250,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               
               // Recalculate totals
               const itemCount = newItems.length;
-              const subtotalInCedis = newItems.reduce((acc, i) => acc + ((i.product.priceInPesewas / 100) * i.quantity), 0);
+              const subtotalInCedis = newItems.reduce((acc, i) => {
+                 const p = i.product.priceInPesewas !== undefined ? i.product.priceInPesewas : ((i.product as any).priceInCedis ? (i.product as any).priceInCedis * 100 : 0);
+                 return acc + ((p / 100) * i.quantity);
+              }, 0);
               
               return {
                   ...currentCart,
@@ -295,7 +301,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               
               // Recalculate totals
               const itemCount = newItems.length;
-              const subtotalInCedis = newItems.reduce((acc, i) => acc + ((i.product.priceInPesewas / 100) * i.quantity), 0);
+              const subtotalInCedis = newItems.reduce((acc, i) => {
+                 const p = i.product.priceInPesewas !== undefined ? i.product.priceInPesewas : ((i.product as any).priceInCedis ? (i.product as any).priceInCedis * 100 : 0);
+                 return acc + ((p / 100) * i.quantity);
+              }, 0);
               
               return {
                   ...currentCart,

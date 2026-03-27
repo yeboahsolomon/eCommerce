@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ShoppingCart, Star, ImageOff, Heart, Eye, MapPin, BadgeCheck, SlidersHorizontal } from "lucide-react";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { toast } from "sonner";
 // import { QuickViewModal } from "./QuickViewModal"; // Assuming we want to create this later or just use placeholder logic
 // Actually, user asked for "Quick view icon", implies functionality. 
@@ -20,7 +21,8 @@ interface ProductCardProps {
 
 function ProductCard({ product }: ProductCardProps) {
   const { addItem, cart } = useCart(); 
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const isWishlisted = isInWishlist(product.id);
   const [isHovered, setIsHovered] = useState(false);
   const router = useRouter();
 
@@ -40,11 +42,10 @@ function ProductCard({ product }: ProductCardProps) {
     await addItem(product.id, 1, product);
   }, [addItem, product, router]);
 
-  const handleWishlist = useCallback((e: React.MouseEvent) => {
+  const handleWishlist = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
-    setIsWishlisted(!isWishlisted);
-    toast.success(isWishlisted ? "Removed from wishlist" : "Added to wishlist");
-  }, [isWishlisted]);
+    await toggleWishlist(product);
+  }, [toggleWishlist, product]);
 
   const handleQuickView = useCallback((e: React.MouseEvent) => {
       e.preventDefault();

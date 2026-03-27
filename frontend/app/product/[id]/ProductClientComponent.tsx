@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { Product, Review, ReviewSummary } from "@/types";
 import { toast } from "sonner";
 import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, ChevronRight, 
@@ -21,7 +22,8 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewSummary, setReviewSummary] = useState<ReviewSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const isWishlisted = product ? isInWishlist(product.id) : false;
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
   // Set default variant
@@ -97,9 +99,9 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
     updateQuantity(cartItem.id, newQty);
   }, [product, cartItem, updateQuantity]);
 
-  const handleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
-    toast.success(isWishlisted ? "Removed from wishlist" : "Added to wishlist");
+  const handleWishlist = async () => {
+    if (!product) return;
+    await toggleWishlist(product);
   };
 
   const handleShare = async () => {

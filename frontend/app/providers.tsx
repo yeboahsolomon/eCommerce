@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 import { Toaster } from "sonner";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
@@ -24,8 +25,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
         <AuthProvider>
           <CartProvider>
-            {children}
-            <Toaster richColors position="top-center" />
+            <WishlistProvider>
+              {children}
+              <Toaster richColors position="top-center" />
+            </WishlistProvider>
           </CartProvider>
         </AuthProvider>
       </GoogleOAuthProvider>
