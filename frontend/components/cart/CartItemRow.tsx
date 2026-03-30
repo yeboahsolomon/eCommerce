@@ -4,7 +4,6 @@ import Image from "next/image";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/types";
 import { useCart } from "@/context/CartContext";
-import { toast } from "sonner";
 
 interface Props {
   item: CartItem;
@@ -15,7 +14,6 @@ export default function CartItemRow({ item }: Props) {
 
   const handleRemove = () => {
     removeItem(item.id);
-    toast.success("Product removed successfully");
   };
 
   return (

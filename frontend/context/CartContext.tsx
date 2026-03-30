@@ -233,7 +233,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     const rootRes = await api.getCart();
                     if (rootRes.success && rootRes.data?.cart) setCart(normalizeCart(rootRes.data.cart));
                 }
-                toast.success("Removed from cart");
+                toast.success("Product removed successfully");
             } catch {
                 toast.error("Failed to remove");
             }
@@ -262,7 +262,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                   subtotalInCedis
               };
         });
-        toast.success("Removed from cart");
+        toast.success("Product removed successfully");
     }
   };
 
