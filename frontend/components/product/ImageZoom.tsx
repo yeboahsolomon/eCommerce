@@ -223,11 +223,11 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
     <>
       <style dangerouslySetInnerHTML={{ __html: cssAnimations }} />
 
-      <div className="space-y-3">
+      <div className="space-y-0">
         {/* Main Image with Zoom */}
         <div
           ref={imageRef}
-          className="relative aspect-square bg-white border border-slate-100 rounded-2xl overflow-hidden cursor-zoom-in group shadow-sm transition-all hover:shadow-md"
+          className="relative aspect-square bg-slate-100 overflow-hidden cursor-zoom-in group transition-all"
           onMouseMove={handleMouseMove}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -238,14 +238,14 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
         >
           {/* Loading skeleton */}
           {!imageLoaded && (
-            <div className="absolute inset-0 img-skeleton rounded-2xl z-[1]" />
+            <div className="absolute inset-0 img-skeleton z-[1]" />
           )}
 
           <img
             key={`main-${activeIndex}`}
             src={activeImage}
             alt={images[activeIndex]?.alt || productName}
-            className={`w-full h-full object-contain p-4 transition-opacity duration-300 ${getSlideClass()} ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${getSlideClass()} ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             draggable={false}
             onLoad={() => setImageLoaded(true)}
           />
@@ -264,24 +264,33 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
           )}
 
           {/* Expand indicator overlay */}
-          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-          <div className="absolute bottom-4 right-4 bg-white/95 text-slate-800 text-xs px-3 py-2 rounded-full shadow-lg border border-slate-100 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 pointer-events-none hidden md:flex font-medium z-20">
-            <Maximize2 className="h-4 w-4 text-blue-600" />
-            Click to expand
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 pointer-events-none" />
+          
+          {/* Image counter badge */}
+          {images.length > 1 && (
+            <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full font-medium z-20 pointer-events-none">
+              {activeIndex + 1} / {images.length}
+            </div>
+          )}
+
+          {/* Expand hint */}
+          <div className="absolute bottom-4 right-4 bg-black/40 backdrop-blur-sm text-white text-xs px-3 py-2 rounded-full flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 pointer-events-none hidden md:flex font-medium z-20">
+            <Maximize2 className="h-3.5 w-3.5" />
+            Expand
           </div>
 
-          {/* Navigation arrows (Mobile) */}
+          {/* Navigation arrows */}
           {images.length > 1 && (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); prevImage(); }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 md:hidden"
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 z-20"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); nextImage(); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-all hover:scale-110 md:hidden"
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 rounded-full p-2 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 z-20"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
@@ -309,16 +318,16 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
 
         {/* Thumbnails (Desktop) */}
         {images.length > 1 && (
-          <div className="hidden md:flex gap-2.5 overflow-x-auto no-scrollbar py-1">
+          <div className="hidden md:flex gap-2 overflow-x-auto no-scrollbar px-3 py-3 bg-white border-t border-slate-100">
             {images.map((img, i) => (
               <button
                 key={i}
                 onMouseEnter={() => goToImage(i, i > activeIndex ? 'left' : 'right')}
                 onClick={() => goToImage(i, i > activeIndex ? 'left' : 'right')}
-                className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+                className={`shrink-0 w-[72px] h-[72px] rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                   i === activeIndex
-                    ? 'border-blue-600 shadow-md transform scale-105'
-                    : 'border-transparent hover:border-blue-300 opacity-70 hover:opacity-100'
+                    ? 'border-blue-600 ring-2 ring-blue-600/20 shadow-sm'
+                    : 'border-slate-200 hover:border-blue-400 opacity-75 hover:opacity-100'
                 }`}
               >
                 <img

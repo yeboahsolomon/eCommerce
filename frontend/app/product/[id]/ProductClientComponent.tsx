@@ -220,12 +220,12 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
             
             {/* ===== IMAGE GALLERY ===== */}
-            <div className="relative w-full md:w-1/2 p-4 md:p-6 lg:p-8 bg-white border-b md:border-b-0 md:border-r border-slate-100 flex items-center justify-center">
+            <div className="relative w-full md:w-1/2 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-100">
               {/* Action Buttons */}
               <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
                 <button
                   onClick={handleWishlist}
-                  className={`h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center transition-all hover:scale-110 ${
+                  className={`h-10 w-10 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transition-all hover:scale-110 ${
                     isWishlisted ? "text-red-500" : "text-slate-400 hover:text-red-500"
                   }`}
                 >
@@ -233,7 +233,7 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
                 </button>
                 <button
                   onClick={handleShare}
-                  className="h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all hover:scale-110"
+                  className="h-10 w-10 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all hover:scale-110"
                 >
                   <Share2 className="h-5 w-5" />
                 </button>
@@ -245,12 +245,10 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
                 </span>
               )}
 
-              <div className="w-full max-w-[500px]">
-                <ImageZoom
-                  images={images.map(img => ({ url: img.url, alt: img.altText || product.name }))}
-                  productName={product.name}
-                />
-              </div>
+              <ImageZoom
+                images={images.map(img => ({ url: img.url, alt: img.altText || product.name }))}
+                productName={product.name}
+              />
             </div>
 
             {/* ===== PRODUCT INFO ===== */}
