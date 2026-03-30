@@ -170,3 +170,22 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Product Card Enhancements */
+.product-card {
+  transform: translateY(0);
+  transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+              box-shadow 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+              border-color 0.3s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+}
+
+/* On touch devices, don't show the slide-up cart overlay */
+@media (hover: none) {
+  .product-card .group-hover\:translate-y-0 {
+    transform: translateY(100%) !important;
+  }
+}
