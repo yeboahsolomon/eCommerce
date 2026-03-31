@@ -212,15 +212,15 @@ function ProductCard({ product }: ProductCardProps) {
           {/* Mobile Cart Button */}
           <button
             onClick={handleAddToCart}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white md:hidden active:scale-90 transition-all duration-150 shadow-md shadow-slate-900/15 hover:bg-blue-600"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600 md:hidden active:scale-95 transition-all duration-200 hover:bg-blue-600 hover:text-white"
             title={product.hasVariants ? "Select Options" : "Add to Cart"}
           >
             {product.hasVariants ? (
-              <SlidersHorizontal className="h-[18px] w-[18px]" />
+              <SlidersHorizontal className="h-4 w-4" />
             ) : quantity > 0 ? (
-              <span className="text-xs font-bold">{quantity}</span>
+              <span className="text-[11px] font-bold">{quantity}</span>
             ) : (
-              <ShoppingCart className="h-[18px] w-[18px]" />
+              <ShoppingCart className="h-4 w-4" />
             )}
           </button>
         </div>
