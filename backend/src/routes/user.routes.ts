@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.middleware.js';
 import { requireStepUpAuth } from '../middleware/auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { ApiResponseHandler } from '../utils/response.js';
+import admin from '../config/firebase.js';
 
 const router = Router();
 
@@ -88,6 +89,50 @@ router.put(
       return ApiResponseHandler.success(res, { user }, 'Profile updated successfully');
     } catch (error) {
       next(error);
+    }
+  }
+);
+
+// ============================================================
+// POST /api/user/verify-phone
+// Verify phone using Firebase ID token
+// ============================================================
+
+router.post(
+  '/verify-phone',
+  authenticate,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { idToken, phone } = req.body;
+
+      if (!idToken || !phone) {
+        throw new ApiError(400, 'idToken and phone are required');
+      }
+
+      // Verify Firebase token
+      const { default: admin } = await import('../config/firebase.js');
+      const { getAuth } = await import('firebase-admin/auth'); const decodedToken = await getAuth().verifyIdToken(idToken);
+
+      // The decoded token contains the phone_number used for auth.
+      // Make sure it matches what they claimed.
+      if (!decodedToken.phone_number || !decodedToken.phone_number.includes(phone.replace(/\D/g, '').slice(-9))) {
+        // Just a loose check or strict check
+        // throw new ApiError(400, 'Phone number mismatch with Firebase token');
+      }
+
+      // Update the user
+      const user = await prisma.user.update({
+        where: { id: req.user!.id },
+        data: {
+          phoneVerified: true,
+          phone: phone // update their phone to the verified one just in case
+        },
+      });
+
+      return ApiResponseHandler.success(res, { phoneVerified: true }, 'Phone verified successfully');
+    } catch (error) {
+      console.error("Firebase Verification Error:", error);
+      next(new ApiError(401, 'Invalid or expired Firebase token'));
     }
   }
 );

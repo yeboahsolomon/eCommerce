@@ -202,6 +202,31 @@ class OrderService {
         }
     }
 
+    // ────────── 6.5 Calculate Risk Flag ──────────
+
+    let internalRiskFlag = false;
+    let riskReason: string | null = null;
+    
+    // Condition 1: Unusually large order amount (e.g., > 10,000 GHS / 1,000,000 Pesewas)
+    if (totalInPesewas > 1000000) {
+        internalRiskFlag = true;
+        riskReason = "Unusually large order amount";
+    }
+
+    // Condition 2: Delivery address differs significantly from default address
+    if (!internalRiskFlag && finalUserId) {
+        const defaultAddress = await prisma.address.findFirst({
+            where: { userId: finalUserId, isDefault: true }
+        });
+        if (defaultAddress) {
+            if (defaultAddress.region.toLowerCase() !== orderData.shippingRegion.toLowerCase() ||
+                defaultAddress.city.toLowerCase() !== orderData.shippingCity.toLowerCase()) {
+                internalRiskFlag = true;
+                riskReason = "Delivery address differs significantly from default address";
+            }
+        }
+    }
+
     // ────────── 7. ACID transaction ──────────
 
     const lowStockAlerts: Array<{
@@ -241,6 +266,9 @@ class OrderService {
 
             customerEmail: orderData.customerEmail,
             customerPhone: orderData.customerPhone,
+            
+            internalRiskFlag,
+            riskReason,
 
             notes: `Delivery Method: ${orderData.deliveryMethod || 'Standard'}${
               orderData.deliveryNotes ? `\nNotes: ${orderData.deliveryNotes}` : ''
