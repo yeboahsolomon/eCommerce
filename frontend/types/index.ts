@@ -13,6 +13,7 @@ export interface User {
   status: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
   avatarUrl?: string;
   emailVerified: boolean;
+  phoneVerified?: boolean;
   createdAt: string;
   lastLoginAt?: string;
 }

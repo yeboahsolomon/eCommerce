@@ -16,6 +16,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronLeft, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import PhoneVerificationModal from "@/components/auth/PhoneVerificationModal";
 
 import { GHANA_REGIONS } from "@/lib/constants";
 
@@ -29,6 +30,9 @@ export default function CheckoutPage() {
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
   const [sellerPackages, setSellerPackages] = useState<any[]>([]);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [pendingOrderData, setPendingOrderData] = useState<CheckoutFormValues | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Auth guard: redirect unauthenticated users to login
   useEffect(() => {
@@ -133,6 +137,18 @@ export default function CheckoutPage() {
   async function onSubmit(data: CheckoutFormValues) {
     setOrderError(null);
 
+    // If phone is not verified (first time checkout effectively), show OTP modal
+    if (!user?.phoneVerified) {
+      setPendingOrderData(data);
+      setShowOtpModal(true);
+      return;
+    }
+
+    await executeOrder(data);
+  }
+
+  const executeOrder = async (data: CheckoutFormValues) => {
+    setIsPlacingOrder(true);
     try {
       // Build order payload matching the backend
       const orderPayload = {
@@ -177,8 +193,32 @@ export default function CheckoutPage() {
     } catch {
       setOrderError("Something went wrong. Please check your connection and try again.");
       toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsPlacingOrder(false);
     }
-  }
+  };
+
+  const handlePhoneVerified = async (idToken: string) => {
+    if (!pendingOrderData) return;
+    try {
+      setIsPlacingOrder(true);
+      const verifyRes = await api.verifyPhone(idToken, pendingOrderData.phone);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (verifyRes && (verifyRes as any).success) {
+        // Introduce a short delay so the toast notifications do not overlap
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Proceed with order now that phone is verified
+        await executeOrder(pendingOrderData);
+      } else {
+        toast.error("Failed to verify phone on server.");
+      }
+    } catch (err) {
+      toast.error("An error occurred confirming verification.");
+    } finally {
+      setIsPlacingOrder(false);
+      setPendingOrderData(null);
+    }
+  };
 
   if (items.length === 0) return null; // Avoids flash of content before redirect
 
@@ -239,11 +279,23 @@ export default function CheckoutPage() {
             totalPrice={totalPrice}
             deliveryFee={deliveryFee}
             grandTotal={grandTotal}
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmitting || isPlacingOrder}
           />
         </div>
 
       </div>
+
+      {showOtpModal && pendingOrderData?.phone && (
+        <PhoneVerificationModal
+          isOpen={showOtpModal}
+          onClose={() => {
+            setShowOtpModal(false);
+            setPendingOrderData(null);
+          }}
+          phoneNumber={pendingOrderData.phone}
+          onSuccess={handlePhoneVerified}
+        />
+      )}
     </div>
   );
 }

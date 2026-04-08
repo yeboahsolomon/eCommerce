@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { useState, useRef } from "react";
+import PhoneVerificationModal from "@/components/auth/PhoneVerificationModal";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -26,6 +27,8 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [pendingProfileData, setPendingProfileData] = useState<ProfileFormValues | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -79,6 +82,17 @@ export default function SettingsPage() {
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
+    // If they typed a phone number, but it's not verified or changed
+    if (data.phone && (!user?.phoneVerified || data.phone !== user?.phone)) {
+      setPendingProfileData(data);
+      setShowOtpModal(true);
+      return;
+    }
+    
+    await executeProfileUpdate(data);
+  };
+
+  const executeProfileUpdate = async (data: ProfileFormValues) => {
     setIsSaving(true);
     try {
       const res = await updateProfile(data);
@@ -93,6 +107,31 @@ export default function SettingsPage() {
       toast.error("An error occurred");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePhoneVerified = async (idToken: string) => {
+    if (!pendingProfileData) return;
+    try {
+      setIsSaving(true);
+      const verifyRes = await api.verifyPhone(idToken, pendingProfileData.phone || '');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (verifyRes && (verifyRes as any).success) {
+          // Update context to reflect immediate verification
+          await checkAuth();
+
+          // Introduce a short delay so the two toast notifications don't overlap awkwardly
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          await executeProfileUpdate(pendingProfileData);
+      } else {
+          toast.error("Server verification failed.");
+      }
+    } catch(err) {
+      toast.error("An error occurred confirming verification.");
+    } finally {
+      setIsSaving(false);
+      setPendingProfileData(null);
     }
   };
 
@@ -266,6 +305,18 @@ export default function SettingsPage() {
         </div>
 
       </div>
+
+      {showOtpModal && pendingProfileData?.phone && (
+        <PhoneVerificationModal
+          isOpen={showOtpModal}
+          onClose={() => {
+            setShowOtpModal(false);
+            setPendingProfileData(null);
+          }}
+          phoneNumber={pendingProfileData.phone}
+          onSuccess={handlePhoneVerified}
+        />
+      )}
     </div>
   );
 }

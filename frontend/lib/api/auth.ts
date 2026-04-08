@@ -37,4 +37,8 @@ export const authApi = {
   async resetPassword(token: string, newPassword: string) {
     return request<null>('POST', '/auth/reset-password', { token, newPassword });
   },
+
+  async verifyPhone(idToken: string, phone: string) {
+    return request<{ phoneVerified: boolean }>('POST', '/user/verify-phone', { idToken, phone });
+  },
 };
