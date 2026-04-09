@@ -220,7 +220,7 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
             
             {/* ===== IMAGE GALLERY ===== */}
-            <div className="relative w-full md:w-1/2 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-100">
+            <div className="relative w-full md:w-1/2 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-100 flex flex-col">
               {/* Action Buttons */}
               <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
                 <button
@@ -335,14 +335,7 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
                   </p>
                 </div>
 
-                {/* Description Preview */}
-                {product.description && (
-                  <div className="mb-6">
-                    <p className="text-sm text-slate-600 leading-relaxed line-clamp-3">
-                      {product.description}
-                    </p>
-                  </div>
-                )}
+
               </div>
 
               {/* Action Buttons */}

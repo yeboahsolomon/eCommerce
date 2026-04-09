@@ -223,11 +223,11 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
     <>
       <style dangerouslySetInnerHTML={{ __html: cssAnimations }} />
 
-      <div className="space-y-0">
+      <div className="flex flex-col h-full w-full">
         {/* Main Image with Zoom */}
         <div
           ref={imageRef}
-          className="relative aspect-square bg-slate-100 overflow-hidden cursor-zoom-in group transition-all"
+          className="relative flex-1 w-full bg-slate-100 overflow-hidden cursor-zoom-in group transition-all min-h-[300px] md:min-h-0"
           onMouseMove={handleMouseMove}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -245,7 +245,7 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
             key={`main-${activeIndex}`}
             src={activeImage}
             alt={images[activeIndex]?.alt || productName}
-            className={`w-full h-full object-cover transition-opacity duration-300 ${getSlideClass()} ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full absolute inset-0 object-cover transition-opacity duration-300 ${getSlideClass()} ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             draggable={false}
             onLoad={() => setImageLoaded(true)}
           />
@@ -343,7 +343,7 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
 
       {/* ==================== Fullscreen Gallery Modal ==================== */}
       <div 
-        className={`fixed inset-0 z-[100] flex flex-col items-center justify-center transition-all bg-black/95 backdrop-blur-md duration-300 ease-out ${
+        className={`fixed inset-0 z-[100] flex flex-col items-center justify-center transition-all bg-black/95 backdrop-blur-md duration-150 ease-out ${
           showGallery ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'
         }`}
         onClick={(e) => {
@@ -353,7 +353,7 @@ export default function ImageZoom({ images, productName }: ImageZoomProps) {
       >
         <div 
           ref={modalImageRef}
-          className={`flex-1 w-full max-w-6xl h-full flex flex-col items-center justify-center relative transition-transform duration-500 ease-out ${
+          className={`flex-1 w-full max-w-6xl h-full flex flex-col items-center justify-center relative transition-transform duration-200 ease-out ${
             showGallery ? 'scale-100 translate-y-0' : 'scale-95 translate-y-8'
           }`}
           onTouchStart={handleTouchStart}
