@@ -113,29 +113,29 @@ export default function MobileMenu({ isOpen, onClose, categories, sellerApplicat
              )}
              
              {isAuthenticated && (
-                 <div className="grid grid-cols-2 gap-2 mt-2">
-                     <Link href="/account/orders" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                 <div className="grid grid-cols-3 gap-2 mt-2">
+                     <Link href="/account/orders" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors text-center">
                          <ShoppingBag className="h-5 w-5 text-slate-600 mb-1" />
-                         <span className="text-xs font-medium text-slate-600">Orders</span>
+                         <span className="text-xs font-medium text-slate-600 leading-tight">Orders</span>
                      </Link>
-                     <Link href="/account/wishlist" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                     <Link href="/account/wishlist" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors text-center">
                          <Heart className="h-5 w-5 text-slate-600 mb-1" />
-                         <span className="text-xs font-medium text-slate-600">Wishlist</span>
+                         <span className="text-xs font-medium text-slate-600 leading-tight">Wishlist</span>
                      </Link>
                      {(user?.role === 'SELLER' || user?.role === 'ADMIN') ? (
-                         <Link href="/seller/dashboard" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 col-span-2">
+                         <Link href="/seller/dashboard" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 text-center">
                              <Store className="h-5 w-5 text-purple-600 mb-1" />
-                             <span className="text-xs font-bold text-purple-700">Seller Dashboard</span>
+                             <span className="text-[10px] sm:text-xs font-bold text-purple-700 leading-tight">Dashboard</span>
                          </Link>
                      ) : sellerApplication ? (
-                         <Link href="/seller/status" onClick={onClose} className="flex items-center justify-center gap-2 p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 col-span-2">
-                             <Store className="h-5 w-5 text-purple-600" />
-                             <span className="text-xs font-bold text-purple-700">Seller Status</span>
+                         <Link href="/seller/status" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 text-center">
+                             <Store className="h-5 w-5 text-purple-600 mb-1" />
+                             <span className="text-[10px] sm:text-xs font-bold text-purple-700 leading-tight">Seller Status</span>
                          </Link>
                      ) : (
-                         <Link href="/seller/register" onClick={onClose} className="flex items-center justify-center gap-2 p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 col-span-2">
-                             <Store className="h-5 w-5 text-purple-600" />
-                             <span className="text-xs font-bold text-purple-700">Become a Seller</span>
+                         <Link href="/seller/register" onClick={onClose} className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors border border-purple-100 text-center">
+                             <Store className="h-5 w-5 text-purple-600 mb-1" />
+                             <span className="text-[10px] sm:text-xs font-bold text-purple-700 leading-tight">Sell</span>
                          </Link>
                      )}
                  </div>
