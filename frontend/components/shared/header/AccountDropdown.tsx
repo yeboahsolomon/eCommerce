@@ -107,7 +107,7 @@ export default function AccountDropdown({ sellerApplication }: { sellerApplicati
                     onClick={() => setIsOpen(false)}
                     className="flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-purple-600 hover:bg-purple-50 transition-colors"
                 >
-                    <Store className="h-4 w-4" /> Seller Dashboard
+                    <Store className="h-4 w-4" /> Dashboard
                 </Link>
             ) : sellerApplication ? (
                  <Link 

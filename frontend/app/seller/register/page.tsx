@@ -24,7 +24,7 @@ const SELLER_BENEFITS = [
   },
   {
     icon: BarChart3,
-    title: "Free Seller Dashboard",
+    title: "Free Dashboard",
     description: "Track orders, inventory, sales analytics, and customer insights all in one place.",
     color: "bg-violet-100 text-violet-600",
   },
