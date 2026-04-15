@@ -417,6 +417,7 @@ export interface ProductQueryParams {
   limit?: number;
   category?: string;
   search?: string;
+  seller?: string;
   inStock?: boolean;
   minPrice?: number;
   maxPrice?: number;

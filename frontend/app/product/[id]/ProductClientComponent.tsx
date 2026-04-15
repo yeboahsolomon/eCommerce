@@ -8,7 +8,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { Product, Review, ReviewSummary } from "@/types";
 import { toast } from "sonner";
 import { Star, ShieldCheck, Truck, RotateCcw, ShoppingCart, ChevronRight, 
-  Minus, Plus, Heart, Share2, ImageOff, Loader2, CheckCircle, BadgeCheck, X
+  Minus, Plus, Heart, Share2, ImageOff, Loader2, CheckCircle, BadgeCheck, X, MapPin, Store
 } from "lucide-react";
 import { use, useState, useEffect, useCallback } from "react";
 import ImageZoom from "@/components/product/ImageZoom";
@@ -25,6 +25,7 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
   const { isInWishlist, toggleWishlist } = useWishlist();
   const isWishlisted = product ? isInWishlist(product.id) : false;
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
 
   // Set default variant
   useEffect(() => {
@@ -541,7 +542,10 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
                     <p className="text-xs text-slate-500">100% Satisfaction Rate</p>
                  </div>
               </div>
-              <button className="w-full py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 hover:border-slate-400 transition-colors">
+              <button 
+                 onClick={() => setIsSellerModalOpen(true)}
+                 className="w-full py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 hover:border-slate-400 transition-colors"
+              >
                  View Profile
               </button>
            </div>
@@ -549,9 +553,70 @@ export default function ProductClient({ params }: { params: Promise<{ id: string
 
       </div>
 
+      {/* Seller Profile Modal */}
+      {isSellerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsSellerModalOpen(false)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-900 text-lg">Seller Profile</h3>
+              <button onClick={() => setIsSellerModalOpen(false)} className="p-2 -mr-2 bg-slate-200 hover:bg-slate-300 rounded-full text-slate-600 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center gap-5 mb-6">
+                <div className="h-20 w-20 bg-slate-900 text-white flex items-center justify-center rounded-2xl font-bold text-3xl shadow-md border-4 border-white">
+                   {product.seller?.logoUrl ? (
+                      <Image src={product.seller.logoUrl} alt={product.seller.businessName} width={80} height={80} className="rounded-2xl object-cover h-20 w-20" />
+                   ) : (
+                      product.seller?.businessName?.[0] || 'G'
+                   )}
+                </div>
+                <div className="flex-1">
+                   <h4 className="font-bold text-xl text-slate-900">{product.seller?.businessName || "GhanaMarket Official"}</h4>
+                   <div className="flex items-center gap-1.5 mt-1 text-sm text-green-600 font-medium">
+                     <BadgeCheck className="h-4 w-4" /> Verified Seller
+                   </div>
+                </div>
+              </div>
 
+              <div className="space-y-3 mb-8">
+                <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                   <div className="mt-0.5 bg-yellow-100 text-yellow-600 p-2 rounded-lg">
+                      <Star className="h-5 w-5 fill-current" />
+                   </div>
+                   <div>
+                      <p className="font-bold text-slate-900">100% Satisfaction Rate</p>
+                      <p className="text-xs text-slate-500 mt-1">Excellent customer feedback.</p>
+                   </div>
+                </div>
+                <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                   <div className="mt-0.5 bg-blue-100 text-blue-600 p-2 rounded-lg">
+                      <MapPin className="h-5 w-5" />
+                   </div>
+                   <div>
+                      <p className="font-bold text-slate-900">Location</p>
+                      <p className="text-xs text-slate-500 mt-1 capitalize">
+                         {product.seller?.businessAddress 
+                             ? `${product.seller.businessAddress}${product.seller.ghanaRegion ? `, ${product.seller.ghanaRegion}` : ''}`
+                             : (product.seller?.ghanaRegion || "Ghana")}
+                      </p>
+                   </div>
+                </div>
+              </div>
 
-
+              <div className="pt-2">
+                 <Link href={`/products?seller=${product.seller?.id || 'official'}`} 
+                       onClick={() => setIsSellerModalOpen(false)}
+                       className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-xl font-bold transition-all active:scale-[0.98]">
+                    <Store className="h-5 w-5" /> All products from seller
+                 </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
