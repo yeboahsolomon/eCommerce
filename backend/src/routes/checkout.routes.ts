@@ -7,6 +7,9 @@ import { cartService } from '../services/cart.service.js';
 
 const router = Router();
 
+/** Default weight per item when the product has no weightInGrams set */
+const DEFAULT_ITEM_WEIGHT_GRAMS = 500;
+
 /**
  * POST /api/checkout/calculate
  * Calculate totals including delivery fees per seller.
@@ -27,7 +30,7 @@ router.post(
         return res.json({ success: true, data: { subtotal: 0, shipping: 0, total: 0, sellers: [] } });
       }
 
-      // Fetch seller info for delivery calc
+      // Fetch seller info + product weight for delivery calc
       const productIds = cart.items.map((i: any) => i.productId);
       const products = await prisma.product.findMany({
           where: { id: { in: productIds } },
@@ -36,7 +39,13 @@ router.post(
 
       let subtotal = 0;
       let totalShipping = 0;
-      const sellerGroups: Record<string, { items: any[]; region: string; city: string; subtotal: number }> = {};
+      const sellerGroups: Record<string, { 
+        items: any[]; 
+        region: string; 
+        city: string; 
+        subtotal: number;
+        totalWeightInGrams: number;
+      }> = {};
 
       for (const item of cart.items) {
           const product = products.find(p => p.id === item.productId);
@@ -48,31 +57,40 @@ router.post(
                   items: [], 
                   region: product.seller?.ghanaRegion || '',
                   city: product.seller?.businessAddress || '',
-                  subtotal: 0 
+                  subtotal: 0,
+                  totalWeightInGrams: 0,
               };
           }
           sellerGroups[sellerId].items.push(item);
           const itemTotal = product.priceInPesewas * item.quantity;
           sellerGroups[sellerId].subtotal += itemTotal;
           subtotal += itemTotal;
+
+          // Accumulate package weight
+          const itemWeight = (product.weightInGrams || DEFAULT_ITEM_WEIGHT_GRAMS) * item.quantity;
+          sellerGroups[sellerId].totalWeightInGrams += itemWeight;
       }
 
       const sellerBreakdown = [];
       for (const [sellerId, group] of Object.entries(sellerGroups)) {
-          const fee = deliveryService.calculateFee(
-              group.region,
-              group.city,
-              shippingRegion || '',
-              shippingCity || ''
-          );
+          const result = deliveryService.calculateEnhanced({
+              sellerRegion: group.region,
+              sellerCity: group.city,
+              buyerRegion: shippingRegion || '',
+              buyerCity: shippingCity || '',
+              totalWeightInGrams: group.totalWeightInGrams,
+          });
           
-          totalShipping += fee;
+          totalShipping += result.feeInPesewas;
           sellerBreakdown.push({
               sellerId,
               subtotal: group.subtotal,
-              shipping: fee,
-              shippingInCedis: fee / 100,
-              total: group.subtotal + fee
+              shipping: result.feeInPesewas,
+              shippingInCedis: result.feeInCedis,
+              total: group.subtotal + result.feeInPesewas,
+              zone: result.zone,
+              zoneName: result.zoneName,
+              estimatedDays: result.estimatedDays,
           });
       }
 

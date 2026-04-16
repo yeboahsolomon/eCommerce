@@ -17,6 +17,7 @@ import crypto from 'crypto';
 import prisma from '../config/database.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { deliveryService } from './delivery.service.js';
+import { normalizeRegion } from '../constants/ghana-regions.js';
 import { paystackService } from './paystack.service.js';
 import { emailService } from './email.service.js';
 import { CreateOrderInput } from '../utils/validators.js';
@@ -31,6 +32,9 @@ export interface CreateOrderResult {
   paymentUrl: string | null;
   reference: string | null;
 }
+
+/** Default weight per item when the product has no weightInGrams set */
+const DEFAULT_ITEM_WEIGHT_GRAMS = 500;
 
 // ━━━━━━━━━━━━━━━━━━━━━━ Helpers ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -111,14 +115,21 @@ class OrderService {
     let totalShippingFeeInPesewas = 0;
 
     for (const [, group] of sellerGroups) {
-      const fee = deliveryService.calculateFee(
-        group.seller?.ghanaRegion || null,
-        group.seller?.businessAddress || null,
-        orderData.shippingRegion,
-        orderData.shippingCity,
-      );
-      group.shippingFee = fee;
-      totalShippingFeeInPesewas += fee;
+      // Calculate total package weight for this seller
+      const totalWeight = group.items.reduce((sum, item) => {
+        const weight = (item.product.weightInGrams || DEFAULT_ITEM_WEIGHT_GRAMS) * item.quantity;
+        return sum + weight;
+      }, 0);
+
+      const result = deliveryService.calculateEnhanced({
+        sellerRegion: group.seller?.ghanaRegion || null,
+        sellerCity: group.seller?.businessAddress || null,
+        buyerRegion: orderData.shippingRegion,
+        buyerCity: orderData.shippingCity,
+        totalWeightInGrams: totalWeight,
+      });
+      group.shippingFee = result.feeInPesewas;
+      totalShippingFeeInPesewas += result.feeInPesewas;
     }
 
     // ────────── 4. Subtotals ──────────
@@ -219,8 +230,13 @@ class OrderService {
             where: { userId: finalUserId, isDefault: true }
         });
         if (defaultAddress) {
-            if (defaultAddress.region.toLowerCase() !== orderData.shippingRegion.toLowerCase() ||
-                defaultAddress.city.toLowerCase() !== orderData.shippingCity.toLowerCase()) {
+            // Normalise region names so legacy values (e.g. "Brong-Ahafo") don't trigger false positives
+            const defaultRegionNorm = normalizeRegion(defaultAddress.region).toLowerCase();
+            const shippingRegionNorm = normalizeRegion(orderData.shippingRegion).toLowerCase();
+            const defaultCityNorm = defaultAddress.city.toLowerCase().trim();
+            const shippingCityNorm = orderData.shippingCity.toLowerCase().trim();
+
+            if (defaultRegionNorm !== shippingRegionNorm || defaultCityNorm !== shippingCityNorm) {
                 internalRiskFlag = true;
                 riskReason = "Delivery address differs significantly from default address";
             }

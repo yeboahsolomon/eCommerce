@@ -191,11 +191,9 @@ const ghanaCardSchema = z.string().regex(
   'Invalid Ghana Card number (format: GHA-XXXXXXXXX-X)'
 );
 
-const ghanaRegions = [
-  'Greater Accra', 'Ashanti', 'Western', 'Eastern', 'Central',
-  'Northern', 'Volta', 'Upper East', 'Upper West', 'Brong-Ahafo',
-  'Western North', 'Ahafo', 'Bono East', 'Oti', 'North East', 'Savannah',
-] as const;
+// Import the canonical region list — single source of truth
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { GHANA_REGIONS as ghanaRegions } from '../constants/ghana-regions.js';
 
 export const sellerApplicationSchema = z.object({
   storeName: z.string()
