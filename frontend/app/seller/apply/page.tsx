@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { Loader2, Check, ChevronRight, ChevronLeft, Upload, CreditCard, Building2, User, FileText } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import Image from "next/image";
+import { GHANA_REGIONS } from "@/lib/constants";
 
 // ==================== SCHEMAS ====================
 
@@ -258,7 +259,7 @@ function Step1Form({ defaultValues, onNext }: { defaultValues: any, onNext: (dat
            <label className="block text-sm font-medium text-slate-700 mb-1">Region</label>
            <select {...register("ghanaRegion")} className="w-full h-10 px-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition bg-white">
               <option value="">Select Region</option>
-              {["Greater Accra", "Ashanti", "Western", "Central", "Eastern", "Volta", "Northern", "Upper East", "Upper West", "Bono", "Bono East", "Ahafo", "Oti", "North East", "Savannah", "Western North"].map(r => (
+              {GHANA_REGIONS.map(r => (
                  <option key={r} value={r}>{r}</option>
               ))}
            </select>

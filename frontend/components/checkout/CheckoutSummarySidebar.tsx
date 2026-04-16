@@ -1,4 +1,4 @@
-import { Lock } from "lucide-react";
+import { Lock, Truck } from "lucide-react";
 import { CartItem } from "@/types"; // Make sure CartItem is imported correctly
 import Image from "next/image";
 
@@ -25,6 +25,17 @@ export default function CheckoutSummarySidebar({
   grandTotal,
   isSubmitting,
 }: OrderSummarySidebarProps) {
+  // Determine the longest estimated delivery window from all seller packages
+  const maxEstimatedDays = sellerPackages.length > 0
+    ? sellerPackages.reduce((max: string, p: any) => {
+        if (!p.estimatedDays) return max;
+        // Compare by the last number in "X–Y business days"
+        const maxNum = parseInt(max.split('–').pop() || '0');
+        const pNum = parseInt(p.estimatedDays.split('–').pop() || '0');
+        return pNum > maxNum ? p.estimatedDays : max;
+      }, sellerPackages[0]?.estimatedDays || '')
+    : '';
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 sticky top-4">
       <h3 className="font-bold text-slate-900 mb-4">Your Order ({itemCount} item{itemCount !== 1 ? 's' : ''})</h3>
@@ -37,19 +48,20 @@ export default function CheckoutSummarySidebar({
           
           return (
             <div key={sellerId} className="bg-slate-50 border border-slate-100 rounded-lg p-3">
-              <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
+              <div className="mb-3 pb-2 border-b border-slate-200">
                 <span className="text-xs font-bold text-slate-800">Package {index + 1}: {group.name}</span>
-                <span className="text-xs text-slate-500">
-                  Shipping:{' '}
-                  {isCalculatingShipping ? (
-                    <span className="text-slate-400 italic">calculating...</span>
-                  ) : !watchRegion ? (
-                    <span className="text-slate-400 italic">select region</span>
-                  ) : (
-                    <span className="font-medium">₵{(pkgInfo?.shippingInCedis ?? pkgShipping).toLocaleString()}</span>
-                  )}
-                </span>
               </div>
+
+              {/* Zone & delivery estimate for this seller package */}
+              {pkgInfo?.zoneName && watchRegion && !isCalculatingShipping && (
+                <div className="flex items-center gap-1.5 mb-3 text-[11px] text-slate-500">
+                  <Truck className="h-3 w-3 flex-shrink-0" />
+                  <span className="font-medium text-slate-600">{pkgInfo.zoneName}</span>
+                  <span className="text-slate-300">·</span>
+                  <span>{pkgInfo.estimatedDays}</span>
+                </div>
+              )}
+
               <div className="space-y-3">
                 {group.items.map((item) => (
                   <div key={item.id} className="flex gap-3">
@@ -85,6 +97,14 @@ export default function CheckoutSummarySidebar({
              <span>₵{deliveryFee.toLocaleString()}</span>
            )}
         </div>
+
+        {/* Estimated delivery summary */}
+        {maxEstimatedDays && watchRegion && !isCalculatingShipping && (
+          <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg">
+            <Truck className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>Estimated delivery: {maxEstimatedDays}</span>
+          </div>
+        )}
         
         <div className="flex justify-between text-lg font-bold text-slate-900 pt-2">
           <span>Total</span>
@@ -114,3 +134,4 @@ export default function CheckoutSummarySidebar({
     </div>
   );
 }
+
