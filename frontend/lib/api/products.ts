@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { Product, Category, Pagination, ProductQueryParams, CreateProductInput, UpdateProductInput } from '../../types';
+import type { Product, Category, Pagination, ProductQueryParams, CreateProductInput, UpdateProductInput, DealOfTheDay } from '../../types';
 
 export const productsApi = {
   async getProducts(params?: ProductQueryParams) {
@@ -12,6 +12,10 @@ export const productsApi = {
 
   async getFeaturedProducts(limit = 8) {
     return request<{ products: Product[] }>('GET', '/products', undefined, { params: { featured: true, limit } });
+  },
+
+  async getDealOfTheDay() {
+    return request<DealOfTheDay | null>('GET', '/products/deal-of-the-day');
   },
 
   async createProduct(data: CreateProductInput) {

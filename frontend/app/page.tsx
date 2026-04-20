@@ -69,13 +69,13 @@ export default function Home() {
         <Greeting />
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Main Carousel - 12 cols on mobile, 8 or 9 on desktop */}
+          {/* Main Carousel - Now handles mobile swiping and appends the deal internally on mobile */}
           <div className="lg:col-span-8 xl:col-span-9">
-            <HeroCarousel />
+            <HeroCarousel appendMobileSlide={<DealOfTheDay />} />
           </div>
           
-          {/* Desktop Side Banner */}
-          <div className="hidden lg:flex lg:col-span-4 xl:col-span-3 flex-col gap-4">
+          {/* Desktop Side Banner. Hidden on mobile, shown as a grid sidebar on desktop */}
+          <div className="hidden lg:flex lg:col-span-4 xl:col-span-3 flex-col h-full">
              <DealOfTheDay />
           </div>
         </div>

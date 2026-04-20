@@ -448,3 +448,40 @@ export interface CreateProductInput {
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {}
+
+// ==================== DEAL OF THE DAY ====================
+
+export interface DealOfTheDay {
+  product: {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    priceInPesewas: number;
+    priceInCedis: number;
+    comparePriceInPesewas: number;
+    comparePriceInCedis: number;
+    image: string | null;
+    images?: ProductImage[];
+    category: Category;
+    seller?: {
+      id: string;
+      businessName: string;
+      slug: string;
+      logoUrl?: string;
+    };
+    averageRating: number;
+    reviewCount: number;
+    stockQuantity: number;
+    salesCount: number;
+  };
+  deal: {
+    discountPercentage: number;
+    savingsInPesewas: number;
+    savingsInCedis: number;
+    endsAt: string;
+    stockAvailable: number;
+    stockSold: number;
+    soldPercentage: number;
+  };
+}
