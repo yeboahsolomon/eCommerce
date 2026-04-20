@@ -57,6 +57,35 @@ router.get(
 );
 
 /**
+ * GET /api/products/deal-of-the-day
+ * Get the algorithmically selected deal of the day
+ * Must be registered BEFORE /:id to avoid catch-all
+ */
+router.get(
+  '/deal-of-the-day',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const deal = await productService.getDealOfTheDay();
+      
+      if (!deal) {
+        return res.json({
+          success: true,
+          data: null,
+          message: 'No deal available today.',
+        });
+      }
+
+      res.json({
+        success: true,
+        data: deal,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * GET /api/products/:id
  * Get single product by ID or slug
  */

@@ -289,6 +289,153 @@ export class ProductService {
     return { product: { ...product, priceInCedis: product.priceInPesewas / 100 } };
   }
 
+  /**
+   * Deal of the Day Algorithm
+   * 
+   * Selects a single product daily using a weighted scoring system inspired
+   * by Jumia/Amazon deal algorithms. The same deal is served to all users
+   * for 24 hours (midnight-to-midnight UTC), cached in Redis.
+   * 
+   * Scoring: discount(35%) + sales(25%) + rating(20%) + views(10%) + recency(10%)
+   */
+  async getDealOfTheDay() {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const cacheKey = `deal-of-the-day:${today}`;
+
+    // 1. Check Redis cache first
+    const cached = await redisService.get<any>(cacheKey);
+    if (cached) return cached;
+
+    // 2. Fetch eligible products (discounted, in-stock, active, with images)
+    const candidates = await prisma.product.findMany({
+      where: {
+        isActive: true,
+        comparePriceInPesewas: { not: null },
+        stockQuantity: { gte: 5 },
+        images: { some: {} },
+      },
+      include: {
+        category: { select: { id: true, name: true, slug: true } },
+        images: { orderBy: { sortOrder: 'asc' }, take: 3 },
+        seller: { select: { id: true, businessName: true, slug: true, logoUrl: true } },
+      },
+      take: 100, // Evaluate top 100 candidates max for performance
+      orderBy: { salesCount: 'desc' },
+    });
+
+    if (candidates.length === 0) return null;
+
+    // 3. Get recent deal history to avoid repeats (last 7 days)
+    const historyKey = 'deal-of-the-day:history';
+    const recentDealIds: string[] = (await redisService.get<string[]>(historyKey)) || [];
+
+    // 4. Calculate scoring metrics across all candidates for normalization
+    const maxSales = Math.max(...candidates.map(p => p.salesCount), 1);
+    const maxViews = Math.max(...candidates.map(p => p.views), 1);
+    const now = Date.now();
+
+    // 5. Score each candidate
+    const scored = candidates.map(product => {
+      const comparePrice = product.comparePriceInPesewas!;
+      const currentPrice = product.priceInPesewas;
+
+      // Discount percentage (must be >= 10% to qualify)
+      const discountPct = ((comparePrice - currentPrice) / comparePrice) * 100;
+      if (discountPct < 10 || currentPrice >= comparePrice) return null;
+
+      // Normalized scores (0-1 range)
+      const discountScore = Math.min(discountPct / 70, 1);  // Cap at 70% discount
+      const salesScore = product.salesCount / maxSales;
+      const ratingScore = Number(product.averageRating) / 5;
+      const viewsScore = product.views / maxViews;
+
+      // Recency: products created in last 30 days get full score, decays over 180 days
+      const ageInDays = (now - new Date(product.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      const recencyScore = Math.max(0, 1 - (ageInDays / 180));
+
+      // Weighted total
+      let totalScore = (
+        discountScore * 0.35 +
+        salesScore * 0.25 +
+        ratingScore * 0.20 +
+        viewsScore * 0.10 +
+        recencyScore * 0.10
+      );
+
+      // Penalty for recent deals (reduce score by 80% if featured in last 7 days)
+      if (recentDealIds.includes(product.id)) {
+        totalScore *= 0.2;
+      }
+
+      // Deterministic daily variation using date seed
+      // This prevents the same product from winning every day when scores are close
+      const dateSeed = today.split('-').reduce((sum, n) => sum + parseInt(n), 0);
+      const productSeed = product.id.charCodeAt(0) + product.id.charCodeAt(product.id.length - 1);
+      const variation = ((dateSeed * productSeed) % 100) / 1000; // 0-0.1 range
+      totalScore += variation;
+
+      return {
+        product,
+        totalScore,
+        discountPct: Math.round(discountPct),
+      };
+    }).filter(Boolean) as { product: any; totalScore: number; discountPct: number }[];
+
+    if (scored.length === 0) return null;
+
+    // 6. Select the highest scoring product
+    scored.sort((a, b) => b.totalScore - a.totalScore);
+    const winner = scored[0];
+    const product = winner.product;
+
+    // 7. Calculate deal end time (midnight UTC tonight)
+    const endOfDay = new Date(today + 'T23:59:59.999Z');
+    const ttlSeconds = Math.max(1, Math.floor((endOfDay.getTime() - Date.now()) / 1000));
+
+    // 8. Build the response
+    const totalStock = product.stockQuantity + product.salesCount;
+    const soldPercentage = totalStock > 0 ? Math.round((product.salesCount / totalStock) * 100) : 0;
+
+    const dealData = {
+      product: {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        priceInPesewas: product.priceInPesewas,
+        priceInCedis: product.priceInPesewas / 100,
+        comparePriceInPesewas: product.comparePriceInPesewas,
+        comparePriceInCedis: product.comparePriceInPesewas! / 100,
+        image: product.images[0]?.url || null,
+        images: product.images,
+        category: product.category,
+        seller: product.seller,
+        averageRating: Number(product.averageRating),
+        reviewCount: product.reviewCount,
+        stockQuantity: product.stockQuantity,
+        salesCount: product.salesCount,
+      },
+      deal: {
+        discountPercentage: winner.discountPct,
+        savingsInPesewas: product.comparePriceInPesewas! - product.priceInPesewas,
+        savingsInCedis: (product.comparePriceInPesewas! - product.priceInPesewas) / 100,
+        endsAt: endOfDay.toISOString(),
+        stockAvailable: product.stockQuantity,
+        stockSold: product.salesCount,
+        soldPercentage,
+      },
+    };
+
+    // 9. Cache the result until midnight
+    await redisService.set(cacheKey, dealData, ttlSeconds);
+
+    // 10. Update deal history (keep last 7 product IDs)
+    const updatedHistory = [product.id, ...recentDealIds.filter(id => id !== product.id)].slice(0, 7);
+    await redisService.set(historyKey, updatedHistory, 7 * 24 * 60 * 60); // 7 days TTL
+
+    return dealData;
+  }
+
   async deleteProduct(id: string, user: any) {
     const product = await prisma.product.findUnique({ where: { id } });
     if (!product) throw new ApiError(404, 'Product not found.');
