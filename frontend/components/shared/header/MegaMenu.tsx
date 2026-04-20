@@ -36,7 +36,7 @@ export default function MegaMenu({ categories, isVisible, onClose }: MegaMenuPro
                 {categories.slice(0, 8).map((cat) => (
                   <li key={cat.id}>
                     <Link 
-                      href={`/categories/${cat.slug}`}
+                      href={`/category/${cat.slug}`}
                       className="flex items-center justify-between px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors group"
                       onClick={onClose}
                     >
@@ -46,7 +46,7 @@ export default function MegaMenu({ categories, isVisible, onClose }: MegaMenuPro
                   </li>
                 ))}
                 <li>
-                    <Link href="/categories" className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-blue-600 hover:underline mt-2">
+                    <Link href="/products" className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-blue-600 hover:underline mt-2">
                         View All Categories
                     </Link>
                 </li>
@@ -76,11 +76,11 @@ export default function MegaMenu({ categories, isVisible, onClose }: MegaMenuPro
                         {(categories[0].subcategories || ['Smartphones', 'Laptops', 'Audio', 'Accessories']).slice(0, 5).map((sub: any, idx: number) => (
                             <li key={idx}>
                                 {typeof sub === 'string' ? (
-                                    <Link href={`/categories/${categories[0].slug}`} onClick={onClose} className="text-sm text-slate-500 hover:text-blue-600 transition-colors">
+                                    <Link href={`/search?q=${encodeURIComponent(sub)}`} onClick={onClose} className="text-sm text-slate-500 hover:text-blue-600 transition-colors">
                                         {sub}
                                     </Link>
                                 ) : (
-                                    <Link href={`/categories/${categories[0].slug}/${sub.slug}`} onClick={onClose} className="text-sm text-slate-500 hover:text-blue-600 transition-colors">
+                                    <Link href={`/category/${sub.slug}`} onClick={onClose} className="text-sm text-slate-500 hover:text-blue-600 transition-colors">
                                         {sub.name}
                                     </Link>
                                 )}

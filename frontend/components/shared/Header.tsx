@@ -241,9 +241,9 @@ export default function Header() {
               </div>
 
                <nav className="flex items-center gap-6 text-sm font-medium text-slate-600">
-                 <Link href="/shop" className="hover:text-blue-600 transition-colors">Best Sellers</Link>
-                 <Link href="/new-arrivals" className="hover:text-blue-600 transition-colors">New Arrivals</Link>
-                 <Link href="/deals" className="text-red-500 font-bold hover:text-red-600 transition-colors flex items-center gap-1">
+                 <Link href="/search?sort=rating" className="hover:text-blue-600 transition-colors">Best Sellers</Link>
+                 <Link href="/search?sort=newest" className="hover:text-blue-600 transition-colors">New Arrivals</Link>
+                 <Link href="/search?sort=price_asc" className="text-red-500 font-bold hover:text-red-600 transition-colors flex items-center gap-1">
                     Today&apos;s Deals
                  </Link>
                  
