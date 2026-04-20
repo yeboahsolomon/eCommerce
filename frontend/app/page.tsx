@@ -14,7 +14,6 @@ import {
 import { PLATFORM_FEATURES, SELLER_PERKS } from "@/lib/constants";
 import HeroCarousel from "@/components/shared/hero/HeroCarousel";
 import Greeting from "@/components/shared/hero/Greeting";
-import TrustBadges from "@/components/shared/hero/TrustBadges";
 import DealOfTheDay from "@/components/shared/hero/DealOfTheDay";
 import { useQuery } from "@tanstack/react-query";
 
@@ -80,9 +79,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="space-y-6">
-          <TrustBadges />
-        </div>
+
       </section>
 
       {/* ═══════════════════════════════════════════════════════════ */}
