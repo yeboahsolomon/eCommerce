@@ -32,7 +32,10 @@ export async function request<T>(
 
     return response.data;
   } catch (error: any) {
-    console.error('API Error:', error);
+    // Prevent expected auth checks from spamming the Next.js Error Overlay
+    if (!error.response || error.response.status !== 401) {
+      console.error('API Error:', error);
+    }
     
     if (error.response) {
       return {
