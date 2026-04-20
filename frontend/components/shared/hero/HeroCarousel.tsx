@@ -10,43 +10,47 @@ import Autoplay from 'embla-carousel-autoplay';
 const slides = [
   {
     id: 1,
-    image: "https://placehold.co/1200x600/e65100/ffffff?text=Fashion+%26+Style",
+    /* Slide 1 — Fashion & Clothing */
+    unsplashId: "photo-1483985988355-763728e1935b",
+    fallbackColor: "#e65100",
     subhead: "Latest Trends in Drobo",
     title: "Look Good, Feel Good",
     desc: "Authentic Ghanaian wear and modern styles delivered to you.",
     cta: "Shop Fashion",
     link: "/products?category=fashion",
-    bg: "from-orange-900/80 to-transparent"
   },
   {
     id: 2,
-    image: "https://placehold.co/1200x600/1e88e5/ffffff?text=Home+Essentials",
+    /* Slide 2 — Home & Kitchen */
+    unsplashId: "photo-1556910103-1c02745aae4d",
+    fallbackColor: "#1e88e5",
     subhead: "Upgrade Your Home",
     title: "Everything You Need",
     desc: "Quality cookware, appliances, and decor for your family.",
     cta: "Shop Home",
     link: "/products?category=home-kitchen",
-    bg: "from-blue-900/80 to-transparent"
   },
   {
     id: 3,
-    image: "https://placehold.co/1200x600/2e7d32/ffffff?text=Farm+Supplies",
+    /* Slide 3 — Agriculture & Farm */
+    unsplashId: "photo-1625246333195-78d9c38ad449",
+    fallbackColor: "#2e7d32",
     subhead: "Grow Your Harvest",
     title: "Farmers' Choice",
     desc: "Seeds, tools, and fertilizers at the best market prices.",
     cta: "Shop Farm Tools",
     link: "/products?category=agriculture",
-    bg: "from-green-900/80 to-transparent"
   },
   {
     id: 4,
-    image: "https://placehold.co/1200x600/455a64/ffffff?text=Electronics",
+    /* Slide 4 — Tech & Electronics */
+    unsplashId: "photo-1498050108023-c5249f4df085",
+    fallbackColor: "#455a64",
     subhead: "Stay Connected",
     title: "Smart Tech Deals",
     desc: "Phones, laptops, and accessories for work and study.",
     cta: "Shop Gadgets",
     link: "/products?category=electronics",
-    bg: "from-slate-900/80 to-transparent"
   }
 ];
 
@@ -106,20 +110,22 @@ export default function HeroCarousel({ appendMobileSlide }: HeroCarouselProps) {
           {slides.map((slide, index) => (
             <div 
               key={slide.id}
-              className="relative flex-[0_0_100%] min-w-0 h-[450px] md:h-[500px]"
+              className={`relative flex-[0_0_100%] min-w-0 h-[450px] md:h-[500px] slide-bg-${slide.id}`}
             >
-              <div className="absolute inset-0">
-                 <Image 
-                   src={slide.image} 
-                   alt={slide.title}
-                   fill
-                   priority={index === 0}
-                   className="object-cover"
-                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1200px"
-                 />
-                 <div className={`absolute inset-0 bg-gradient-to-r ${slide.bg} sm:via-transparent sm:to-transparent`}></div>
-                 <div className="absolute inset-0 bg-black/20 sm:bg-transparent"></div>
-              </div>
+              <style dangerouslySetInnerHTML={{ __html: `
+                .slide-bg-${slide.id} {
+                  background-color: ${slide.fallbackColor};
+                  background-image: linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.10) 100%), url('https://images.unsplash.com/${slide.unsplashId}?auto=format&fit=crop&q=80&w=800&h=1000');
+                  background-size: cover;
+                  background-position: center center;
+                  background-attachment: scroll;
+                }
+                @media (min-width: 768px) {
+                  .slide-bg-${slide.id} {
+                    background-image: linear-gradient(to right, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.10) 100%), url('https://images.unsplash.com/${slide.unsplashId}?auto=format&fit=crop&q=80&w=1600&h=900');
+                  }
+                }
+              `}} />
 
               <div className="absolute inset-0 flex items-center p-6 sm:p-12 lg:p-16">
                 <div className="max-w-xl text-white">
