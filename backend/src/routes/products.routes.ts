@@ -9,6 +9,7 @@ import {
   UpdateProductInput 
 } from '../utils/validators.js';
 import { productService } from '../services/product.service.js';
+import { recommendationService } from '../services/recommendation.service.js';
 
 const router = Router();
 
@@ -50,6 +51,29 @@ router.get(
     try {
       const result = await productService.getProducts(req.query);
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/products/homepage-feeds
+ * Returns all algorithmically-ranked product feeds for the homepage.
+ * Feeds: trending, bestSellers, topDeals, newArrivals, topRated, categoryPicks
+ * Cached in Redis for 15 minutes.
+ * Must be registered BEFORE /:id to avoid catch-all.
+ */
+router.get(
+  '/homepage-feeds',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const feeds = await recommendationService.getHomepageFeeds();
+
+      res.json({
+        success: true,
+        data: feeds,
+      });
     } catch (error) {
       next(error);
     }
