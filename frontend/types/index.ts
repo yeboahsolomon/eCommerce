@@ -485,3 +485,24 @@ export interface DealOfTheDay {
     soldPercentage: number;
   };
 }
+
+// ==================== HOMEPAGE FEEDS ====================
+
+export interface CategoryPick {
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  products: Product[];
+}
+
+export interface HomepageFeeds {
+  trending: Product[];
+  bestSellers: Product[];
+  topDeals: Product[];
+  newArrivals: Product[];
+  topRated: Product[];
+  categoryPicks: CategoryPick[];
+}
+

@@ -189,3 +189,27 @@ body {
     transform: translateY(100%) !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════ */
+/* CAROUSEL UTILITIES                                        */
+/* ═══════════════════════════════════════════════════════════ */
+
+/* Hide the scrollbar on carousel tracks (WebKit + Firefox) */
+.carousel-scrollbar {
+  scrollbar-width: none;         /* Firefox */
+  -ms-overflow-style: none;      /* IE/Edge */
+}
+.carousel-scrollbar::-webkit-scrollbar {
+  display: none;                 /* Chrome/Safari */
+}
+
+/* Scroll-snap for carousel items on touch devices */
+@media (hover: none) {
+  .carousel-scrollbar {
+    scroll-snap-type: x proximity;
+  }
+  .carousel-scrollbar > * {
+    scroll-snap-align: start;
+  }
+}
+
