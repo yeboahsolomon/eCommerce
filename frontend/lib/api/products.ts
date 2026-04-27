@@ -41,6 +41,6 @@ export const categoriesApi = {
   },
 
   async getCategoryProducts(slug: string, params?: ProductQueryParams) {
-    return request<{ category: Category; products: Product[]; pagination: Pagination }>('GET', `/categories/${slug}/products`, undefined, { params });
+    return request<{ category: Category; products: Product[]; pagination: Pagination }>('GET', `/categories/${slug}`, undefined, { params });
   },
 };

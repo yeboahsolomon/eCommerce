@@ -421,7 +421,7 @@ export interface ProductQueryParams {
   inStock?: boolean;
   minPrice?: number;
   maxPrice?: number;
-  sortBy?: 'priceInPesewas' | 'averageRating' | 'createdAt' | 'name';
+  sortBy?: 'priceInPesewas' | 'averageRating' | 'createdAt' | 'name' | 'salesCount';
   order?: 'asc' | 'desc';
   featured?: boolean;
 }
