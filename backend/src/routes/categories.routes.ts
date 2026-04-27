@@ -86,19 +86,30 @@ router.get(
 
 /**
  * GET /api/categories/:id
- * Get single category with its products
+ * Get single category with its products.
+ * Supports: page, limit, sortBy (createdAt|priceInPesewas|averageRating|salesCount|name), order (asc|desc)
  */
 router.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const { page = '1', limit = '20' } = req.query;
-      
-      const pageNum = parseInt(page as string, 10);
-      const limitNum = Math.min(parseInt(limit as string, 10), 50);
+      const {
+        page = '1',
+        limit = '20',
+        sortBy = 'createdAt',
+        order = 'desc',
+      } = req.query;
+
+      const pageNum = parseInt(page as string, 10) || 1;
+      const limitNum = Math.min(parseInt(limit as string, 10) || 20, 50);
       const skip = (pageNum - 1) * limitNum;
-      
+
+      // Validate sortBy to prevent injection
+      const allowedSorts = ['createdAt', 'priceInPesewas', 'averageRating', 'salesCount', 'name'];
+      const safeSortBy = allowedSorts.includes(sortBy as string) ? (sortBy as string) : 'createdAt';
+      const safeOrder = (order as string) === 'asc' ? 'asc' : 'desc';
+
       const category = await prisma.category.findFirst({
         where: {
           OR: [{ id }, { slug: id }],
@@ -110,19 +121,25 @@ router.get(
           },
           children: {
             where: { isActive: true },
-            select: { id: true, name: true, slug: true },
+            include: {
+              _count: { select: { products: { where: { isActive: true } } } },
+            },
+            orderBy: { sortOrder: 'asc' },
           },
-          _count: { select: { products: true } },
+          _count: { select: { products: { where: { isActive: true } } } },
         },
       });
-      
+
       if (!category) {
         throw new ApiError(404, 'Category not found.');
       }
-      
-      // Get products in this category and its children
+
+      // Include products from this category AND its children (subcategories)
       const categoryIds = [category.id, ...category.children.map(c => c.id)];
-      
+
+      const orderByClause: any = {};
+      orderByClause[safeSortBy] = safeOrder;
+
       const [products, totalProducts] = await Promise.all([
         prisma.product.findMany({
           where: {
@@ -130,12 +147,21 @@ router.get(
             isActive: true,
           },
           include: {
-            images: {
-              where: { isPrimary: true },
-              take: 1,
+            category: { select: { id: true, name: true, slug: true } },
+            images: { orderBy: { sortOrder: 'asc' }, take: 5 },
+            variants: true,
+            seller: {
+              select: {
+                id: true,
+                businessName: true,
+                slug: true,
+                ghanaRegion: true,
+                businessAddress: true,
+                logoUrl: true,
+              },
             },
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: orderByClause,
           skip,
           take: limitNum,
         }),
@@ -146,15 +172,37 @@ router.get(
           },
         }),
       ]);
-      
+
+      // Transform products to match the standard product response shape
+      const transformedProducts = products.map((p) => ({
+        ...p,
+        priceInCedis: p.priceInPesewas / 100,
+        comparePriceInCedis: p.comparePriceInPesewas ? p.comparePriceInPesewas / 100 : null,
+        inStock: !p.trackInventory || p.stockQuantity > 0 || p.allowBackorder,
+        image: p.images[0]?.url || null,
+      }));
+
+      // Transform children to include product count
+      const children = category.children.map((child: any) => ({
+        id: child.id,
+        name: child.name,
+        slug: child.slug,
+        productCount: child._count?.products ?? 0,
+      }));
+
       res.json({
         success: true,
         data: {
-          category,
-          products: products.map(p => ({
-            ...p,
-            priceInCedis: p.priceInPesewas / 100,
-          })),
+          category: {
+            id: category.id,
+            name: category.name,
+            slug: category.slug,
+            description: category.description,
+            parent: category.parent,
+            children,
+            productCount: (category as any)._count?.products ?? totalProducts,
+          },
+          products: transformedProducts,
           pagination: {
             page: pageNum,
             limit: limitNum,
