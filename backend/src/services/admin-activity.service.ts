@@ -58,15 +58,15 @@ export async function logAdminActivity({
       req.socket?.remoteAddress ||
       null;
 
-    await prisma.adminActivityLog.create({
+    await prisma.adminLog.create({
       data: {
         adminId,
         adminEmail,
         action,
-        entityType,
-        entityId,
-        details: details || undefined,
-        ipAddress,
+        targetCollection: entityType,
+        targetId: entityId,
+        metadata: details || undefined,
+        ip: ipAddress,
       },
     });
   } catch (error) {
@@ -89,19 +89,19 @@ export async function getActivityLogs(params: {
   const { entityType, entityId, adminId, action, page = 1, limit = 20 } = params;
 
   const where: any = {};
-  if (entityType) where.entityType = entityType;
-  if (entityId) where.entityId = entityId;
+  if (entityType) where.targetCollection = entityType;
+  if (entityId) where.targetId = entityId;
   if (adminId) where.adminId = adminId;
   if (action) where.action = action;
 
   const [logs, total] = await Promise.all([
-    prisma.adminActivityLog.findMany({
+    prisma.adminLog.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { timestamp: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
     }),
-    prisma.adminActivityLog.count({ where }),
+    prisma.adminLog.count({ where }),
   ]);
 
   return {

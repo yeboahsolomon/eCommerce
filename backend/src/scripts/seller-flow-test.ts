@@ -52,13 +52,13 @@ async function runTest() {
 
     console.log('Created PENDING application:', application.id);
 
-    // 5. Find an ADMIN user to test the review/approve endpoints
+    // 5. Find an SUPERADMIN user to test the review/approve endpoints
     const adminUser = await prisma.user.findFirst({
-        where: { role: 'ADMIN' }
+        where: { role: 'SUPERADMIN' }
     });
 
     if (!adminUser) {
-        throw new Error('No ADMIN user found in the database. Please create one.');
+        throw new Error('No SUPERADMIN user found in the database. Please create one.');
     }
 
     console.log('Using Admin:', adminUser.email);

@@ -26,7 +26,7 @@ class RedisService {
 
       await client.connect();
 
-      this.client = client;
+      this.client = client as any;
       this.isConnected = true;
       console.log('✅ Redis connected');
     } catch {

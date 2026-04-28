@@ -81,7 +81,42 @@ router.post(
     try {
       const input = req.body as LoginInput & { rememberMe?: boolean };
       const data = await authService.login(input);
-      setAuthCookies(res, data.accessToken, data.refreshToken, input.rememberMe);
+
+      if (data.otpRequired) {
+        return ApiResponseHandler.success(res, {
+          otpRequired: true,
+          preAuthToken: data.preAuthToken,
+          user: data.user,
+        }, 'Phone verification required.');
+      }
+
+      setAuthCookies(res, data.accessToken!, data.refreshToken!, input.rememberMe);
+      
+      return ApiResponseHandler.success(res, {
+        user: data.user,
+      }, 'Login successful!');
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ============================================================
+// POST /api/auth/verify-admin-otp
+// ============================================================
+
+router.post(
+  '/verify-admin-otp',
+  loginLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { preAuthToken, firebaseIdToken } = req.body;
+      if (!preAuthToken || !firebaseIdToken) {
+        throw new Error('Missing required tokens');
+      }
+
+      const data = await authService.verifyAdminOtp(preAuthToken, firebaseIdToken);
+      setAuthCookies(res, data.accessToken, data.refreshToken, false);
       
       return ApiResponseHandler.success(res, {
         user: data.user,

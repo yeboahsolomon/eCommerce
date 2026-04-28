@@ -101,7 +101,7 @@ export const testAdmin = {
   ...testUser,
   id: 'cltest000000000000admin1',
   email: 'admin@test.com',
-  role: 'ADMIN' as const,
+  role: 'SUPERADMIN' as const,
 };
 
 export const testSeller = {

@@ -10,6 +10,7 @@ import {
 } from '../utils/validators.js';
 import { productService } from '../services/product.service.js';
 import { recommendationService } from '../services/recommendation.service.js';
+import { logAdminAction } from '../middleware/adminLog.middleware.js';
 
 const router = Router();
 
@@ -241,6 +242,7 @@ router.delete(
   '/:id',
   authenticate,
   requireSellerOrAdmin,
+  logAdminAction('DELETE_PRODUCT', 'product', 'id'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;

@@ -98,7 +98,9 @@ describe('Google Auth Routes', () => {
       expect(res.body.data.user.email).toBe('newgoogleuser@test.com');
       expect(res.body.data.accessToken).toBeDefined();
 
-      const cookiesStr = res.headers['set-cookie']?.join('; ');
+      const cookiesStr = Array.isArray(res.headers['set-cookie']) 
+        ? res.headers['set-cookie'].join('; ') 
+        : res.headers['set-cookie'];
       expect(cookiesStr).toContain('accessToken=');
       expect(cookiesStr).toContain('refreshToken=');
       

@@ -321,9 +321,9 @@ export class AdminSellerService {
       });
     }
 
-    const activityLogs = await prisma.adminActivityLog.findMany({
-      where: { entityType: 'seller_application', entityId: applicationId },
-      orderBy: { createdAt: 'desc' },
+    const activityLogs = await prisma.adminLog.findMany({
+      where: { targetCollection: 'seller_application', targetId: applicationId },
+      orderBy: { timestamp: 'desc' },
       take: 20,
     });
 

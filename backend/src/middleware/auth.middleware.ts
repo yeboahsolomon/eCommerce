@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { config } from '../config/env.js';
-import prisma from '../config/database.js';
-import { ApiError } from './error.middleware.js';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { config } from "../config/env.js";
+import prisma from "../config/database.js";
+import { ApiError } from "./error.middleware.js";
 
 // Extend Express Request type to include user
 declare global {
@@ -35,40 +35,43 @@ interface JwtPayload {
 export async function authenticate(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   try {
     let token;
 
     if (req.cookies && req.cookies.accessToken) {
       token = req.cookies.accessToken;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-      token = req.headers.authorization.split(' ')[1];
+    } else if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
     }
-    
+
     if (!token) {
-      throw new ApiError(401, 'Authentication required. Please login.');
+      throw new ApiError(401, "Authentication required. Please login.");
     }
-    
+
     // Verify token
     const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
-    
+
     // Check if user still exists
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { 
-        id: true, 
-        email: true, 
+      select: {
+        id: true,
+        email: true,
         role: true,
         emailVerified: true,
-        sellerProfile: { select: { id: true, isActive: true } }
-      }
+        sellerProfile: { select: { id: true, isActive: true } },
+      },
     });
-    
+
     if (!user) {
-      throw new ApiError(401, 'User no longer exists.');
+      throw new ApiError(401, "User no longer exists.");
     }
-    
+
     // Attach user to request
     req.user = {
       id: user.id,
@@ -77,11 +80,11 @@ export async function authenticate(
       emailVerified: user.emailVerified,
       sellerProfile: user.sellerProfile,
     };
-    
+
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
-      next(new ApiError(401, 'Invalid or expired token.'));
+      next(new ApiError(401, "Invalid or expired token."));
     } else {
       next(error);
     }
@@ -94,18 +97,18 @@ export async function authenticate(
 export function requireAdmin(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   if (!req.user) {
-    next(new ApiError(401, 'Authentication required.'));
+    next(new ApiError(401, "Authentication required."));
     return;
   }
-  
-  if (req.user.role !== 'ADMIN') {
-    next(new ApiError(403, 'Admin access required.'));
+
+  if (req.user.role !== "ADMIN") {
+    next(new ApiError(403, "Admin access required."));
     return;
   }
-  
+
   next();
 }
 
@@ -115,18 +118,18 @@ export function requireAdmin(
 export function requireSellerOrAdmin(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   if (!req.user) {
-    next(new ApiError(401, 'Authentication required.'));
+    next(new ApiError(401, "Authentication required."));
     return;
   }
-  
-  if (req.user.role !== 'ADMIN' && req.user.role !== 'SELLER') {
-    next(new ApiError(403, 'Seller or Admin access required.'));
+
+  if (req.user.role !== "ADMIN" && req.user.role !== "SELLER") {
+    next(new ApiError(403, "Seller or Admin access required."));
     return;
   }
-  
+
   next();
 }
 
@@ -136,30 +139,30 @@ export function requireSellerOrAdmin(
 export async function requireStepUpAuth(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   if (!req.user) {
-    next(new ApiError(401, 'Authentication required.'));
+    next(new ApiError(401, "Authentication required."));
     return;
   }
 
   try {
     const stepUpToken = req.cookies.stepUpToken;
     if (!stepUpToken) {
-      next(new ApiError(401, 'STEP_UP_REQUIRED'));
+      next(new ApiError(401, "STEP_UP_REQUIRED"));
       return;
     }
 
     const decoded = jwt.verify(stepUpToken, config.jwtSecret) as JwtPayload;
-    
+
     if (decoded.userId !== req.user.id) {
-      next(new ApiError(401, 'STEP_UP_REQUIRED'));
+      next(new ApiError(401, "STEP_UP_REQUIRED"));
       return;
     }
 
     next();
   } catch (error) {
-    next(new ApiError(401, 'STEP_UP_REQUIRED'));
+    next(new ApiError(401, "STEP_UP_REQUIRED"));
   }
 }
 
@@ -169,34 +172,37 @@ export async function requireStepUpAuth(
 export async function optionalAuth(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   try {
     let token;
 
     if (req.cookies && req.cookies.accessToken) {
       token = req.cookies.accessToken;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-      token = req.headers.authorization.split(' ')[1];
+    } else if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
     }
-    
+
     if (!token) {
       return next();
     }
-    
+
     const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
-    
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { 
-        id: true, 
-        email: true, 
+      select: {
+        id: true,
+        email: true,
         role: true,
         emailVerified: true,
-        sellerProfile: { select: { id: true, isActive: true } }
-      }
+        sellerProfile: { select: { id: true, isActive: true } },
+      },
     });
-    
+
     if (user) {
       req.user = {
         id: user.id,
@@ -206,7 +212,7 @@ export async function optionalAuth(
         sellerProfile: user.sellerProfile,
       };
     }
-    
+
     next();
   } catch {
     // Token invalid, continue without user

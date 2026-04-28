@@ -40,7 +40,7 @@ const notificationService = {
     const { emailService } = await import('../services/email.service.js');
     
     await Promise.all([
-      emailService.sendOrderConfirmationEmail({ to: user.email }),
+      emailService.sendOrderConfirmationEmail({ to: user.email } as any),
       mockPrisma.notification.create({
         data: {
           userId: user.id,

@@ -7,6 +7,7 @@ import { adminRejectApplicationSchema, adminRequestInfoSchema } from '../utils/v
 import { emailService } from '../services/email.service.js';
 import { logAdminActivity, getActivityLogs } from '../services/admin-activity.service.js';
 import { adminDashboardService } from '../services/admin-dashboard.service.js';
+import { logAdminAction } from '../middleware/adminLog.middleware.js';
 
 const router = Router();
 
@@ -20,6 +21,30 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
   try {
     const data = await adminDashboardService.getDashboardOverview();
     res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ==================== ALERTS (Smart Notification Center) ====================
+
+import { adminAlertsService } from '../services/admin-alerts.service.js';
+
+// Get all alerts grouped by severity
+router.get('/alerts', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await adminAlertsService.getAlerts();
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get just the badge count (lightweight)
+router.get('/alerts/count', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const count = await adminAlertsService.getAlertCount();
+    res.json({ success: true, data: { count } });
   } catch (error) {
     next(error);
   }
@@ -127,7 +152,7 @@ router.get('/users/:userId', async (req: Request, res: Response, next: NextFunct
 });
 
 // Update user status
-router.put('/users/:userId/status', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/users/:userId/status', logAdminAction('UPDATE_USER_STATUS', 'user', 'userId'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId } = req.params;
     const { status } = req.body;
@@ -196,7 +221,7 @@ router.get('/sellers/:id', async (req: Request, res: Response, next: NextFunctio
 });
 
 // Suspend a seller
-router.put('/sellers/:id/suspend', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/sellers/:id/suspend', logAdminAction('SUSPEND_SELLER', 'seller', 'id'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
@@ -213,7 +238,7 @@ router.put('/sellers/:id/suspend', async (req: Request, res: Response, next: Nex
 });
 
 // Activate a seller
-router.put('/sellers/:id/activate', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/sellers/:id/activate', logAdminAction('ACTIVATE_SELLER', 'seller', 'id'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
@@ -282,7 +307,7 @@ router.get('/seller-applications/:id', async (req: Request, res: Response, next:
 });
 
 // Approve seller application (atomic transaction)
-router.post('/seller-applications/:id/approve', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/seller-applications/:id/approve', logAdminAction('APPROVE_SELLER_APPLICATION', 'seller_application', 'id'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const result = await adminSellerService.approveApplication(id, req);
@@ -376,7 +401,7 @@ router.get('/orders', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // Update order status
-router.put('/orders/:orderId/status', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/orders/:orderId/status', logAdminAction('UPDATE_ORDER_STATUS', 'order', 'orderId'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId } = req.params;
     const { status, trackingNumber, notes } = req.body;

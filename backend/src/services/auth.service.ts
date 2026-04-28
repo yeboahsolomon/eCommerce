@@ -6,6 +6,7 @@ import { RegisterInput, LoginInput, ChangePasswordInput } from '../utils/validat
 import { hashPassword, comparePassword, generateToken, generateRefreshToken, generateSecureToken } from '../utils/helpers.js';
 import { hashToken } from '../utils/token.helpers.js';
 import jwt from 'jsonwebtoken';
+import admin from '../config/firebase.js';
 
 export class AuthService {
   async register(input: RegisterInput) {
@@ -64,6 +65,66 @@ export class AuthService {
     
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     
+    if (user.role === 'SUPERADMIN') {
+      const preAuthToken = jwt.sign({ userId: user.id }, config.jwtSecret, { expiresIn: '5m' });
+      return {
+        otpRequired: true,
+        preAuthToken,
+        user: { id: user.id, email: user.email, phone: user.phone, role: user.role, firstName: user.firstName, lastName: user.lastName, emailVerified: user.emailVerified },
+      };
+    }
+
+    const accessToken = generateToken({ userId: user.id, email: user.email, roles: [user.role], emailVerified: user.emailVerified });
+    const refreshToken = generateRefreshToken({ userId: user.id });
+    const refreshTokenHash = hashToken(refreshToken);
+
+    await prisma.refreshToken.create({
+      data: { userId: user.id, token: refreshTokenHash, expiresAt: new Date(Date.now() + config.refreshTokenExpiresIn) },
+    });
+
+    return {
+      otpRequired: false,
+      user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, phone: user.phone, role: user.role, emailVerified: user.emailVerified },
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async verifyAdminOtp(preAuthToken: string, firebaseIdToken: string) {
+    // 1. Verify the preAuthToken
+    let decodedPreAuth: any;
+    try {
+      decodedPreAuth = jwt.verify(preAuthToken, config.jwtSecret);
+    } catch (error) {
+      throw new ApiError(401, 'Session expired or invalid. Please login again.');
+    }
+
+    // 2. Fetch the user
+    const user = await prisma.user.findUnique({ where: { id: decodedPreAuth.userId } });
+    if (!user || user.role !== 'SUPERADMIN') throw new ApiError(403, 'Access denied.');
+
+    // 3. Verify Firebase ID Token
+    let decodedFirebaseToken: any;
+    try {
+      decodedFirebaseToken = await admin.auth().verifyIdToken(firebaseIdToken);
+    } catch (error) {
+      throw new ApiError(401, 'Invalid OTP or phone verification failed.');
+    }
+
+    // 4. Enforce exact phone match (normalized)
+    let normalizedUserPhone = user.phone ? user.phone.replace(/\s+/g, '') : '';
+    if (normalizedUserPhone.startsWith('0')) {
+      normalizedUserPhone = '+233' + normalizedUserPhone.substring(1);
+    }
+    if (!normalizedUserPhone.startsWith('+') && normalizedUserPhone.length > 0) {
+      normalizedUserPhone = '+' + normalizedUserPhone;
+    }
+
+    if (normalizedUserPhone !== decodedFirebaseToken.phone_number) {
+      throw new ApiError(401, 'The verified phone number does not match the registered superadmin phone number.');
+    }
+
+    // 5. Generate final tokens
     const accessToken = generateToken({ userId: user.id, email: user.email, roles: [user.role], emailVerified: user.emailVerified });
     const refreshToken = generateRefreshToken({ userId: user.id });
     const refreshTokenHash = hashToken(refreshToken);
