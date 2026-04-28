@@ -7,7 +7,7 @@ export const authApi = {
   },
 
   async login(email: string, password: string, rememberMe?: boolean) {
-    return request<{ user: User }>('POST', '/auth/login', { email, password, rememberMe });
+    return request<{ user: User, otpRequired?: boolean, preAuthToken?: string }>('POST', '/auth/login', { email, password, rememberMe });
   },
 
   async googleLogin(credential: string) {
@@ -40,5 +40,9 @@ export const authApi = {
 
   async verifyPhone(idToken: string, phone: string) {
     return request<{ phoneVerified: boolean }>('POST', '/user/verify-phone', { idToken, phone });
+  },
+
+  async verifyAdminOtp(preAuthToken: string, firebaseIdToken: string) {
+    return request<{ user: User }>('POST', '/auth/verify-admin-otp', { preAuthToken, firebaseIdToken });
   },
 };

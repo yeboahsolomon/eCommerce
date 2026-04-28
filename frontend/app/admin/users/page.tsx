@@ -107,7 +107,8 @@ export default function AdminUsersPage() {
           className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
         >
           <option value="">All Roles</option>
-          <option value="ADMIN">Admin</option>
+          <option value="SUPERADMIN">Superadmin</option>
+          <option value="ADMIN">Admin (Legacy)</option>
           <option value="SELLER">Seller</option>
           <option value="BUYER">Buyer</option>
         </select>
@@ -176,9 +177,9 @@ export default function AdminUsersPage() {
                           {user.status === "ACTIVE" ? (
                             <button
                               onClick={() => handleStatusChange(user.id, "SUSPENDED")}
-                              disabled={actionId === user.id || user.role === "ADMIN"}
+                              disabled={actionId === user.id || user.role === "SUPERADMIN" || user.role === "ADMIN"}
                               className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition disabled:opacity-20 disabled:cursor-not-allowed"
-                              title={user.role === "ADMIN" ? "Cannot suspend admins" : "Suspend user"}
+                              title={user.role === "SUPERADMIN" || user.role === "ADMIN" ? "Cannot suspend admins" : "Suspend user"}
                             >
                               {actionId === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
                             </button>
@@ -192,7 +193,7 @@ export default function AdminUsersPage() {
                               <CheckCircle className="h-4 w-4" />
                             </button>
                           ) : null}
-                          {user.role !== "ADMIN" && (
+                          {user.role !== "SUPERADMIN" && user.role !== "ADMIN" && (
                             <button
                               onClick={() => handleDelete(user.id)}
                               disabled={actionId === user.id}

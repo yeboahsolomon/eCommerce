@@ -50,7 +50,7 @@ export default function AdminRegisterPage() {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        role: "ADMIN",
+        role: "SUPERADMIN",
         adminCode: formData.adminCode,
       });
 

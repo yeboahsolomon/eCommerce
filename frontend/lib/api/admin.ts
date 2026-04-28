@@ -7,6 +7,15 @@ export const adminApi = {
     return request<any>('GET', '/admin/dashboard');
   },
 
+  // Alerts (Smart Notification Center)
+  async getAdminAlerts() {
+    return request<any>('GET', '/admin/alerts');
+  },
+
+  async getAdminAlertCount() {
+    return request<{ count: number }>('GET', '/admin/alerts/count');
+  },
+
   // Analytics
   async getAdminSalesChart(period = '30d') {
     return request<any>('GET', '/admin/analytics/sales-chart', undefined, { params: { period } });

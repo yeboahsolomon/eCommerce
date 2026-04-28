@@ -8,7 +8,8 @@ interface AuthState {
   isAuthenticated: boolean;
   
   // Actions
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message?: string }>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; message?: string; otpRequired?: boolean; preAuthToken?: string; user?: any }>;
+  verifyAdminOtp: (preAuthToken: string, firebaseIdToken: string) => Promise<{ success: boolean; message?: string }>;
   googleLogin: (credential: string) => Promise<{ success: boolean; message?: string }>;
   register: (data: RegisterData) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
@@ -44,10 +45,26 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const response = await api.login(email, password, rememberMe);
       if (response.success && response.data) {
+        if (response.data.otpRequired) {
+          return { success: true, otpRequired: true, preAuthToken: response.data.preAuthToken, user: response.data.user };
+        }
         set({ user: response.data.user, isAuthenticated: true });
         return { success: true };
       }
       return { success: false, message: response.message || 'Login failed' };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'An error occurred' };
+    }
+  },
+
+  verifyAdminOtp: async (preAuthToken, firebaseIdToken) => {
+    try {
+      const response = await api.verifyAdminOtp(preAuthToken, firebaseIdToken);
+      if (response.success && response.data) {
+        set({ user: response.data.user, isAuthenticated: true });
+        return { success: true };
+      }
+      return { success: false, message: response.message || 'OTP verification failed' };
     } catch (error: any) {
       return { success: false, message: error.message || 'An error occurred' };
     }

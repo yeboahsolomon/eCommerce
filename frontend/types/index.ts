@@ -9,7 +9,7 @@ export interface User {
   firstName: string;
   lastName: string;
   phone?: string;
-  role: 'BUYER' | 'SELLER' | 'ADMIN';
+  role: 'BUYER' | 'SELLER' | 'ADMIN' | 'SUPERADMIN';
   status: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
   avatarUrl?: string;
   emailVerified: boolean;

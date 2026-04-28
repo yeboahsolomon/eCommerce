@@ -29,7 +29,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
     if (!isLoading) {
       if (!isAuthenticated) {
         router.push("/auth/login?redirect=/seller/dashboard");
-      } else if (user?.role !== "SELLER" && user?.role !== "ADMIN") {
+      } else if (user?.role !== "SELLER" && user?.role !== "SUPERADMIN" && user?.role !== "ADMIN") {
         router.push("/seller/apply");
       }
     }
@@ -43,7 +43,7 @@ export default function SellerDashboardLayout({ children }: { children: React.Re
     );
   }
 
-  if (!isAuthenticated || (user?.role !== "SELLER" && user?.role !== "ADMIN")) {
+  if (!isAuthenticated || (user?.role !== "SELLER" && user?.role !== "SUPERADMIN" && user?.role !== "ADMIN")) {
     return null;
   }
 
