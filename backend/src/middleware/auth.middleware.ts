@@ -104,7 +104,7 @@ export function requireAdmin(
     return;
   }
 
-  if (req.user.role !== "ADMIN") {
+  if (req.user.role !== "SUPERADMIN") {
     next(new ApiError(403, "Admin access required."));
     return;
   }
@@ -125,7 +125,7 @@ export function requireSellerOrAdmin(
     return;
   }
 
-  if (req.user.role !== "ADMIN" && req.user.role !== "SELLER") {
+  if (req.user.role !== "SUPERADMIN" && req.user.role !== "SELLER") {
     next(new ApiError(403, "Seller or Admin access required."));
     return;
   }

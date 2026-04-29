@@ -177,7 +177,7 @@ export class ProductService {
     if (!product.isActive) {
       const isOwner =
         user?.role === "SELLER" && user?.sellerProfile?.id === product.sellerId;
-      const isAdmin = user?.role === "ADMIN";
+      const isAdmin = user?.role === "SUPERADMIN";
       if (!isOwner && !isAdmin) throw new ApiError(404, "Product not found.");
     }
 
@@ -304,7 +304,7 @@ export class ProductService {
     const existingProduct = await prisma.product.findUnique({ where: { id } });
     if (!existingProduct) throw new ApiError(404, "Product not found");
 
-    if (user.role !== "ADMIN") {
+    if (user.role !== "SUPERADMIN") {
       if (existingProduct.sellerId !== user.sellerProfile?.id)
         throw new ApiError(403, "Not authorized to update this product");
     }

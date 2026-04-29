@@ -328,7 +328,7 @@ router.post(
       const { orderId } = req.params;
       const user = (req as any).user;
 
-      if (user.role !== "ADMIN") {
+      if (user.role !== "SUPERADMIN") {
         return res
           .status(403)
           .json({ success: false, message: "Admin access required" });
@@ -394,7 +394,7 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      if (user.role !== "ADMIN") {
+      if (user.role !== "SUPERADMIN") {
         return res
           .status(403)
           .json({ success: false, message: "Admin access required" });

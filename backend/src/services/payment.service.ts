@@ -668,7 +668,7 @@ export class PaymentService {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        ...(user.role !== "ADMIN" ? { userId: user.id } : {}),
+        ...(user.role !== "SUPERADMIN" ? { userId: user.id } : {}),
       },
       include: { payment: true },
     });
