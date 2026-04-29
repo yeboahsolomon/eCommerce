@@ -10,12 +10,14 @@ import {
   ImageOff, Eye, Package 
 } from "lucide-react";
 import { toast } from "sonner";
+import ConfirmationModal from "@/components/admin/ConfirmationModal";
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -38,8 +40,7 @@ export default function AdminProductsPage() {
   }, []);
 
   const handleDelete = async (productId: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-    
+    setProductToDelete(null);
     setDeletingId(productId);
     try {
       await api.deleteProduct(productId);
@@ -145,7 +146,7 @@ export default function AdminProductsPage() {
                       <Edit2 className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(product.id)}
+                      onClick={() => setProductToDelete(product)}
                       disabled={deletingId === product.id}
                       className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
                     >
@@ -169,6 +170,16 @@ export default function AdminProductsPage() {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!productToDelete}
+        title="Delete Product"
+        message={`Are you sure you want to permanently delete "${productToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete Product"
+        onConfirm={() => productToDelete && handleDelete(productToDelete.id)}
+        onCancel={() => setProductToDelete(null)}
+        isDangerous={true}
+      />
     </div>
   );
 }

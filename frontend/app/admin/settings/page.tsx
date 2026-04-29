@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { 
-  User, Lock, Settings as SettingsIcon, AlertTriangle, Edit2, Shield, Eye, EyeOff, Save, Database, Download, Check
+  User, Lock, Settings as SettingsIcon, AlertTriangle, Edit2, Shield, Eye, EyeOff, Save, Database, Download, Check, Monitor
 } from "lucide-react";
+import ConfirmationModal from "@/components/admin/ConfirmationModal";
 
 export interface AdminProfile {
   name: string;
@@ -37,6 +38,12 @@ const mockConfig: PlatformConfig = {
   feePercentage: 5.0,
 };
 
+const mockSessions = [
+  { id: "1", device: "MacBook Pro", browser: "Chrome 120", ip: "197.251.10.15", location: "Accra, Ghana", lastActive: "Just now", isCurrent: true },
+  { id: "2", device: "iPhone 13", browser: "Safari Mobile", ip: "197.251.10.42", location: "Kumasi, Ghana", lastActive: "2 hours ago", isCurrent: false },
+  { id: "3", device: "Windows Desktop", browser: "Firefox 118", ip: "154.160.2.19", location: "Lagos, Nigeria", lastActive: "3 days ago", isCurrent: false },
+];
+
 export default function SettingsPage() {
   const [profile, setProfile] = useState<AdminProfile>(mockProfile);
   const [config, setConfig] = useState<PlatformConfig>(mockConfig);
@@ -55,6 +62,21 @@ export default function SettingsPage() {
 
   // Modals
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showClearCacheModal, setShowClearCacheModal] = useState(false);
+  const [pendingMaintenanceMode, setPendingMaintenanceMode] = useState<boolean | null>(null);
+
+  // Sessions
+  const [sessions, setSessions] = useState(mockSessions);
+  const [sessionToLogout, setSessionToLogout] = useState<string | null>(null);
+  const [showLogoutAllModal, setShowLogoutAllModal] = useState(false);
+
+  const handleMaintenanceToggle = (newValue: boolean) => {
+    if (newValue) {
+      setPendingMaintenanceMode(true);
+    } else {
+      setMaintenanceMode(false);
+    }
+  };
 
   const getPasswordStrength = (pass: string) => {
     let score = 0;
@@ -146,7 +168,7 @@ export default function SettingsPage() {
             <div className="space-y-1">
               <Toggle 
                 enabled={maintenanceMode} 
-                onChange={setMaintenanceMode} 
+                onChange={handleMaintenanceToggle} 
                 label="Maintenance Mode" 
                 description="Temporarily disable public access to the platform." 
               />
@@ -315,7 +337,10 @@ export default function SettingsPage() {
               <div className="p-4 bg-slate-900/50 border border-slate-700 rounded-lg">
                 <h3 className="font-bold text-white text-sm">Clear System Cache</h3>
                 <p className="text-xs text-slate-400 mt-1 mb-3">Forces all storefront pages and API routes to rebuild their cached responses.</p>
-                <button className="px-4 py-1.5 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors">
+                <button 
+                  onClick={() => setShowClearCacheModal(true)}
+                  className="px-4 py-1.5 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+                >
                   Clear Cache
                 </button>
               </div>
@@ -332,6 +357,65 @@ export default function SettingsPage() {
             </div>
           </div>
 
+        </div>
+      </div>
+
+      {/* Active Sessions */}
+      <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm mt-6 mb-8">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Monitor className="w-5 h-5 text-indigo-400" />
+            Active Sessions
+          </h2>
+          <button 
+            onClick={() => setShowLogoutAllModal(true)}
+            className="px-4 py-2 text-xs font-medium text-white bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+          >
+            Sign Out All Other Sessions
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-700/30">
+              <tr>
+                <th className="text-left py-3 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider rounded-tl-lg">Device</th>
+                <th className="text-left py-3 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">Browser</th>
+                <th className="text-left py-3 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">IP Address</th>
+                <th className="text-left py-3 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">Location</th>
+                <th className="text-left py-3 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider">Last Active</th>
+                <th className="text-right py-3 px-4 text-slate-400 font-medium text-xs uppercase tracking-wider rounded-tr-lg">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700/30">
+              {sessions.map((session) => (
+                <tr key={session.id} className="hover:bg-slate-700/20 transition">
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2 text-white font-medium">
+                      {session.device}
+                      {session.isCurrent && (
+                        <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Current</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-slate-300">{session.browser}</td>
+                  <td className="py-3 px-4 text-slate-400 font-mono text-xs">{session.ip}</td>
+                  <td className="py-3 px-4 text-slate-400">{session.location}</td>
+                  <td className="py-3 px-4 text-slate-400">{session.lastActive}</td>
+                  <td className="py-3 px-4 text-right">
+                    {!session.isCurrent && (
+                      <button 
+                        onClick={() => setSessionToLogout(session.id)}
+                        className="text-xs text-red-400 hover:text-red-300 font-medium px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                      >
+                        Force Logout
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -374,6 +458,59 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modals */}
+      <ConfirmationModal
+        isOpen={pendingMaintenanceMode === true}
+        title="Enable Maintenance Mode"
+        message="Are you sure you want to enable maintenance mode? The storefront will be hidden from public visitors and only admins will be able to log in."
+        confirmLabel="Enable Maintenance"
+        onConfirm={() => {
+          setMaintenanceMode(true);
+          setPendingMaintenanceMode(null);
+        }}
+        onCancel={() => setPendingMaintenanceMode(null)}
+        isDangerous={true}
+      />
+
+      <ConfirmationModal
+        isOpen={showClearCacheModal}
+        title="Clear System Cache"
+        message="This will force all storefront pages and API routes to rebuild their cached responses. It may temporarily increase server load."
+        confirmLabel="Clear Cache"
+        onConfirm={() => {
+          // Implement cache clearing logic here
+          setShowClearCacheModal(false);
+        }}
+        onCancel={() => setShowClearCacheModal(false)}
+        isDangerous={true}
+      />
+
+      <ConfirmationModal
+        isOpen={!!sessionToLogout}
+        title="Force Logout Session"
+        message="Are you sure you want to force logout this session? The user on that device will be required to log in again."
+        confirmLabel="Force Logout"
+        onConfirm={() => {
+          setSessions(sessions.filter(s => s.id !== sessionToLogout));
+          setSessionToLogout(null);
+        }}
+        onCancel={() => setSessionToLogout(null)}
+        isDangerous={true}
+      />
+
+      <ConfirmationModal
+        isOpen={showLogoutAllModal}
+        title="Sign Out All Other Sessions"
+        message="This will immediately invalidate all other active sessions across all devices. You will remain logged in on this device."
+        confirmLabel="Sign Out All"
+        onConfirm={() => {
+          setSessions(sessions.filter(s => s.isCurrent));
+          setShowLogoutAllModal(false);
+        }}
+        onCancel={() => setShowLogoutAllModal(false)}
+        isDangerous={true}
+      />
 
     </div>
   );

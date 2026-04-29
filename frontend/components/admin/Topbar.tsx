@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Menu, Search, Bell, User, Key, LogOut } from "lucide-react";
+import { Menu, Search, Bell, User, Key, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 // Breadcrumb/Title map
@@ -90,7 +90,8 @@ export default function Topbar({ setIsMobileMenuOpen, pendingAlertsCount = 0 }: 
 
           {/* SUPERADMIN Badge */}
           {user?.role === "SUPERADMIN" && (
-            <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30 tracking-wide">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-600 text-white shadow-lg shadow-green-600/20 tracking-wide">
+              <Shield className="w-3.5 h-3.5" />
               SUPERADMIN
             </span>
           )}

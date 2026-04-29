@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import ConfirmationModal from "@/components/admin/ConfirmationModal";
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
@@ -429,42 +430,37 @@ export default function ApplicationReviewPage() {
       )}
 
       {/* Reject Modal */}
-      {showRejectModal && (
-        <Modal onClose={() => setShowRejectModal(false)}>
-          <h2 className="text-lg font-bold text-white mb-4">Reject Application</h2>
+      <ConfirmationModal
+        isOpen={showRejectModal}
+        title="Reject Application"
+        confirmLabel="Reject"
+        onConfirm={handleReject}
+        onCancel={() => setShowRejectModal(false)}
+        isDangerous={true}
+      >
+        <div className="mb-4">
+          <label className="block text-sm text-slate-300 mb-1.5">Reason</label>
+          <select
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg text-sm text-white p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+          >
+            <option value="">Select a reason...</option>
+            {REJECTION_REASONS.map((r) => (<option key={r} value={r}>{r}</option>))}
+          </select>
+        </div>
+        {rejectReason === "Other" && (
           <div className="mb-4">
-            <label className="block text-sm text-slate-300 mb-1.5">Reason</label>
-            <select
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg text-sm text-white p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/50"
-            >
-              <option value="">Select a reason...</option>
-              {REJECTION_REASONS.map((r) => (<option key={r} value={r}>{r}</option>))}
-            </select>
+            <textarea
+              value={rejectDetails}
+              onChange={(e) => setRejectDetails(e.target.value)}
+              placeholder="Specify the reason..."
+              rows={3}
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg text-sm text-white p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
+            />
           </div>
-          {rejectReason === "Other" && (
-            <div className="mb-4">
-              <textarea
-                value={rejectDetails}
-                onChange={(e) => setRejectDetails(e.target.value)}
-                placeholder="Specify the reason..."
-                rows={3}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg text-sm text-white p-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
-              />
-            </div>
-          )}
-          <div className="flex gap-3 justify-end">
-            <button onClick={() => setShowRejectModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition">Cancel</button>
-            <button onClick={handleReject} disabled={actionLoading || !rejectReason}
-              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50 flex items-center gap-2"
-            >
-              {actionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Reject
-            </button>
-          </div>
-        </Modal>
-      )}
+        )}
+      </ConfirmationModal>
 
       {/* Request Info Modal */}
       {showInfoModal && (

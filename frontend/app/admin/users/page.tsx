@@ -7,6 +7,7 @@ import {
   Ban, CheckCircle, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import ConfirmationModal from "@/components/admin/ConfirmationModal";
 
 const ROLE_STYLES: Record<string, string> = {
   ADMIN: "bg-purple-500/15 text-purple-400 border-purple-500/30",
@@ -29,6 +30,8 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<any>(null);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [suspendUser, setSuspendUser] = useState<any>(null);
+  const [deleteUser, setDeleteUser] = useState<any>(null);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -67,7 +70,7 @@ export default function AdminUsersPage() {
   };
 
   const handleDelete = async (userId: string) => {
-    if (!confirm("Deactivate this user? This action can be reversed.")) return;
+    setDeleteUser(null);
     setActionId(userId);
     try {
       const res = await api.deleteAdminUser(userId);
@@ -176,7 +179,7 @@ export default function AdminUsersPage() {
                         <div className="flex items-center justify-end gap-1">
                           {user.status === "ACTIVE" ? (
                             <button
-                              onClick={() => handleStatusChange(user.id, "SUSPENDED")}
+                              onClick={() => setSuspendUser(user)}
                               disabled={actionId === user.id || user.role === "SUPERADMIN" || user.role === "ADMIN"}
                               className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition disabled:opacity-20 disabled:cursor-not-allowed"
                               title={user.role === "SUPERADMIN" || user.role === "ADMIN" ? "Cannot suspend admins" : "Suspend user"}
@@ -195,7 +198,7 @@ export default function AdminUsersPage() {
                           ) : null}
                           {user.role !== "SUPERADMIN" && user.role !== "ADMIN" && (
                             <button
-                              onClick={() => handleDelete(user.id)}
+                              onClick={() => setDeleteUser(user)}
                               disabled={actionId === user.id}
                               className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition disabled:opacity-30"
                               title="Deactivate user"
@@ -234,6 +237,31 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!suspendUser}
+        title="Suspend User"
+        message={`Are you sure you want to suspend ${suspendUser?.firstName} ${suspendUser?.lastName}? They will temporarily lose access to the platform.`}
+        confirmLabel="Suspend User"
+        onConfirm={() => {
+          if (suspendUser) {
+            handleStatusChange(suspendUser.id, "SUSPENDED");
+            setSuspendUser(null);
+          }
+        }}
+        onCancel={() => setSuspendUser(null)}
+        isDangerous={true}
+      />
+
+      <ConfirmationModal
+        isOpen={!!deleteUser}
+        title="Deactivate User"
+        message={`Are you sure you want to deactivate ${deleteUser?.firstName} ${deleteUser?.lastName}? This action will permanently remove their access.`}
+        confirmLabel="Deactivate User"
+        onConfirm={() => handleDelete(deleteUser?.id)}
+        onCancel={() => setDeleteUser(null)}
+        isDangerous={true}
+      />
     </div>
   );
 }
