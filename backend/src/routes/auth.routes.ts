@@ -80,7 +80,10 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const input = req.body as LoginInput & { rememberMe?: boolean };
-      const data = await authService.login(input);
+      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+
+      const data = await authService.login({ ...input, ipAddress, userAgent });
 
       if (data.otpRequired) {
         return ApiResponseHandler.success(res, {

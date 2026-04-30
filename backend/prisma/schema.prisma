@@ -931,6 +931,21 @@ model AdminLog {
   @@index([timestamp])
 }
 
+// Security Logs - Tracks login attempts and blocks
+model SecurityLog {
+  id        String   @id @default(cuid())
+  email     String
+  ipAddress String
+  status    String   // "SUCCESS", "FAILED", "BLOCKED"
+  userAgent String?
+  timestamp DateTime @default(now())
+
+  @@index([email])
+  @@index([ipAddress])
+  @@index([status])
+  @@index([timestamp])
+}
+
 // Coupon/Discount codes
 model Coupon {
   id   String @id @default(cuid())

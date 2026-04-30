@@ -53,16 +53,53 @@ export class AuthService {
     return { user, accessToken, refreshToken };
   }
 
-  async login(input: LoginInput) {
-    const { email, password } = input;
+  async login(input: LoginInput & { ipAddress?: string, userAgent?: string }) {
+    const { email, password, ipAddress = 'unknown', userAgent = 'unknown' } = input;
     
+    // Check if IP is blocked
+    const failedAttempts = await prisma.securityLog.count({
+      where: {
+        ipAddress,
+        status: 'FAILED',
+        timestamp: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+      }
+    });
+
+    if (failedAttempts >= 5) {
+      await prisma.securityLog.create({
+        data: { email: email.toLowerCase(), ipAddress, status: 'BLOCKED', userAgent }
+      });
+      throw new ApiError(403, 'Your IP has been temporarily blocked due to too many failed login attempts.');
+    }
+
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (!user) throw new ApiError(401, 'Invalid email or password.');
-    if (user.status !== 'ACTIVE') throw new ApiError(403, 'Your account has been suspended or deactivated.');
+    if (!user) {
+      await prisma.securityLog.create({
+        data: { email: email.toLowerCase(), ipAddress, status: 'FAILED', userAgent }
+      });
+      throw new ApiError(401, 'Invalid email or password.');
+    }
+
+    if (user.status !== 'ACTIVE') {
+      await prisma.securityLog.create({
+        data: { email: email.toLowerCase(), ipAddress, status: 'FAILED', userAgent: `Suspended account: ${userAgent}` }
+      });
+      throw new ApiError(403, 'Your account has been suspended or deactivated.');
+    }
     
     const isValidPassword = await comparePassword(password, user.password);
-    if (!isValidPassword) throw new ApiError(401, 'Invalid email or password.');
+    if (!isValidPassword) {
+      await prisma.securityLog.create({
+        data: { email: email.toLowerCase(), ipAddress, status: 'FAILED', userAgent }
+      });
+      throw new ApiError(401, 'Invalid email or password.');
+    }
     
+    // Log success
+    await prisma.securityLog.create({
+      data: { email: email.toLowerCase(), ipAddress, status: 'SUCCESS', userAgent }
+    });
+
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     
     if (user.role === 'SUPERADMIN') {

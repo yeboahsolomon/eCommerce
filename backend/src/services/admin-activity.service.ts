@@ -104,8 +104,71 @@ export async function getActivityLogs(params: {
     prisma.adminLog.count({ where }),
   ]);
 
+  const mappedLogs = logs.map(log => ({
+    id: log.id,
+    adminEmail: log.adminEmail,
+    action: log.action,
+    entityType: log.targetCollection,
+    entityId: log.targetId,
+    details: log.metadata,
+    ipAddress: log.ip,
+    createdAt: log.timestamp,
+  }));
+
   return {
-    logs,
+    logs: mappedLogs,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
+}
+
+/**
+ * Query security logs (login attempts)
+ */
+export async function getSecurityLogs(params: {
+  page?: number;
+  limit?: number;
+}) {
+  const { page = 1, limit = 20 } = params;
+
+  const [logs, total] = await Promise.all([
+    prisma.securityLog.findMany({
+      orderBy: { timestamp: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.securityLog.count(),
+  ]);
+
+  const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const attemptsCount = await prisma.securityLog.groupBy({
+    by: ['ipAddress'],
+    where: {
+      status: 'FAILED',
+      timestamp: { gte: last24h }
+    },
+    _count: {
+      id: true
+    }
+  });
+
+  const attemptsMap = new Map(attemptsCount.map(item => [item.ipAddress, item._count.id]));
+
+  const mappedLogs = logs.map(log => ({
+    id: log.id,
+    ip: log.ipAddress,
+    email: log.email,
+    timestamp: log.timestamp,
+    status: log.status === 'BLOCKED' ? 'Blocked' : (log.status === 'SUCCESS' ? 'Success' : 'Failed'),
+    attempts: attemptsMap.get(log.ipAddress) || 0
+  }));
+
+  return {
+    logs: mappedLogs,
     pagination: {
       page,
       limit,

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database.js';
 import { authMiddleware, requireAdmin } from '../middleware/auth.middleware.js';
-import { getActivityLogs } from '../services/admin-activity.service.js';
+import { getActivityLogs, getSecurityLogs } from '../services/admin-activity.service.js';
 
 const router = Router();
 
@@ -33,6 +33,29 @@ router.get('/', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Get admin audit logs error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch admin audit logs' });
+  }
+});
+
+// ==================== SECURITY LOGS (FAILED LOGINS) ====================
+
+// Fetch paginated security logs (login attempts)
+router.get('/security-logs', async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+
+    const data = await getSecurityLogs({
+      page,
+      limit,
+    });
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error: any) {
+    console.error('Get security logs error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch security logs' });
   }
 });
 
