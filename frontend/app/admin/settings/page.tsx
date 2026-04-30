@@ -114,218 +114,230 @@ export default function SettingsPage() {
         <p className="text-sm text-slate-400 mt-1">Manage your platform configuration, security, and administrative preferences.</p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="space-y-6">
         
-        {/* Left Column */}
-        <div className="xl:col-span-1 space-y-6">
+        {/* ROW 1: Profile & Config */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Admin Profile */}
-          <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-400" />
-              Admin Profile
-            </h2>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="h-16 w-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-green-500/20">
-                {profile.avatar}
+          <div className="lg:col-span-1">
+            <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm flex flex-col h-full">
+              <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
+                <User className="w-5 h-5 text-blue-400" />
+                Admin Profile
+              </h2>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-16 w-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-green-500/20 flex-shrink-0">
+                  {profile.avatar}
+                </div>
+                <div>
+                  <h3 className="font-bold text-white">{profile.name}</h3>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 uppercase mt-1">
+                    <Shield className="w-3 h-3" /> {profile.role}
+                  </span>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-white">{profile.name}</h3>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 uppercase mt-1">
-                  <Shield className="w-3 h-3" /> {profile.role}
-                </span>
+              <div className="space-y-3 text-sm flex-1">
+                <div className="flex justify-between border-b border-slate-700/50 pb-2">
+                  <span className="text-slate-400">Email</span>
+                  <span className="text-white font-medium">{profile.email}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-700/50 pb-2">
+                  <span className="text-slate-400">Phone</span>
+                  <span className="text-white font-medium">{profile.phone}</span>
+                </div>
               </div>
-            </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between border-b border-slate-700/50 pb-2">
-                <span className="text-slate-400">Email</span>
-                <span className="text-white font-medium">{profile.email}</span>
-              </div>
-              <div className="flex justify-between border-b border-slate-700/50 pb-2">
-                <span className="text-slate-400">Phone</span>
-                <span className="text-white font-medium">{profile.phone}</span>
-              </div>
-            </div>
-            <button className="w-full mt-5 flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors">
-              <Edit2 className="w-4 h-4" /> Edit Profile
-            </button>
-          </div>
-
-          {/* System Toggles */}
-          <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
-              <SettingsIcon className="w-5 h-5 text-slate-400" />
-              Preferences
-            </h2>
-            
-            {maintenanceMode && (
-              <div className="mb-4 bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-2 text-orange-400 text-xs">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <p><strong>Maintenance Mode is active.</strong> The storefront is currently hidden from public visitors.</p>
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <Toggle 
-                enabled={maintenanceMode} 
-                onChange={handleMaintenanceToggle} 
-                label="Maintenance Mode" 
-                description="Temporarily disable public access to the platform." 
-              />
-              <Toggle 
-                enabled={newRegistrations} 
-                onChange={setNewRegistrations} 
-                label="Seller Registrations" 
-                description="Allow new sellers to submit applications." 
-              />
-              <Toggle 
-                enabled={emailNotifications} 
-                onChange={setEmailNotifications} 
-                label="Email Alerts" 
-                description="Receive system alerts via email." 
-              />
-              <Toggle 
-                enabled={smsNotifications} 
-                onChange={setSmsNotifications} 
-                label="SMS Alerts" 
-                description="Receive critical alerts via SMS (charges apply)." 
-              />
-            </div>
-          </div>
-          
-        </div>
-
-        {/* Right Column */}
-        <div className="xl:col-span-2 space-y-6">
-          
-          {/* Platform Config */}
-          <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
-              <Globe className="w-5 h-5 text-blue-400" />
-              Platform Configuration
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Platform Name</label>
-                <input 
-                  type="text" 
-                  value={config.platformName}
-                  onChange={(e) => setConfig({...config, platformName: e.target.value})}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Base Currency</label>
-                <select 
-                  value={config.currency}
-                  onChange={(e) => setConfig({...config, currency: e.target.value})}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                >
-                  <option value="GHS (₵)">GHS (₵)</option>
-                  <option value="USD ($)">USD ($)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Support Email</label>
-                <input 
-                  type="email" 
-                  value={config.supportEmail}
-                  onChange={(e) => setConfig({...config, supportEmail: e.target.value})}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Support Phone</label>
-                <input 
-                  type="text" 
-                  value={config.supportPhone}
-                  onChange={(e) => setConfig({...config, supportPhone: e.target.value})}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Platform Fee Percentage (%)</label>
-                <input 
-                  type="number" 
-                  value={config.feePercentage}
-                  onChange={(e) => setConfig({...config, feePercentage: parseFloat(e.target.value)})}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                />
-                <p className="text-xs text-slate-500 mt-1.5">This percentage is automatically deducted from seller payouts.</p>
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end">
-              <button className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-600/20">
-                <Save className="w-4 h-4" /> Save Configuration
+              <button className="w-full mt-5 flex items-center justify-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors">
+                <Edit2 className="w-4 h-4" /> Edit Profile
               </button>
             </div>
           </div>
 
-          {/* Security & Password */}
-          <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-green-400" />
-              Security & Password
-            </h2>
-            <div className="space-y-4 max-w-md">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Current Password</label>
-                <div className="relative">
+          {/* Platform Config */}
+          <div className="lg:col-span-2">
+            <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm flex flex-col h-full">
+              <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
+                <Globe className="w-5 h-5 text-blue-400" />
+                Platform Configuration
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 flex-1">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Platform Name</label>
                   <input 
-                    type={showPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-4 pr-10 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    type="text" 
+                    value={config.platformName}
+                    onChange={(e) => setConfig({...config, platformName: e.target.value})}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Base Currency</label>
+                  <select 
+                    value={config.currency}
+                    onChange={(e) => setConfig({...config, currency: e.target.value})}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  >
+                    <option value="GHS (₵)">GHS (₵)</option>
+                    <option value="USD ($)">USD ($)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Support Email</label>
+                  <input 
+                    type="email" 
+                    value={config.supportEmail}
+                    onChange={(e) => setConfig({...config, supportEmail: e.target.value})}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Support Phone</label>
+                  <input 
+                    type="text" 
+                    value={config.supportPhone}
+                    onChange={(e) => setConfig({...config, supportPhone: e.target.value})}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Platform Fee Percentage (%)</label>
+                  <input 
+                    type="number" 
+                    value={config.feePercentage}
+                    onChange={(e) => setConfig({...config, feePercentage: parseFloat(e.target.value)})}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  />
+                  <p className="text-xs text-slate-500 mt-1.5">This percentage is automatically deducted from seller payouts.</p>
                 </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">New Password</label>
-                <input 
-                  type={showPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                />
-                {newPassword && (
-                  <div className="mt-2">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-slate-400">Strength:</span>
-                      <span className={`font-bold ${strengthColors[strength] ? strengthColors[strength].replace('bg-', 'text-') : 'text-slate-400'}`}>
-                        {strengthLabels[strength]}
-                      </span>
-                    </div>
-                    <div className="flex gap-1 h-1.5">
-                      {[1, 2, 3, 4].map((level) => (
-                        <div key={level} className={`flex-1 rounded-full ${strength >= level ? strengthColors[strength] : 'bg-slate-700'}`}></div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Confirm New Password</label>
-                <input 
-                  type={showPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button className="flex items-center justify-center gap-2 w-full px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50" disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}>
-                  <Check className="w-4 h-4" /> Update Password
+              <div className="mt-5 flex justify-end">
+                <button className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-600/20">
+                  <Save className="w-4 h-4" /> Save Configuration
                 </button>
               </div>
             </div>
           </div>
 
+        </div>
+
+        {/* ROW 2: Preferences & Security */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* System Toggles */}
+          <div className="lg:col-span-1">
+            <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm flex flex-col h-full">
+              <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
+                <SettingsIcon className="w-5 h-5 text-slate-400" />
+                Preferences
+              </h2>
+              
+              {maintenanceMode && (
+                <div className="mb-4 bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-2 text-orange-400 text-xs">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <p><strong>Maintenance Mode is active.</strong> The storefront is currently hidden from public visitors.</p>
+                </div>
+              )}
+
+              <div className="space-y-1 flex-1">
+                <Toggle 
+                  enabled={maintenanceMode} 
+                  onChange={handleMaintenanceToggle} 
+                  label="Maintenance Mode" 
+                  description="Temporarily disable public access to the platform." 
+                />
+                <Toggle 
+                  enabled={newRegistrations} 
+                  onChange={setNewRegistrations} 
+                  label="Seller Registrations" 
+                  description="Allow new sellers to submit applications." 
+                />
+                <Toggle 
+                  enabled={emailNotifications} 
+                  onChange={setEmailNotifications} 
+                  label="Email Alerts" 
+                  description="Receive system alerts via email." 
+                />
+                <Toggle 
+                  enabled={smsNotifications} 
+                  onChange={setSmsNotifications} 
+                  label="SMS Alerts" 
+                  description="Receive critical alerts via SMS (charges apply)." 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Security & Password */}
+          <div className="lg:col-span-2">
+            <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm flex flex-col h-full">
+              <h2 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-green-400" />
+                Security & Password
+              </h2>
+              <div className="space-y-4 max-w-md flex-1">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Current Password</label>
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-4 pr-10 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">New Password</label>
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  />
+                  {newPassword && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-slate-400">Strength:</span>
+                        <span className={`font-bold ${strengthColors[strength] ? strengthColors[strength].replace('bg-', 'text-') : 'text-slate-400'}`}>
+                          {strengthLabels[strength]}
+                        </span>
+                      </div>
+                      <div className="flex gap-1 h-1.5">
+                        {[1, 2, 3, 4].map((level) => (
+                          <div key={level} className={`flex-1 rounded-full ${strength >= level ? strengthColors[strength] : 'bg-slate-700'}`}></div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Confirm New Password</label>
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button className="flex items-center justify-center gap-2 w-full px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50" disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}>
+                    <Check className="w-4 h-4" /> Update Password
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ROW 3: Danger Zone */}
+        <div className="grid grid-cols-1 gap-6">
           {/* Danger Zone */}
           <div className="bg-slate-800 rounded-xl border border-red-500/30 p-6 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
@@ -356,8 +368,8 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-
         </div>
+
       </div>
 
       {/* Active Sessions */}

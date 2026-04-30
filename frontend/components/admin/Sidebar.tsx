@@ -130,40 +130,6 @@ export default function Sidebar({
         })}
       </nav>
 
-      {/* Bottom User Section */}
-      <div className="p-4 bg-slate-900/50">
-        {!collapsed ? (
-          <>
-            <div className="flex items-center gap-3 mb-4 px-2">
-              <div className="h-10 w-10 bg-gradient-to-br from-green-500 to-emerald-700 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-lg border border-white/10">
-                {user?.firstName?.[0] || "A"}
-                {user?.lastName?.[0] || "P"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className="text-xs text-slate-400 truncate">{user?.email}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => logout()}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => logout()}
-            className="w-full p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition flex justify-center"
-            title="Sign Out"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
-        )}
-      </div>
     </aside>
   );
 }
