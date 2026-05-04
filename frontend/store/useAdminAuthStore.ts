@@ -26,7 +26,7 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
   checkAuth: async () => {
     set({ isLoading: true });
     try {
-      const response = await adminAuthApi.getMe();
+      const response = (await adminAuthApi.getMe()) as any;
       if (response.success && response.admin) {
         set({ admin: response.admin, isAuthenticated: true });
       } else if (response.success && response.data?.admin) {
@@ -43,7 +43,7 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
 
   login: async (email, password) => {
     try {
-      const response = await adminAuthApi.login({ email, password });
+      const response = (await adminAuthApi.login({ email, password })) as any;
       if (response.success && response.admin) {
         set({ admin: response.admin, isAuthenticated: true });
         return { success: true };
