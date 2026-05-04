@@ -282,7 +282,7 @@ export class AdminSellerService {
   }
 
   async getApplicationDetail(applicationId: string, req: any) {
-    const adminId = req.user.id;
+    const adminId = req.admin?.adminId || req.user?.id;
 
     let application = await prisma.sellerApplication.findUnique({
       where: { id: applicationId },
@@ -335,7 +335,7 @@ export class AdminSellerService {
   }
 
   async approveApplication(applicationId: string, req: any) {
-    const adminId = req.user.id;
+    const adminId = req.admin?.adminId || req.user?.id;
 
     const application = await prisma.sellerApplication.findUnique({
       where: { id: applicationId },
@@ -405,7 +405,7 @@ export class AdminSellerService {
   }
 
   async rejectApplication(applicationId: string, reason: string, req: any) {
-    const adminId = req.user.id;
+    const adminId = req.admin?.adminId || req.user?.id;
 
     const application = await prisma.sellerApplication.findUnique({
       where: { id: applicationId },
@@ -436,7 +436,7 @@ export class AdminSellerService {
   }
 
   async requestInfo(applicationId: string, notes: string, req: any) {
-    const adminId = req.user.id;
+    const adminId = req.admin?.adminId || req.user?.id;
 
     const application = await prisma.sellerApplication.findUnique({
       where: { id: applicationId },

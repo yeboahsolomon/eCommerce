@@ -15,8 +15,9 @@ export const logAdminAction = (action: string, targetCollection: string, paramKe
       // If the status code indicates success (2xx)
       if (res.statusCode >= 200 && res.statusCode < 300) {
         try {
-          const adminId = req.user?.id;
-          const adminEmail = req.user?.email;
+          // Support both admin auth (req.admin) and storefront auth (req.user)
+          const adminId = req.admin?.adminId || req.user?.id;
+          const adminEmail = req.admin?.email || req.user?.email;
           const targetId = req.params[paramKeyForTargetId];
 
           if (!adminId || !adminEmail || !targetId) {

@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../config/database.js';
-import { authenticate, requireAdmin } from '../middleware/auth.middleware.js';
+import { requireSuperAdmin } from '../middleware/admin-auth.middleware.js';
 import { ApiError } from '../middleware/error.middleware.js';
 import { z } from 'zod';
 
@@ -41,8 +41,7 @@ const updateCouponSchema = z.object({
  */
 router.get(
   '/',
-  authenticate,
-  requireAdmin,
+  requireSuperAdmin,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
@@ -103,8 +102,7 @@ router.get(
  */
 router.post(
   '/',
-  authenticate,
-  requireAdmin,
+  requireSuperAdmin,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = createCouponSchema.parse(req.body);
@@ -154,8 +152,7 @@ router.post(
  */
 router.get(
   '/:id',
-  authenticate,
-  requireAdmin,
+  requireSuperAdmin,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const coupon = await prisma.coupon.findUnique({
@@ -180,8 +177,7 @@ router.get(
  */
 router.put(
   '/:id',
-  authenticate,
-  requireAdmin,
+  requireSuperAdmin,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const data = updateCouponSchema.parse(req.body);
@@ -232,8 +228,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  authenticate,
-  requireAdmin,
+  requireSuperAdmin,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const existing = await prisma.coupon.findUnique({ where: { id: req.params.id } });

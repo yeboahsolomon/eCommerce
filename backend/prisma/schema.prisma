@@ -1004,3 +1004,27 @@ model EmailLog {
   @@index([template])
   @@index([createdAt])
 }
+
+// =================================================================
+// ADMIN PORTAL (Independent Auth)
+// =================================================================
+
+model SuperAdmin {
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  passwordHash        String
+  phone               String?
+  avatarUrl           String?
+  isActive            Boolean   @default(true)
+  lastLoginAt         DateTime?
+  lastLoginIP         String?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([isActive])
+}

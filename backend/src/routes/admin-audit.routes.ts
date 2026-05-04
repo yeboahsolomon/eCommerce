@@ -1,13 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database.js';
-import { authMiddleware, requireAdmin } from '../middleware/auth.middleware.js';
+import { requireSuperAdmin } from '../middleware/admin-auth.middleware.js';
 import { getActivityLogs, getSecurityLogs } from '../services/admin-activity.service.js';
 
 const router = Router();
 
-// Secure all audit routes
-router.use(authMiddleware);
-router.use(requireAdmin);
+// Secure all audit routes with admin auth
+router.use(requireSuperAdmin);
 
 // ==================== ADMIN ACTIVITY LOGS ====================
 

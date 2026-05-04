@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database.js';
-import { authMiddleware, requireAdmin, requireSellerOrAdmin } from '../middleware/auth.middleware.js';
+import { authMiddleware, requireSellerOrAdmin } from '../middleware/auth.middleware.js';
+import { requireSuperAdmin } from '../middleware/admin-auth.middleware.js';
 import { paystackService } from '../services/paystack.service.js';
 import { z } from 'zod';
 import { validate } from '../middleware/validate.middleware.js';
@@ -150,7 +151,7 @@ router.get('/', authMiddleware, requireSellerOrAdmin, async (req: Request, res: 
 
 // ==================== ADMIN: LIST ALL PAYOUTS ====================
 
-router.get('/admin/all', authMiddleware, requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/all', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
@@ -205,10 +206,10 @@ router.get('/admin/all', authMiddleware, requireAdmin, async (req: Request, res:
 
 // ==================== ADMIN: APPROVE PAYOUT ====================
 
-router.post('/:id/approve', authMiddleware, requireAdmin, async (req: Request, res: Response) => {
+router.post('/:id/approve', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).user.id;
+    const adminId = req.admin?.adminId;
 
     const payout = await prisma.payout.findUnique({
       where: { id },
@@ -298,7 +299,7 @@ router.post('/:id/approve', authMiddleware, requireAdmin, async (req: Request, r
 
 // ==================== ADMIN: CANCEL PAYOUT ====================
 
-router.post('/:id/cancel', authMiddleware, requireAdmin, async (req: Request, res: Response) => {
+router.post('/:id/cancel', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;

@@ -27,6 +27,7 @@ import wishlistRoutes from './routes/wishlist.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import adminAuditRoutes from './routes/admin-audit.routes.js';
+import adminAuthRoutes from './routes/admin-auth.routes.js';
 import searchRoutes from './routes/search.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
 import sellerAnalyticsRoutes from './routes/seller-analytics.routes.js';
@@ -164,6 +165,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/webhook', webhookRoutes);
 
 // Admin routes
+app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/audit-logs', adminAuditRoutes);
 app.use('/api/admin/coupons', couponRoutes);

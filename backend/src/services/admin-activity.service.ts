@@ -51,8 +51,8 @@ export async function logAdminActivity({
   details,
 }: LogActivityParams): Promise<void> {
   try {
-    const adminId = (req as any).user?.id || 'unknown';
-    const adminEmail = (req as any).user?.email || 'unknown';
+    const adminId = (req as any).admin?.adminId || (req as any).user?.id || 'unknown';
+    const adminEmail = (req as any).admin?.email || (req as any).user?.email || 'unknown';
     const ipAddress =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
       req.socket?.remoteAddress ||

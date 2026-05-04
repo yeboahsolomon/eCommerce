@@ -1,7 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database.js';
-import { authMiddleware } from '../middleware/auth.middleware.js';
-import { requireAdmin } from '../middleware/auth.middleware.js';
+import { requireSuperAdmin } from '../middleware/admin-auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { adminRejectApplicationSchema, adminRequestInfoSchema } from '../utils/validators.js';
 import { emailService } from '../services/email.service.js';
@@ -11,9 +10,8 @@ import { logAdminAction } from '../middleware/adminLog.middleware.js';
 
 const router = Router();
 
-// All admin routes require authentication + admin role
-router.use(authMiddleware);
-router.use(requireAdmin);
+// All admin routes require authentication via admin auth system
+router.use(requireSuperAdmin);
 
 // ==================== DASHBOARD OVERVIEW ====================
 
