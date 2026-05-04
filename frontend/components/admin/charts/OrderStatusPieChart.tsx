@@ -18,12 +18,20 @@ const mockData: OrderStatusData[] = [
   { name: "Cancelled", value: 15, color: "#ef4444" },  // red
 ];
 
-export default function OrderStatusPieChart() {
+export default function OrderStatusPieChart({ data }: { data?: any[] }) {
+  const chartData = data && data.length > 0 
+    ? data.map((d, i) => ({
+        name: d.status || d.name,
+        value: d.count !== undefined ? d.count : d.value,
+        color: d.color || ["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#ec4899", "#14b8a6"][i % 8]
+      }))
+    : mockData;
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <Pie
-          data={mockData}
+          data={chartData}
           dataKey="value"
           nameKey="name"
           cx="50%"
@@ -33,7 +41,7 @@ export default function OrderStatusPieChart() {
           paddingAngle={5}
           animationDuration={1500}
         >
-          {mockData.map((entry, index) => (
+          {chartData.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={entry.color} stroke="transparent" />
           ))}
         </Pie>

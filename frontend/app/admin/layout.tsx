@@ -1,7 +1,6 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
-import { api } from "@/lib/api";
+import { useAdminAuthStore } from "@/store/useAdminAuthStore";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -25,6 +24,7 @@ import {
 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
 import Topbar from "@/components/admin/Topbar";
+import { api } from "@/lib/api";
 
 const sidebarLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -57,7 +57,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { admin, isAuthenticated, isLoading, logout, checkAuth } = useAdminAuthStore();
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -67,26 +67,31 @@ export default function AdminLayout({
   // Allow access to login/register pages without auth
   const isAuthPage = pathname === "/admin/login" || pathname === "/admin/register";
 
+  // Check admin auth on mount
+  useEffect(() => {
+    if (!isAuthPage) {
+      checkAuth();
+    }
+  }, [isAuthPage, checkAuth]);
+
   useEffect(() => {
     if (!isLoading && !isAuthPage) {
       if (!isAuthenticated) {
         router.push("/admin/login");
-      } else if (user?.role !== "SUPERADMIN") {
-        router.push("/admin/login");
       }
     }
-  }, [isLoading, isAuthenticated, user, router, isAuthPage]);
+  }, [isLoading, isAuthenticated, router, isAuthPage]);
 
   // Fetch pending application count
   useEffect(() => {
-    if (isAuthenticated && user?.role === "SUPERADMIN") {
+    if (isAuthenticated) {
       api.getAdminDashboard().then((res) => {
         if (res.success && res.data?.sellers?.pendingApplications) {
           setPendingApps(res.data.sellers.pendingApplications);
         }
       }).catch(() => {});
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated]);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -108,7 +113,7 @@ export default function AdminLayout({
   }
 
   // Not authorized
-  if (!isAuthenticated || user?.role !== "SUPERADMIN") {
+  if (!isAuthenticated) {
     return null;
   }
 

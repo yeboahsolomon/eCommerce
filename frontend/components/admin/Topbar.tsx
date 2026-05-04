@@ -1,9 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { Menu, Search, Bell, User, Key, LogOut, Shield } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAdminAuthStore } from "@/store/useAdminAuthStore";
 
 // Breadcrumb/Title map
 const titleMap: Record<string, string> = {
@@ -28,7 +28,8 @@ interface TopbarProps {
 
 export default function Topbar({ setIsMobileMenuOpen, pendingAlertsCount = 0 }: TopbarProps) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { admin, logout } = useAdminAuthStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +48,20 @@ export default function Topbar({ setIsMobileMenuOpen, pendingAlertsCount = 0 }: 
   const pathSegments = pathname.split("/").filter(Boolean);
   const lastSegment = pathSegments[pathSegments.length - 1];
   const pageTitle = titleMap[lastSegment] || lastSegment || "Dashboard";
+
+  // Get initials from admin name
+  const getInitials = () => {
+    if (!admin?.name) return "SA";
+    const parts = admin.name.trim().split(/\s+/);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    setDropdownOpen(false);
+    await logout();
+    router.push("/admin/login");
+  };
 
   return (
     <header className="bg-[#0f1117] px-4 md:px-8 py-4 sticky top-0 z-30 border-b border-slate-800">
@@ -89,12 +104,10 @@ export default function Topbar({ setIsMobileMenuOpen, pendingAlertsCount = 0 }: 
           </button>
 
           {/* SUPERADMIN Badge */}
-          {user?.role === "SUPERADMIN" && (
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-600 text-white shadow-lg shadow-green-600/20 tracking-wide">
-              <Shield className="w-3.5 h-3.5" />
-              SUPERADMIN
-            </span>
-          )}
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-600 text-white shadow-lg shadow-green-600/20 tracking-wide">
+            <Shield className="w-3.5 h-3.5" />
+            SUPERADMIN
+          </span>
 
           {/* User Profile Dropdown */}
           <div className="relative" ref={dropdownRef}>
@@ -102,17 +115,16 @@ export default function Topbar({ setIsMobileMenuOpen, pendingAlertsCount = 0 }: 
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="h-9 w-9 bg-gradient-to-br from-green-500 to-emerald-700 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md border border-slate-700 hover:border-slate-500 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-[#0f1117]"
             >
-              {user?.firstName?.[0] || "A"}
-              {user?.lastName?.[0] || "P"}
+              {getInitials()}
             </button>
 
             {dropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-xl shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="px-4 py-2 border-b border-slate-800">
                   <p className="text-sm font-medium text-white truncate">
-                    {user?.firstName} {user?.lastName}
+                    {admin?.name || "Admin"}
                   </p>
-                  <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+                  <p className="text-xs text-slate-400 truncate">{admin?.email}</p>
                 </div>
                 
                 <button className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2 transition-colors">
@@ -123,10 +135,7 @@ export default function Topbar({ setIsMobileMenuOpen, pendingAlertsCount = 0 }: 
                 </button>
                 <div className="border-t border-slate-800 my-1"></div>
                 <button 
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    logout();
-                  }}
+                  onClick={handleLogout}
                   className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                 >
                   <LogOut className="h-4 w-4" /> Sign Out

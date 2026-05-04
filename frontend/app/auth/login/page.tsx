@@ -133,41 +133,43 @@ export default function LoginPage() {
         </button>
 
         {/* Social Login Button Placeholder */}
-        <div className="relative my-4 flex flex-col gap-4">
-          <div className="relative flex justify-center text-xs uppercase pt-2">
-            <span className="bg-white px-2 text-slate-500 z-10">Or continue with</span>
-            <div className="absolute inset-0 flex items-center top-[calc(50%+4px)]">
-               <span className="w-full border-t border-slate-300" />
+        {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+          <div className="relative my-4 flex flex-col gap-4">
+            <div className="relative flex justify-center text-xs uppercase pt-2">
+              <span className="bg-white px-2 text-slate-500 z-10">Or continue with</span>
+              <div className="absolute inset-0 flex items-center top-[calc(50%+4px)]">
+                 <span className="w-full border-t border-slate-300" />
+              </div>
+            </div>
+            
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                onSuccess={async (credentialResponse: CredentialResponse) => {
+                  if (credentialResponse.credential) {
+                    setIsLoading(true);
+                    try {
+                      const response = await googleLogin(credentialResponse.credential);
+                      if (response.success) {
+                        toast.success("Google Login successful!");
+                        router.push("/");
+                      } else {
+                        toast.error(response.message || "Google login failed");
+                      }
+                    } catch(e) {
+                        toast.error("Unexpected error occurred with Google login");
+                    } finally {
+                        setIsLoading(false);
+                    }
+                  }
+                }}
+                onError={() => {
+                  toast.error("Google Login Failed");
+                }}
+                useOneTap
+              />
             </div>
           </div>
-          
-          <div className="flex justify-center w-full">
-            <GoogleLogin
-              onSuccess={async (credentialResponse: CredentialResponse) => {
-                if (credentialResponse.credential) {
-                  setIsLoading(true);
-                  try {
-                    const response = await googleLogin(credentialResponse.credential);
-                    if (response.success) {
-                      toast.success("Google Login successful!");
-                      router.push("/");
-                    } else {
-                      toast.error(response.message || "Google login failed");
-                    }
-                  } catch(e) {
-                      toast.error("Unexpected error occurred with Google login");
-                  } finally {
-                      setIsLoading(false);
-                  }
-                }
-              }}
-              onError={() => {
-                toast.error("Google Login Failed");
-              }}
-              useOneTap
-            />
-          </div>
-        </div>
+        )}
       </form>
 
       {/* Footer / Register Link */}

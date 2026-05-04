@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
@@ -18,7 +18,7 @@ import {
   ChevronLeft,
   Menu,
 } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAdminAuthStore } from "@/store/useAdminAuthStore";
 
 const sidebarLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -50,7 +50,13 @@ export default function Sidebar({
   pendingApps,
 }: SidebarProps) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { admin, logout } = useAdminAuthStore();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/admin/login");
+  };
 
   return (
     <aside

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { Activity, Search, Filter, ShieldAlert, Download, AlertTriangle, RefreshCw } from "lucide-react";
@@ -27,7 +26,6 @@ interface SecurityLog {
 }
 
 export default function AdminAuditLogsPage() {
-  const { user } = useAuth();
   
   // System Logs State
   const [logs, setLogs] = useState<AuditLog[]>([]);
