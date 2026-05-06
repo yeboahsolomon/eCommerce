@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
 // ─────────────────────────────────────────────────────────────
+// ADMIN MIDDLEWARE — Completely independent from storefront
+//
+// This middleware ONLY handles /admin/* routes.
+// It does NOT read, write, or validate storefront tokens.
+// Storefront auth is handled entirely by client-side Firebase.
+// ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
 // Configuration
 // ─────────────────────────────────────────────────────────────
 
 /** Routes under /admin that do NOT require authentication */
 const ADMIN_PUBLIC_PATHS = new Set(['/admin/login', '/admin/register']);
 
-/** Cookie name that holds the access-token JWT (set by the backend) */
+/** Cookie name that holds the admin access-token JWT (set by the backend) */
 const ADMIN_TOKEN_COOKIE = 'admin_token';
 
 // ─────────────────────────────────────────────────────────────
@@ -41,7 +49,11 @@ function getSecret(): Uint8Array {
 }
 
 /**
- * Verify the JWT and return its typed payload, or `null` when invalid / expired.
+ * Verify the admin JWT and return its typed payload, or `null` when
+ * the token is invalid, expired, or has a wrong signature.
+ *
+ * @param token  The raw JWT string from the `admin_token` cookie.
+ * @returns      The decoded payload, or `null` on failure.
  */
 async function verifyToken(token: string): Promise<AdminJwtPayload | null> {
   try {
@@ -57,6 +69,24 @@ async function verifyToken(token: string): Promise<AdminJwtPayload | null> {
 // Middleware
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Next.js Edge Middleware for admin route protection.
+ *
+ * **Behaviour:**
+ * - For `/admin/login` (and `/admin/register`):
+ *   - If a valid `admin_token` cookie exists → redirect to `/admin/dashboard`
+ *   - Otherwise → allow access (public page)
+ *
+ * - For all other `/admin/*` routes:
+ *   - If no `admin_token` cookie → redirect to `/admin/login`
+ *   - If the token is invalid/expired → clear cookie, redirect to `/admin/login`
+ *   - If the token role ≠ `superadmin` → redirect to `/admin/login`
+ *   - Otherwise → allow access
+ *
+ * **Isolation:**
+ * - This middleware completely ignores storefront tokens.
+ * - Storefront routes completely ignore `admin_token`.
+ */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -68,7 +98,7 @@ export async function middleware(request: NextRequest) {
     if (token) {
       const payload = await verifyToken(token);
       if (payload?.role === 'superadmin') {
-        return NextResponse.redirect(new URL('/admin', request.url));
+        return NextResponse.redirect(new URL('/admin/dashboard', request.url));
       }
     }
     return NextResponse.next();
@@ -114,6 +144,10 @@ function redirectToLogin(request: NextRequest, message: string): NextResponse {
 
 // ─────────────────────────────────────────────────────────────
 // Matcher — only run this middleware for admin routes
+//
+// Storefront routes are NOT matched here and are therefore
+// completely unaffected by this middleware. This ensures
+// full isolation between admin and storefront auth systems.
 // ─────────────────────────────────────────────────────────────
 
 export const config = {
