@@ -25,16 +25,13 @@ import paymentRoutes from './routes/payments.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
 import wishlistRoutes from './routes/wishlist.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
-import adminRoutes from './routes/admin.routes.js';
-import adminAuditRoutes from './routes/admin-audit.routes.js';
-import adminAuthRoutes from './routes/admin-auth.routes.js';
+import adminRouter from './routes/admin/index.js';
 import searchRoutes from './routes/search.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
 import sellerAnalyticsRoutes from './routes/seller-analytics.routes.js';
 import userRoutes from './routes/user.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import payoutRoutes from './routes/payout.routes.js';
-import couponRoutes from './routes/coupon.routes.js';
 import notificationRoutes from './routes/notifications.routes.js';
 import { startCartRecoveryJob } from './jobs/cart-recovery.job.js';
 
@@ -164,11 +161,8 @@ app.use('/api/search', searchRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/webhook', webhookRoutes);
 
-// Admin routes
-app.use('/api/admin/auth', adminAuthRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/admin/audit-logs', adminAuditRoutes);
-app.use('/api/admin/coupons', couponRoutes);
+// ADMIN ROUTES — DO NOT MODIFY STOREFRONT ABOVE
+app.use('/api/admin', adminRouter);
 
 // Seller analytics routes (mounted BEFORE /api/seller to avoid /:slug catch-all)
 app.use('/api/seller/analytics', sellerAnalyticsRoutes);

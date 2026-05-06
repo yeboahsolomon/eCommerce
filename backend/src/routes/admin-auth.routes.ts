@@ -1,15 +1,28 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { adminAuthService } from '../services/admin-auth.service.js';
 import { signAdminToken } from '../utils/adminJwt.js';
-import { requireSuperAdmin } from '../middleware/admin-auth.middleware.js';
 import { ApiResponseHandler } from '../utils/response.js';
 import { config } from '../config/env.js';
+import prisma from '../config/database.js';
 
 const router = Router();
+
+// ─────────────────────────────────────────────────────────────
+// NOTE: Authentication and rate limiting are applied by the
+// centralized admin router in routes/admin/index.ts.
+//
+// POST /login  → public (no requireSuperAdmin, has loginLimiter)
+// All others   → protected via requireSuperAdmin
+// ─────────────────────────────────────────────────────────────
 
 // ============================================================
 // POST /api/admin/auth/login
 // ============================================================
+
+/**
+ * Authenticate a SuperAdmin via email + password.
+ * Sets an HTTP-only `admin_token` cookie on success.
+ */
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
@@ -73,6 +86,10 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 // ============================================================
 // POST /api/admin/auth/logout
 // ============================================================
+
+/**
+ * Clear the admin session by removing the `admin_token` cookie.
+ */
 router.post('/logout', async (req: Request, res: Response, next: NextFunction) => {
   try {
     res.clearCookie('admin_token', { path: '/' });
@@ -85,9 +102,14 @@ router.post('/logout', async (req: Request, res: Response, next: NextFunction) =
 // ============================================================
 // GET /api/admin/auth/me
 // ============================================================
-router.get('/me', requireSuperAdmin, async (req: Request, res: Response, next: NextFunction) => {
+
+/**
+ * Return the currently authenticated admin's profile.
+ * Requires `requireSuperAdmin` (applied by centralized router).
+ */
+router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const adminId = req.admin!.adminId;
+    const adminId = req.admin!.adminId ?? req.admin!.id;
     const admin = await adminAuthService.getAdminById(adminId);
     
     if (!admin) {
@@ -103,7 +125,12 @@ router.get('/me', requireSuperAdmin, async (req: Request, res: Response, next: N
 // ============================================================
 // POST /api/admin/auth/change-password
 // ============================================================
-router.post('/change-password', requireSuperAdmin, async (req: Request, res: Response, next: NextFunction) => {
+
+/**
+ * Change the current admin's password.
+ * Requires `requireSuperAdmin` (applied by centralized router).
+ */
+router.post('/change-password', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { currentPassword, newPassword } = req.body;
     
@@ -111,7 +138,7 @@ router.post('/change-password', requireSuperAdmin, async (req: Request, res: Res
       return ApiResponseHandler.error(res, 'Current and new passwords are required', 400);
     }
 
-    const adminId = req.admin!.adminId;
+    const adminId = req.admin!.adminId ?? req.admin!.id;
     // We need the full record to get the hash
     const admin = await prisma.superAdmin.findUnique({ where: { id: adminId } });
     
@@ -137,7 +164,5 @@ router.post('/change-password', requireSuperAdmin, async (req: Request, res: Res
     next(error);
   }
 });
-
-import prisma from '../config/database.js'; // imported for change-password route
 
 export default router;

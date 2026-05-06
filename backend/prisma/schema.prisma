@@ -923,6 +923,7 @@ model AdminLog {
   targetId         String
   metadata         Json? // Additional context (reason, notes, previous values, etc.)
   ip               String?
+  userAgent        String?
   timestamp        DateTime @default(now())
 
   @@index([adminId])

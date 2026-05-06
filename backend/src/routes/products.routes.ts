@@ -10,7 +10,7 @@ import {
 } from '../utils/validators.js';
 import { productService } from '../services/product.service.js';
 import { recommendationService } from '../services/recommendation.service.js';
-import { logAdminAction } from '../middleware/adminLog.middleware.js';
+import { logAdminAction } from '../middleware/adminLogger.js';
 
 const router = Router();
 

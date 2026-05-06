@@ -1,12 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/database.js';
-import { requireSuperAdmin } from '../middleware/admin-auth.middleware.js';
 import { getActivityLogs, getSecurityLogs } from '../services/admin-activity.service.js';
 
 const router = Router();
 
-// Secure all audit routes with admin auth
-router.use(requireSuperAdmin);
+// NOTE: Authentication is applied by the centralized admin router
+// in routes/admin/index.ts — do NOT add router.use(requireSuperAdmin) here.
 
 // ==================== ADMIN ACTIVITY LOGS ====================
 
