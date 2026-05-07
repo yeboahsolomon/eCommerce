@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import { 
-  User, Lock, Settings as SettingsIcon, AlertTriangle, Edit2, Shield, Eye, EyeOff, Save, Database, Download, Check, Monitor
+  User, Settings, Shield, Bell, Key, Save,
+  LogOut, LogIn, Lock, EyeOff, Eye, Check, AlertTriangle, Database, Monitor, Download, X, Edit2, Settings as SettingsIcon
 } from "lucide-react";
-import ConfirmationModal from "@/components/admin/ConfirmationModal";
 
 export interface AdminProfile {
   name: string;
@@ -20,33 +21,24 @@ export interface PlatformConfig {
   supportEmail: string;
   supportPhone: string;
   feePercentage: number;
+  maintenanceMode: boolean;
+  autoApproveSellers: boolean;
 }
 
-const mockProfile: AdminProfile = {
-  name: "Super Admin",
-  email: "admin@ecommerce.com",
-  phone: "+233 20 000 0000",
-  role: "SUPERADMIN",
-  avatar: "SA",
-};
-
-const mockConfig: PlatformConfig = {
+const defaultConfig: PlatformConfig = {
   platformName: "GhanaMarket",
   currency: "GHS (₵)",
   supportEmail: "support@ghanamarket.com",
   supportPhone: "+233 24 111 2222",
   feePercentage: 5.0,
+  maintenanceMode: false,
+  autoApproveSellers: false,
 };
 
-const mockSessions = [
-  { id: "1", device: "MacBook Pro", browser: "Chrome 120", ip: "197.251.10.15", location: "Accra, Ghana", lastActive: "Just now", isCurrent: true },
-  { id: "2", device: "iPhone 13", browser: "Safari Mobile", ip: "197.251.10.42", location: "Kumasi, Ghana", lastActive: "2 hours ago", isCurrent: false },
-  { id: "3", device: "Windows Desktop", browser: "Firefox 118", ip: "154.160.2.19", location: "Lagos, Nigeria", lastActive: "3 days ago", isCurrent: false },
-];
-
 export default function SettingsPage() {
-  const [profile, setProfile] = useState<AdminProfile>(mockProfile);
-  const [config, setConfig] = useState<PlatformConfig>(mockConfig);
+  const [profile, setProfile] = useState<AdminProfile>({ name: "", email: "", phone: "", role: "SUPERADMIN", avatar: "SA" });
+  const [config, setConfig] = useState<PlatformConfig>(defaultConfig);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Passwords
   const [currentPassword, setCurrentPassword] = useState("");
@@ -66,9 +58,98 @@ export default function SettingsPage() {
   const [pendingMaintenanceMode, setPendingMaintenanceMode] = useState<boolean | null>(null);
 
   // Sessions
-  const [sessions, setSessions] = useState(mockSessions);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [sessionToLogout, setSessionToLogout] = useState<string | null>(null);
   const [showLogoutAllModal, setShowLogoutAllModal] = useState(false);
+
+  const ConfirmationModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Confirm", isDanger = false }: any) => {
+    if (!isOpen) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-6 max-w-md w-full shadow-2xl">
+          <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+          <p className="text-slate-400 text-sm mb-6">{message}</p>
+          <div className="flex justify-end gap-3">
+            <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors">Cancel</button>
+            <button onClick={onConfirm} className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${isDanger ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>{confirmText}</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const [profileRes, configRes, sessionsRes] = await Promise.all([
+          api.getAdminProfile(),
+          api.getAdminConfig(),
+          api.getAdminSessions()
+        ]);
+        
+        if (profileRes.success) {
+          setProfile({
+            ...profileRes.data,
+            role: "SUPERADMIN",
+            avatar: profileRes.data.name?.substring(0, 2).toUpperCase() || "SA"
+          });
+        }
+        
+        if (configRes.success && configRes.data) {
+          setConfig({
+            ...defaultConfig,
+            feePercentage: configRes.data.commissionRate || 5.0,
+            maintenanceMode: configRes.data.maintenanceMode || false,
+            autoApproveSellers: configRes.data.autoApproveSellers || false,
+          });
+          setMaintenanceMode(configRes.data.maintenanceMode || false);
+        }
+
+        if (sessionsRes.success) {
+          setSessions(sessionsRes.data);
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSaveConfig = async () => {
+    try {
+      await api.updateAdminConfig({
+        commissionRate: config.feePercentage,
+        maintenanceMode: maintenanceMode,
+        autoApproveSellers: config.autoApproveSellers,
+        maxProductsPerSeller: 100, // Default for now
+        payoutProcessingDays: 3,
+      });
+      alert("Configuration saved successfully");
+    } catch (error) {
+      alert("Failed to save configuration");
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (newPassword !== confirmPassword) return alert("Passwords do not match");
+    try {
+      await api.updateAdminProfile({
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        currentPassword,
+        newPassword
+      });
+      alert("Password updated successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      alert("Failed to update password: " + (error.response?.data?.error || ""));
+    }
+  };
 
   const handleMaintenanceToggle = (newValue: boolean) => {
     if (newValue) {
@@ -114,6 +195,9 @@ export default function SettingsPage() {
         <p className="text-sm text-slate-400 mt-1">Manage your platform configuration, security, and administrative preferences.</p>
       </div>
 
+      {isLoading ? (
+        <div className="text-slate-400 text-center py-20">Loading settings...</div>
+      ) : (
       <div className="space-y-6">
         
         {/* ROW 1: Profile & Config */}
@@ -211,7 +295,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="mt-5 flex justify-end">
-                <button className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-600/20">
+                <button onClick={handleSaveConfig} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-600/20">
                   <Save className="w-4 h-4" /> Save Configuration
                 </button>
               </div>
@@ -326,7 +410,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="pt-2">
-                  <button className="flex items-center justify-center gap-2 w-full px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50" disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}>
+                  <button onClick={handleUpdatePassword} className="flex items-center justify-center gap-2 w-full px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50" disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}>
                     <Check className="w-4 h-4" /> Update Password
                   </button>
                 </div>
@@ -371,6 +455,7 @@ export default function SettingsPage() {
         </div>
 
       </div>
+      )}
 
       {/* Active Sessions */}
       <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-6 shadow-sm mt-6 mb-8">
@@ -404,18 +489,18 @@ export default function SettingsPage() {
                 <tr key={session.id} className="hover:bg-slate-700/20 transition">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2 text-white font-medium">
-                      {session.device}
-                      {session.isCurrent && (
+                      {session.device || session.browser || 'Unknown Device'}
+                      {session.id === 'current-jwt' && (
                         <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Current</span>
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-slate-300">{session.browser}</td>
-                  <td className="py-3 px-4 text-slate-400 font-mono text-xs">{session.ip}</td>
-                  <td className="py-3 px-4 text-slate-400">{session.location}</td>
-                  <td className="py-3 px-4 text-slate-400">{session.lastActive}</td>
+                  <td className="py-3 px-4 text-slate-300">{session.browser || 'Unknown'}</td>
+                  <td className="py-3 px-4 text-slate-400 font-mono text-xs">{session.ipAddress || session.ip}</td>
+                  <td className="py-3 px-4 text-slate-400">{session.location || 'Unknown'}</td>
+                  <td className="py-3 px-4 text-slate-400">{new Date(session.lastSeenAt).toLocaleString()}</td>
                   <td className="py-3 px-4 text-right">
-                    {!session.isCurrent && (
+                    {session.id !== 'current-jwt' && (
                       <button 
                         onClick={() => setSessionToLogout(session.id)}
                         className="text-xs text-red-400 hover:text-red-300 font-medium px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 transition-colors"
@@ -476,52 +561,52 @@ export default function SettingsPage() {
         isOpen={pendingMaintenanceMode === true}
         title="Enable Maintenance Mode"
         message="Are you sure you want to enable maintenance mode? The storefront will be hidden from public visitors and only admins will be able to log in."
-        confirmLabel="Enable Maintenance"
+        confirmText="Enable Maintenance"
         onConfirm={() => {
           setMaintenanceMode(true);
           setPendingMaintenanceMode(null);
         }}
         onCancel={() => setPendingMaintenanceMode(null)}
-        isDangerous={true}
+        isDanger={true}
       />
 
       <ConfirmationModal
         isOpen={showClearCacheModal}
         title="Clear System Cache"
         message="This will force all storefront pages and API routes to rebuild their cached responses. It may temporarily increase server load."
-        confirmLabel="Clear Cache"
+        confirmText="Clear Cache"
         onConfirm={() => {
           // Implement cache clearing logic here
           setShowClearCacheModal(false);
         }}
         onCancel={() => setShowClearCacheModal(false)}
-        isDangerous={true}
+        isDanger={true}
       />
 
       <ConfirmationModal
         isOpen={!!sessionToLogout}
         title="Force Logout Session"
         message="Are you sure you want to force logout this session? The user on that device will be required to log in again."
-        confirmLabel="Force Logout"
+        confirmText="Force Logout"
         onConfirm={() => {
-          setSessions(sessions.filter(s => s.id !== sessionToLogout));
+          setSessions(sessions.filter((s: any) => s.id !== sessionToLogout));
           setSessionToLogout(null);
         }}
         onCancel={() => setSessionToLogout(null)}
-        isDangerous={true}
+        isDanger={true}
       />
 
       <ConfirmationModal
         isOpen={showLogoutAllModal}
         title="Sign Out All Other Sessions"
         message="This will immediately invalidate all other active sessions across all devices. You will remain logged in on this device."
-        confirmLabel="Sign Out All"
+        confirmText="Sign Out All"
         onConfirm={() => {
-          setSessions(sessions.filter(s => s.isCurrent));
+          setSessions(sessions.filter((s: any) => s.isCurrent));
           setShowLogoutAllModal(false);
         }}
         onCancel={() => setShowLogoutAllModal(false)}
-        isDangerous={true}
+        isDanger={true}
       />
 
     </div>
@@ -530,8 +615,4 @@ export default function SettingsPage() {
 
 function Globe(props: any) {
   return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-}
-
-function X(props: any) {
-  return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import { 
   CreditCard, Search, Filter, Download, 
   CheckCircle2, Clock, XCircle, Wallet, ArrowUpRight, TrendingUp, AlertTriangle
@@ -17,26 +18,44 @@ export interface Transaction {
   date: string;
 }
 
-const mockTransactions: Transaction[] = [
-  { id: "1", referenceId: "TXN-9823741", customerName: "Kwesi Appiah", customerPhone: "+233 24 123 4567", amount: 1250.00, method: "MTN MoMo", status: "Success", date: "2026-04-29T10:30:00Z" },
-  { id: "2", referenceId: "TXN-9823742", customerName: "Ama Serwaa", customerPhone: "+233 20 987 6543", amount: 450.50, method: "Telecel Cash", status: "Pending", date: "2026-04-29T11:15:00Z" },
-  { id: "3", referenceId: "TXN-9823743", customerName: "Kofi Mensah", customerPhone: "+233 27 333 2211", amount: 8900.00, method: "Paystack", status: "Success", date: "2026-04-28T14:20:00Z" },
-  { id: "4", referenceId: "TXN-9823744", customerName: "Abena Osei", customerPhone: "+233 55 444 9988", amount: 120.00, method: "AirtelTigo", status: "Failed", date: "2026-04-28T09:05:00Z" },
-  { id: "5", referenceId: "TXN-9823745", customerName: "Yaw Boakye", customerPhone: "+233 24 777 8899", amount: 3200.75, method: "MTN MoMo", status: "Success", date: "2026-04-27T16:45:00Z" },
-  { id: "6", referenceId: "TXN-9823746", customerName: "Akua Danso", customerPhone: "+233 20 111 2233", amount: 650.00, method: "Paystack", status: "Pending", date: "2026-04-27T12:10:00Z" },
-];
-
 export default function TransactionsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [methodFilter, setMethodFilter] = useState("All");
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [txnRes, summaryRes] = await Promise.all([
+          api.getAdminTransactions({ status: statusFilter, method: methodFilter, search: searchTerm }),
+          api.getAdminTransactionsSummary()
+        ]);
+        if (txnRes.success) setTransactions(txnRes.data);
+        if (summaryRes.success) setSummary(summaryRes.data);
+      } catch (err) {
+        console.error("Failed to load transactions", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Simple debounce for search
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter, methodFilter]);
 
   const handleExportCSV = () => {
     // Basic CSV Export logic
     const headers = ["Reference ID", "Customer", "Phone", "Amount (GHS)", "Method", "Status", "Date"];
     const csvContent = [
       headers.join(","),
-      ...mockTransactions.map(t => 
+      ...transactions.map(t => 
         `"${t.referenceId}","${t.customerName}","${t.customerPhone}",${t.amount},"${t.method}","${t.status}","${new Date(t.date).toLocaleString()}"`
       )
     ].join("\n");
@@ -48,13 +67,7 @@ export default function TransactionsPage() {
     link.click();
   };
 
-  const filteredTransactions = mockTransactions.filter(t => {
-    const matchesSearch = t.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          t.referenceId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "All" || t.status === statusFilter;
-    const matchesMethod = methodFilter === "All" || t.method === methodFilter;
-    return matchesSearch && matchesStatus && matchesMethod;
-  });
+  const filteredTransactions = transactions; // API already filters
 
   const getStatusBadge = (status: Transaction["status"]) => {
     switch(status) {
@@ -83,10 +96,10 @@ export default function TransactionsPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Total Paid Out", value: "₵ 145,230.50", icon: Wallet, color: "bg-green-500/15 text-green-400", trend: "+12.5%" },
-          { label: "Pending Settlements", value: "₵ 12,450.00", icon: Clock, color: "bg-yellow-500/15 text-yellow-400", trend: "4 active" },
-          { label: "Failed Transactions", value: "24", icon: AlertTriangle, color: "bg-red-500/15 text-red-400", trend: "-2.4%" },
-          { label: "Success Rate", value: "98.2%", icon: TrendingUp, color: "bg-blue-500/15 text-blue-400", trend: "+0.5%" },
+          { label: "Total Paid Out", value: `₵ ${(summary?.totalPaidOutInPesewas / 100 || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, icon: Wallet, color: "bg-green-500/15 text-green-400", trend: "" },
+          { label: "Pending Settlements", value: `₵ ${(summary?.pendingSettlementsInPesewas / 100 || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`, icon: Clock, color: "bg-yellow-500/15 text-yellow-400", trend: "Active" },
+          { label: "Failed Transactions", value: summary?.failedTransactions || 0, icon: AlertTriangle, color: "bg-red-500/15 text-red-400", trend: "" },
+          { label: "Success Rate", value: `${summary?.successRate || 0}%`, icon: TrendingUp, color: "bg-blue-500/15 text-blue-400", trend: "" },
         ].map((card, i) => (
           <div key={i} className="bg-slate-800 rounded-xl border border-slate-700/50 p-5 shadow-sm hover:border-slate-500 transition-colors">
             <div className="flex items-center justify-between mb-4">
@@ -153,7 +166,13 @@ export default function TransactionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
-              {filteredTransactions.length > 0 ? filteredTransactions.map((txn) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center text-slate-500">
+                    Loading transactions...
+                  </td>
+                </tr>
+              ) : filteredTransactions.length > 0 ? filteredTransactions.map((txn) => (
                 <tr key={txn.id} className="hover:bg-slate-700/20 transition-colors">
                   <td className="py-3.5 px-5 font-mono text-xs text-slate-300">{txn.referenceId}</td>
                   <td className="py-3.5 px-5">

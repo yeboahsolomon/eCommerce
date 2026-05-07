@@ -85,9 +85,9 @@ export default function AdminLayout({
   // Fetch pending application count
   useEffect(() => {
     if (isAuthenticated) {
-      api.getAdminDashboard().then((res) => {
-        if (res.success && res.data?.sellers?.pendingApplications) {
-          setPendingApps(res.data.sellers.pendingApplications);
+      api.getAdminDashboardStats().then((res: any) => {
+        if (res.success && res.data?.pendingApplications) {
+          setPendingApps(res.data.pendingApplications);
         }
       }).catch(() => {});
     }

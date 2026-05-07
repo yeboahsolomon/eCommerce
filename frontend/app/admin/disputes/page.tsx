@@ -6,41 +6,75 @@ import {
   XCircle, Clock, Shield, X, Eye
 } from "lucide-react";
 
+import { useEffect } from "react";
+import { api } from "@/lib/api";
+
 export interface Dispute {
   id: string;
-  disputeId: string;
-  buyer: string;
-  seller: string;
-  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  sellerName: string;
   reason: string;
-  status: "Open" | "Under Review" | "Resolved" | "Escalated";
+  status: "Open" | "Under Review" | "Resolved" | "Escalated" | string;
   date: string;
 }
 
 export interface FlaggedProduct {
   id: string;
-  product: string;
-  seller: string;
+  productName: string;
+  sellerName: string;
   reason: string;
   reportedBy: string;
+  status: string;
   date: string;
 }
 
-const mockDisputes: Dispute[] = [
-  { id: "1", disputeId: "DSP-1029", buyer: "Kwame Mensah", seller: "Accra Electronics", orderId: "ORD-9482", reason: "Item not as described", status: "Open", date: "2026-04-29T10:30:00Z" },
-  { id: "2", disputeId: "DSP-1028", buyer: "Abena Osei", seller: "Kumasi Kente Hub", orderId: "ORD-9480", reason: "Never received item", status: "Under Review", date: "2026-04-28T14:15:00Z" },
-  { id: "3", disputeId: "DSP-1027", buyer: "Kofi Appiah", seller: "Tech Haven", orderId: "ORD-9475", reason: "Defective product", status: "Escalated", date: "2026-04-27T09:45:00Z" },
-  { id: "4", disputeId: "DSP-1026", buyer: "Ama Serwaa", seller: "Ghana Fresh Groceries", orderId: "ORD-9470", reason: "Wrong item delivered", status: "Resolved", date: "2026-04-25T16:20:00Z" },
-];
-
-const mockFlaggedProducts: FlaggedProduct[] = [
-  { id: "1", product: "Fake Apple AirPods Pro", seller: "Tech Haven", reason: "Counterfeit item", reportedBy: "Kofi Appiah", date: "2026-04-29T11:00:00Z" },
-  { id: "2", product: "Miracle Weight Loss Tea", seller: "Health Hub", reason: "Misleading claims", reportedBy: "Ama Serwaa", date: "2026-04-28T13:40:00Z" },
-  { id: "3", product: "Stolen Samsung S23", seller: "Accra Electronics", reason: "Suspiciously low price", reportedBy: "Yaw Boakye", date: "2026-04-27T10:15:00Z" },
-];
-
 export default function DisputesPage() {
   const [activeTab, setActiveTab] = useState<"disputes" | "flagged">("disputes");
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [flaggedProducts, setFlaggedProducts] = useState<FlaggedProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [disputesRes, flaggedRes] = await Promise.all([
+        api.getAdminDisputes(),
+        api.getAdminFlaggedProducts()
+      ]);
+      
+      if (disputesRes.success) setDisputes(disputesRes.data);
+      if (flaggedRes.success) setFlaggedProducts(flaggedRes.data);
+    } catch (error) {
+      console.error("Failed to load disputes/flags:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleUpdateDisputeStatus = async (id: string, status: string) => {
+    try {
+      await api.updateAdminDisputeStatus(id, status);
+      fetchData(); // Refresh list
+    } catch (error) {
+      console.error("Failed to update dispute:", error);
+      alert("Failed to update dispute status");
+    }
+  };
+
+  const handleUpdateFlaggedStatus = async (id: string, status: string) => {
+    try {
+      await api.updateAdminFlaggedProductStatus(id, status);
+      fetchData(); // Refresh list
+    } catch (error) {
+      console.error("Failed to update flagged product:", error);
+      alert("Failed to update flagged product status");
+    }
+  };
 
   const getDisputeStatusBadge = (status: Dispute["status"]) => {
     switch(status) {
@@ -102,12 +136,16 @@ export default function DisputesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {mockDisputes.map((dispute) => (
+                {isLoading ? (
+                  <tr><td colSpan={8} className="py-8 text-center text-slate-500">Loading disputes...</td></tr>
+                ) : disputes.length === 0 ? (
+                  <tr><td colSpan={8} className="py-8 text-center text-slate-500">No disputes found.</td></tr>
+                ) : disputes.map((dispute) => (
                   <tr key={dispute.id} className="hover:bg-slate-700/20 transition-colors group">
-                    <td className="py-4 px-5 font-mono text-xs text-slate-300 font-bold">{dispute.disputeId}</td>
-                    <td className="py-4 px-5 font-medium text-white">{dispute.buyer}</td>
-                    <td className="py-4 px-5 font-medium text-white">{dispute.seller}</td>
-                    <td className="py-4 px-5 font-mono text-xs text-blue-400 hover:underline cursor-pointer">{dispute.orderId}</td>
+                    <td className="py-4 px-5 font-mono text-xs text-slate-300 font-bold">{dispute.id.slice(-8).toUpperCase()}</td>
+                    <td className="py-4 px-5 font-medium text-white">{dispute.customerName}</td>
+                    <td className="py-4 px-5 font-medium text-white">{dispute.sellerName}</td>
+                    <td className="py-4 px-5 font-mono text-xs text-blue-400 hover:underline cursor-pointer">{dispute.orderNumber}</td>
                     <td className="py-4 px-5 text-slate-300">{dispute.reason}</td>
                     <td className="py-4 px-5">{getDisputeStatusBadge(dispute.status)}</td>
                     <td className="py-4 px-5 text-slate-400 text-xs">
@@ -118,13 +156,13 @@ export default function DisputesPage() {
                         <button className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Review Dispute">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" title="Resolve Dispute">
+                        <button onClick={() => handleUpdateDisputeStatus(dispute.id, 'Resolved')} className="p-1.5 text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" title="Resolve Dispute">
                           <CheckCircle2 className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Escalate / Suspend">
+                        <button onClick={() => handleUpdateDisputeStatus(dispute.id, 'Escalated')} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Escalate / Suspend">
                           <ShieldAlert className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:bg-slate-700 rounded-lg transition-colors" title="Dismiss">
+                        <button onClick={() => handleUpdateDisputeStatus(dispute.id, 'Closed')} className="p-1.5 text-slate-400 hover:bg-slate-700 rounded-lg transition-colors" title="Dismiss">
                           <XCircle className="w-4 h-4" />
                         </button>
                       </div>
@@ -153,10 +191,14 @@ export default function DisputesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
-                {mockFlaggedProducts.map((report) => (
+                {isLoading ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-500">Loading flagged products...</td></tr>
+                ) : flaggedProducts.length === 0 ? (
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-500">No flagged products found.</td></tr>
+                ) : flaggedProducts.map((report) => (
                   <tr key={report.id} className="hover:bg-slate-700/20 transition-colors group">
-                    <td className="py-4 px-5 font-medium text-white">{report.product}</td>
-                    <td className="py-4 px-5 font-medium text-white">{report.seller}</td>
+                    <td className="py-4 px-5 font-medium text-white">{report.productName}</td>
+                    <td className="py-4 px-5 font-medium text-white">{report.sellerName}</td>
                     <td className="py-4 px-5 text-red-400 font-medium">{report.reason}</td>
                     <td className="py-4 px-5 text-slate-300">{report.reportedBy}</td>
                     <td className="py-4 px-5 text-slate-400 text-xs">
@@ -167,10 +209,10 @@ export default function DisputesPage() {
                         <button className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Review Product">
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Remove Product">
+                        <button onClick={() => handleUpdateFlaggedStatus(report.id, 'Removed')} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Remove Product">
                           <X className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" title="Clear Flag">
+                        <button onClick={() => handleUpdateFlaggedStatus(report.id, 'Dismissed')} className="p-1.5 text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" title="Clear Flag">
                           <Shield className="w-4 h-4" />
                         </button>
                       </div>

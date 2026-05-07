@@ -48,28 +48,23 @@ export interface MockOrder {
   totalInCedis: number;
 }
 
-const mockRecentOrders: MockOrder[] = [
-  { id: "1", orderNumber: "ORD-9482", customerName: "Kwame Mensah", status: "PENDING", totalInCedis: 450.50 },
-  { id: "2", orderNumber: "ORD-9481", customerName: "Abena Osei", status: "PROCESSING", totalInCedis: 1250.00 },
-  { id: "3", orderNumber: "ORD-9480", customerName: "Kofi Appiah", status: "SHIPPED", totalInCedis: 85.00 },
-  { id: "4", orderNumber: "ORD-9479", customerName: "Ama Serwaa", status: "DELIVERED", totalInCedis: 3200.75 },
-  { id: "5", orderNumber: "ORD-9478", customerName: "Yaw Boakye", status: "CANCELLED", totalInCedis: 120.00 },
-];
-
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [topCategories, setTopCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [dashboardRes, catRes] = await Promise.all([
-          api.getAdminDashboard(),
+        const [statsRes, ordersRes, catRes] = await Promise.all([
+          api.getAdminDashboardStats(),
+          api.getAdminDashboardRecentOrders(),
           api.getAdminTopCategories(6),
         ]);
 
-        if (dashboardRes.success) setStats(dashboardRes.data);
+        if (statsRes.success) setStats(statsRes.data);
+        if (ordersRes.success) setRecentOrders(ordersRes.data || []);
         if (catRes.success) setTopCategories(catRes.data || []);
       } catch (err) {
         console.error("Failed to load dashboard:", err);
@@ -92,55 +87,55 @@ export default function AdminDashboard() {
   const statCards: StatCardData[] = [
     {
       label: "Monthly Revenue",
-      value: `₵${stats?.revenue?.thisMonth?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || "45,230.50"}`,
+      value: `₵${stats?.monthlyRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || "0.00"}`,
       icon: DollarSign,
       color: "green",
-      trendText: "+12.5% vs last month",
-      trendPositive: true,
+      trendText: `${stats?.revenueChangePercent >= 0 ? '+' : ''}${stats?.revenueChangePercent || 0}% vs last month`,
+      trendPositive: (stats?.revenueChangePercent || 0) >= 0,
       link: "/admin/analytics",
     },
     {
       label: "Total Orders",
-      value: stats?.orders?.total || 1240,
+      value: stats?.totalOrders || 0,
       icon: ShoppingCart,
       color: "blue",
-      trendText: "+5.2% vs last month",
-      trendPositive: true,
+      trendText: `${stats?.ordersChangePercent >= 0 ? '+' : ''}${stats?.ordersChangePercent || 0}% vs last month`,
+      trendPositive: (stats?.ordersChangePercent || 0) >= 0,
       link: "/admin/orders",
     },
     {
       label: "Active Sellers",
-      value: stats?.sellers?.total || 142,
+      value: stats?.activeSellers || 0,
       icon: ShoppingBag,
       color: "purple",
-      trendText: "+18.0% vs last month",
+      trendText: "Active stores",
       trendPositive: true,
       link: "/admin/sellers",
     },
     {
       label: "Active Products",
-      value: stats?.products?.active || 4850,
+      value: stats?.activeProducts || 0,
       icon: Package,
       color: "amber",
-      trendText: "-2.4% vs last month",
-      trendPositive: false,
+      trendText: "Listed products",
+      trendPositive: true,
       link: "/admin/products",
     },
     {
       label: "Total Users",
-      value: stats?.users?.total || 15420,
+      value: stats?.totalUsers || 0,
       icon: Users,
       color: "indigo",
-      trendText: "+24.8% vs last month",
+      trendText: "Registered accounts",
       trendPositive: true,
       link: "/admin/users",
     },
     {
       label: "Pending Applications",
-      value: stats?.sellers?.pendingApplications || 12,
+      value: stats?.pendingApplications || 0,
       icon: FileText,
       color: "red",
-      trendText: "-8.5% vs last month",
+      trendText: "Awaiting review",
       trendPositive: false,
       link: "/admin/applications",
     },
@@ -295,7 +290,7 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
-              {mockRecentOrders.map((order) => (
+              {recentOrders.length > 0 ? recentOrders.map((order: any) => (
                 <tr key={order.id} className="hover:bg-slate-700/20 transition-colors group">
                   <td className="py-3.5 px-5 font-medium text-white whitespace-nowrap">
                     {order.orderNumber}
@@ -309,7 +304,7 @@ export default function AdminDashboard() {
                     </span>
                   </td>
                   <td className="py-3.5 px-5 text-right font-bold text-white whitespace-nowrap">
-                    ₵{order.totalInCedis.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₵{(order.totalInPesewas / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                   <td className="py-3.5 px-5 text-right">
                     <Link
@@ -321,7 +316,13 @@ export default function AdminDashboard() {
                     </Link>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-500">
+                    No recent orders
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

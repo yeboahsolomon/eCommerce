@@ -3,8 +3,11 @@ import type { Order, Product, Pagination } from '../../types';
 
 export const adminApi = {
   // Dashboard
-  async getAdminDashboard() {
-    return request<any>('GET', '/admin/dashboard');
+  async getAdminDashboardStats() {
+    return request<any>('GET', '/admin/dashboard/stats');
+  },
+  async getAdminDashboardRecentOrders() {
+    return request<any>('GET', '/admin/dashboard/recent-orders');
   },
 
   // Alerts (Smart Notification Center)
@@ -137,6 +140,69 @@ export const adminApi = {
   },
 
   async deleteCoupon(id: string) {
-    return request<void>('DELETE', `/admin/coupons/${id}`);
+    return request<any>('DELETE', `/admin/coupons/${id}`);
+  },
+
+  async getAdminTransactions(params?: { status?: string; method?: string; search?: string }) {
+    return request<any>('GET', '/admin/transactions', undefined, { params });
+  },
+
+  async getAdminTransactionsSummary() {
+    return request<any>('GET', '/admin/transactions/summary');
+  },
+
+  // Settings
+  async getAdminProfile() {
+    return request<any>('GET', '/admin/settings/profile');
+  },
+
+  async updateAdminProfile(data: any) {
+    return request<any>('PUT', '/admin/settings/profile', data);
+  },
+
+  async getAdminConfig() {
+    return request<any>('GET', '/admin/settings/config');
+  },
+
+  async updateAdminConfig(data: any) {
+    return request<any>('PUT', '/admin/settings/config', data);
+  },
+
+  async getAdminSessions() {
+    return request<any>('GET', '/admin/settings/sessions');
+  },
+
+  // Disputes & Flags
+  async getAdminDisputes() {
+    return request<any>('GET', '/admin/disputes');
+  },
+
+  async updateAdminDisputeStatus(id: string, status: string) {
+    return request<any>('PUT', `/admin/disputes/${id}/status`, { status });
+  },
+
+  async getAdminFlaggedProducts() {
+    return request<any>('GET', '/admin/disputes/flagged-products');
+  },
+
+  async updateAdminFlaggedProductStatus(id: string, status: string) {
+    return request<any>('PUT', `/admin/disputes/flagged-products/${id}/status`, { status });
+  },
+
+  // Announcements
+  async getAdminAnnouncements() {
+    return request<any>('GET', '/admin/announcements');
+  },
+
+  async createAdminAnnouncement(data: any) {
+    return request<any>('POST', '/admin/announcements', data);
+  },
+
+  async updateAdminAnnouncement(id: string, data: any) {
+    return request<any>('PUT', `/admin/announcements/${id}`, data);
+  },
+
+  async deleteAdminAnnouncement(id: string) {
+    return request<any>('DELETE', `/admin/announcements/${id}`);
   },
 };

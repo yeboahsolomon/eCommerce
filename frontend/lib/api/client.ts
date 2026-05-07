@@ -32,8 +32,12 @@ export async function request<T>(
 
     return response.data;
   } catch (error: any) {
-    // Prevent expected auth checks from spamming the Next.js Error Overlay
-    if (!error.response || error.response.status !== 401) {
+    // Suppress expected auth checks (401), not-found (404), and network errors from the overlay
+    const isNetworkError = !error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error');
+    const isAuthCheck = error.response?.status === 401;
+    const isNotFound = error.response?.status === 404;
+
+    if (!isNetworkError && !isAuthCheck && !isNotFound) {
       console.error('API Error:', error);
     }
     
