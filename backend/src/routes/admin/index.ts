@@ -10,6 +10,10 @@ import adminAuthRoutes from '../admin-auth.routes.js';
 import adminCoreRoutes from '../admin.routes.js';
 import adminAuditRoutes from '../admin-audit.routes.js';
 import couponRoutes from '../coupon.routes.js';
+import transactionRoutes from './transactions.js';
+import settingsRoutes from './settings.js';
+import disputeRoutes from './disputes.js';
+import announcementRoutes from './announcements.js';
 
 // ─────────────────────────────────────────────────────────────
 // Centralised Admin Router
@@ -76,10 +80,10 @@ adminRouter.use('/coupons', couponRoutes);
 // ─────────────────────────────────────────────────────────────
 // Future route stubs — uncomment as features are built:
 //
-// adminRouter.use('/transactions', transactionRoutes);
-// adminRouter.use('/disputes', disputeRoutes);
-// adminRouter.use('/announcements', announcementRoutes);
-// adminRouter.use('/settings', settingsRoutes);
+adminRouter.use('/transactions', transactionRoutes);
+adminRouter.use('/disputes', disputeRoutes);
+adminRouter.use('/announcements', announcementRoutes);
+adminRouter.use('/settings', settingsRoutes);
 // adminRouter.use('/sessions', sessionRoutes);
 // ─────────────────────────────────────────────────────────────
 

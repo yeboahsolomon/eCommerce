@@ -74,6 +74,8 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   sellerApplications      SellerApplication[]
   notifications           Notification[]
+  disputes                Dispute[]
+  flaggedProducts         FlaggedProduct[]
 
   // Timestamps
   createdAt    DateTime       @default(now())
@@ -250,6 +252,7 @@ model SellerProfile {
   sellerOrders SellerOrder[]
   reviews      SellerReview[]
   coupons      Coupon[]
+  disputes     Dispute[]
 
   // Social & Contact
   website   String?
@@ -458,6 +461,7 @@ model Product {
   orderItems    OrderItem[]
   reviews       Review[]
   wishlistItems WishlistItem[]
+  flaggedProducts FlaggedProduct[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -672,6 +676,7 @@ model Order {
   // Relations
   sellerOrders SellerOrder[] // The sub-orders
   items        OrderItem[] // Direct link for easier querying (denormalized)
+  disputes     Dispute[]
 
   // Payment
   payment Payment?
@@ -1028,4 +1033,123 @@ model SuperAdmin {
 
   @@index([email])
   @@index([isActive])
+}
+
+// =================================================================
+// ADMIN DATA MODELS (For Dashboard & Operations)
+// =================================================================
+
+model PlatformSettings {
+  id                    String   @id @default("global") // Single row pattern
+  commissionRate        Float    @default(5.0)
+  maintenanceMode       Boolean  @default(false)
+  autoApproveSellers    Boolean  @default(false)
+  maxProductsPerSeller  Int      @default(100)
+  payoutProcessingDays  Int      @default(3)
+  
+  updatedAt             DateTime @updatedAt
+  updatedBy             String?  // Admin ID
+}
+
+model AdminSession {
+  id          String   @id @default(cuid())
+  adminId     String
+  adminEmail  String
+  ipAddress   String?
+  userAgent   String?
+  device      String?
+  browser     String?
+  os          String?
+  
+  status      String   @default("ACTIVE") // ACTIVE, EXPIRED, TERMINATED
+  
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  
+  @@index([adminId])
+  @@index([status])
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED_CUSTOMER
+  RESOLVED_SELLER
+  CLOSED
+}
+
+model Dispute {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  sellerId    String
+  seller      SellerProfile @relation(fields: [sellerId], references: [id])
+  
+  reason      String
+  description String?
+  status      DisputeStatus @default(OPEN)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([orderId])
+  @@index([userId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+enum FlagStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+  ACTION_TAKEN
+}
+
+model FlaggedProduct {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  
+  userId      String?  // Who flagged it
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  reason      String
+  description String?
+  status      FlagStatus @default(PENDING)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([productId])
+  @@index([status])
+}
+
+enum AnnouncementTarget {
+  ALL
+  SELLERS
+  BUYERS
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  targetRole  AnnouncementTarget @default(ALL)
+  isActive    Boolean  @default(true)
+  
+  authorId    String   // Admin who created it
+  
+  publishAt   DateTime @default(now())
+  expiresAt   DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([isActive])
+  @@index([targetRole])
 }

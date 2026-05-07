@@ -23,6 +23,61 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
   }
 });
 
+// Dashboard stats (flattened for frontend compatibility)
+router.get('/dashboard/stats', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const overview = await adminDashboardService.getDashboardOverview();
+
+    // Flatten the nested overview into the flat shape the frontend expects
+    const flat = {
+      totalRevenue: overview.revenue.thisMonth + overview.revenue.lastMonth,
+      monthlyRevenue: overview.revenue.thisMonth,
+      revenueChangePercent: overview.revenue.growth,
+      totalOrders: overview.orders.total,
+      ordersThisMonth: overview.orders.today, // best available proxy
+      ordersChangePercent: 0,
+      activeSellers: overview.sellers.total,
+      activeProducts: overview.products.active,
+      totalUsers: overview.users.total,
+      pendingApplications: overview.sellers.pendingApplications,
+      lowStockProducts: overview.products.lowStock,
+      recentApplications: overview.recentApplications,
+    };
+
+    res.json({ success: true, data: flat });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Recent orders for dashboard widget
+router.get('/dashboard/recent-orders', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 10;
+    const orders = await prisma.order.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    const mapped = orders.map((o: any) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      customerName: o.user ? `${o.user.firstName} ${o.user.lastName}` : 'Unknown',
+      customerEmail: o.user?.email,
+      status: o.status,
+      totalInCedis: (o.totalInPesewas || 0) / 100,
+      createdAt: o.createdAt,
+    }));
+
+    res.json({ success: true, data: mapped });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ==================== ALERTS (Smart Notification Center) ====================
 
 import { adminAlertsService } from '../services/admin-alerts.service.js';
