@@ -169,6 +169,7 @@ export default function RegisterPage() {
           )}
         </button>
 
+        {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
         <div className="relative my-4 flex flex-col gap-4">
           <div className="relative flex justify-center text-xs uppercase pt-2">
             <span className="bg-white px-2 text-slate-500 z-10">Or sign up with</span>
@@ -203,6 +204,7 @@ export default function RegisterPage() {
             />
           </div>
         </div>
+        )}
       </form>
 
       {/* Footer / Login Link */}
