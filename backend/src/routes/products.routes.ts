@@ -82,6 +82,32 @@ router.get(
 );
 
 /**
+ * GET /api/products/flash-sales
+ * Returns paginated flash sale products with composite scoring,
+ * plus top picks for the recommendations section.
+ * Query params: page (default 1), limit (default 20)
+ * Must be registered BEFORE /:id to avoid catch-all.
+ */
+router.get(
+  '/flash-sales',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+
+      const data = await recommendationService.getFlashSales(page, limit);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * GET /api/products/deal-of-the-day
  * Get the algorithmically selected deal of the day
  * Must be registered BEFORE /:id to avoid catch-all
