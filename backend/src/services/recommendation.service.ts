@@ -48,12 +48,18 @@ const PRODUCT_INCLUDE = {
 
 /** Transform a raw Prisma product into the API response shape */
 function transformProduct(product: any) {
+  let discountPercentage = null;
+  if (product.comparePriceInPesewas && product.priceInPesewas < product.comparePriceInPesewas) {
+    discountPercentage = Math.round(((product.comparePriceInPesewas - product.priceInPesewas) / product.comparePriceInPesewas) * 100);
+  }
+
   return {
     ...product,
     priceInCedis: product.priceInPesewas / 100,
     comparePriceInCedis: product.comparePriceInPesewas
       ? product.comparePriceInPesewas / 100
       : null,
+    discountPercentage,
     inStock:
       !product.trackInventory ||
       product.stockQuantity > 0 ||
