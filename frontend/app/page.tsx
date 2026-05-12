@@ -5,6 +5,7 @@ import ProductCarousel from "@/components/ui/ProductCarousel";
 import CategoryProductRow from "@/components/ui/CategoryProductRow";
 import CategoryCard from "@/components/ui/CategoryCard";
 import CountdownTimer from "@/components/ui/CountdownTimer";
+import FlashSalesBanner from "@/components/ui/FlashSalesBanner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Product, Category, HomepageFeeds } from "@/types";
@@ -145,45 +146,7 @@ export default function Home() {
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* FLASH DEALS BANNER                                         */}
       {/* ═══════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 p-6 sm:p-8 shadow-xl shadow-red-600/10">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djJIMjR2LTJoMTJ6TTM2IDI0djJIMjR2LTJoMTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30 animate-pulse"></div>
-
-        <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Flame className="h-7 w-7 text-yellow-300 animate-bounce" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-xl sm:text-2xl font-extrabold text-white">
-                  Flash Deals
-                </h3>
-                <span className="bg-yellow-400 text-yellow-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase animate-pulse">
-                  Live
-                </span>
-              </div>
-              <p className="text-white/80 text-sm mt-1">
-                Massive discounts ending soon — don&apos;t miss out!
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="text-center hidden sm:block">
-              <p className="text-white/60 text-xs font-medium mb-2 uppercase tracking-wider">
-                Ends In
-              </p>
-              <CountdownTimer hoursFromNow={8} />
-            </div>
-            <Link
-              href="/products?deals=true"
-              className="bg-white text-red-600 px-6 py-3 rounded-xl font-bold hover:bg-red-50 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 flex-shrink-0"
-            >
-              Shop Deals
-            </Link>
-          </div>
-        </div>
-      </section>
+      <FlashSalesBanner products={feeds?.topDeals || []} isLoading={feedsLoading} />
 
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* 💰 TOP DEALS                                               */}

@@ -39,6 +39,7 @@ export interface Product {
   description?: string;
   priceInPesewas: number;
   comparePriceInPesewas?: number;
+  discountPercentage?: number;
   image: string | null;
   images?: ProductImage[];
   category: Category;
