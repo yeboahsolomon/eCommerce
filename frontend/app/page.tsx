@@ -65,7 +65,7 @@ export default function Home() {
   const categories = categoriesData || [];
 
   return (
-    <div className="space-y-10 md:space-y-14 pb-12">
+    <div className="space-y-6 md:space-y-8 pb-6 md:pb-8">
 
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* HERO SECTION                                               */}
@@ -208,7 +208,7 @@ export default function Home() {
       {/* 📦 CATEGORY PICKS                                          */}
       {/* ═══════════════════════════════════════════════════════════ */}
       {feeds?.categoryPicks && feeds.categoryPicks.length > 0 && (
-        <div className="space-y-10 md:space-y-14">
+        <div className="space-y-6 md:space-y-8">
           {feeds.categoryPicks.map((pick) =>
             pick && pick.products.length > 0 ? (
               <CategoryProductRow
