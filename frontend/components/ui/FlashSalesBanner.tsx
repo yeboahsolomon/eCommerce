@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef } from "react";
-import Image from "next/image";
+import { useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { ChevronRight, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { Product } from "@/types";
 import CountdownTimer from "./CountdownTimer";
+import ProductCard from "./ProductCard";
 
 interface FlashSalesBannerProps {
   products: Product[];
@@ -17,10 +17,70 @@ export default function FlashSalesBanner({
   isLoading,
 }: FlashSalesBannerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragState = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 10);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+  }, []);
+
+  const scroll = useCallback((direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollAmount = el.clientWidth * 0.8;
+    el.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    dragState.current = { isDown: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
+    setIsDragging(false);
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragState.current.isDown) return;
+    e.preventDefault();
+    const el = scrollRef.current;
+    if (!el) return;
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - dragState.current.startX) * 1.5;
+    el.scrollLeft = dragState.current.scrollLeft - walk;
+    if (Math.abs(walk) > 5) setIsDragging(true);
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    dragState.current.isDown = false;
+    setTimeout(() => setIsDragging(false), 50);
+  }, []);
 
   if (isLoading) {
     return (
-      <div className="w-full h-[400px] bg-slate-100 rounded-lg animate-pulse" />
+      <div className="w-full rounded-2xl overflow-hidden border border-slate-200">
+        <div className="bg-[#E02B2B] px-4 py-3 h-[52px]" />
+        <div className="flex gap-4 p-4 bg-[#FCEAE8]">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-[160px] sm:w-[200px] lg:w-[220px]">
+              <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+                <div className="aspect-square bg-slate-100 animate-pulse" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3 bg-slate-100 rounded animate-pulse w-2/3" />
+                  <div className="h-4 bg-slate-100 rounded animate-pulse" />
+                  <div className="h-6 bg-slate-100 rounded animate-pulse w-3/4 mt-2" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -28,11 +88,10 @@ export default function FlashSalesBanner({
     return null;
   }
 
-  // To match Jumia style, we can use a subset of products for the banner (e.g. top 10)
   const flashSaleProducts = products.slice(0, 10);
 
   return (
-    <div className="w-full rounded-md overflow-hidden bg-[#FCEAE8] border border-slate-200">
+    <div className="w-full rounded-2xl overflow-hidden bg-[#FCEAE8] border border-slate-200">
       {/* 🔴 HEADER SECTION */}
       <div className="bg-[#E02B2B] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -42,15 +101,13 @@ export default function FlashSalesBanner({
 
         <div className="hidden md:flex items-center gap-2 text-white font-medium">
           <span className="text-sm">Time Left:</span>
-          {/* We reuse the CountdownTimer but might need to tweak its text color depending on how it's styled internally. 
-              The existing CountdownTimer uses red text on white bg, so let's wrap it nicely. */}
           <div className="scale-90 origin-left flex items-center">
              <CountdownTimer hoursFromNow={8} />
           </div>
         </div>
 
         <Link
-          href="/products?deals=true"
+          href="/flash-sales"
           className="text-white text-sm font-medium hover:underline flex items-center"
         >
           See All <ChevronRight className="h-4 w-4 ml-0.5" />
@@ -65,83 +122,66 @@ export default function FlashSalesBanner({
         </div>
       </div>
 
-      {/* 🛒 PRODUCTS CAROUSEL */}
-      <div className="relative group">
+      {/* 🛒 PRODUCTS CAROUSEL — Uses standard ProductCard */}
+      <div className="relative group/flash">
+        {/* Left arrow */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scroll("left")}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg shadow-slate-200/60 border border-slate-100 text-slate-600 hover:text-slate-900 hover:shadow-xl transition-all duration-200 translate-x-1 opacity-0 group-hover/flash:opacity-100 hover:scale-110"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Right arrow */}
+        {canScrollRight && (
+          <button
+            onClick={() => scroll("right")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 hidden md:flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg shadow-slate-200/60 border border-slate-100 text-slate-600 hover:text-slate-900 hover:shadow-xl transition-all duration-200 -translate-x-1 opacity-0 group-hover/flash:opacity-100 hover:scale-110"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Left gradient fade */}
+        {canScrollLeft && (
+          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#FCEAE8] to-transparent z-10 pointer-events-none" />
+        )}
+
+        {/* Right gradient fade */}
+        {canScrollRight && (
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#FCEAE8] to-transparent z-10 pointer-events-none" />
+        )}
+
+        {/* Scrollable track */}
         <div
           ref={scrollRef}
-          className="flex overflow-x-auto gap-4 p-4 scrollbar-hide snap-x snap-mandatory"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          className={`flex gap-4 overflow-x-auto p-4 pb-5 scroll-smooth ${
+            isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+          }`}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onScroll={checkScroll}
+          style={{ scrollbarWidth: "none" }}
         >
-          {flashSaleProducts.map((product) => {
-            // Fake realistic stock progress calculation if real data isn't perfectly structured for it
-            const stock = product.stockQuantity || 1;
-            const maxAssumedStock = stock > 20 ? stock * 2 : 50;
-            const progressPercentage = Math.min(
-              100,
-              Math.max(5, (stock / maxAssumedStock) * 100)
-            );
-
-            return (
-              <Link
-                href={`/product/${product.slug}`}
-                key={product.id}
-                className="snap-start flex-shrink-0 w-[160px] md:w-[180px] bg-white rounded-md p-3 hover:shadow-md transition-shadow relative block"
-              >
-                {/* Image */}
-                <div className="relative aspect-square mb-2 bg-white flex items-center justify-center overflow-hidden">
-                  {product.image ? (
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      sizes="180px"
-                      className="object-contain"
-                    />
-                  ) : (
-                    <div className="bg-slate-100 w-full h-full" />
-                  )}
-                  
-                  {/* Discount Badge */}
-                  {product.discountPercentage && (
-                    <div className="absolute top-0 right-0 bg-orange-100 text-orange-500 text-xs font-bold px-1.5 py-0.5 rounded">
-                      -{product.discountPercentage}%
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="space-y-1">
-                  <h3 className="text-sm text-slate-800 line-clamp-2 min-h-[40px] leading-tight">
-                    {product.name}
-                  </h3>
-                  
-                  <div className="flex flex-col">
-                    <span className="text-lg font-bold text-slate-900 leading-none">
-                      GH₵ {(product.priceInPesewas / 100).toLocaleString()}
-                    </span>
-                    {product.comparePriceInPesewas && (
-                      <span className="text-xs text-slate-400 line-through mt-0.5">
-                        GH₵ {(product.comparePriceInPesewas / 100).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Stock Progress */}
-                  <div className="pt-2">
-                    <div className="text-[10px] text-slate-500 mb-1 font-medium">
-                      {product.stockQuantity} items left
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-orange-500 rounded-full"
-                        style={{ width: `${progressPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+          {flashSaleProducts.map((product, index) => (
+            <div
+              key={product.id}
+              className="flex-shrink-0 w-[160px] sm:w-[200px] lg:w-[220px] animate-fade-in-up"
+              style={{
+                animationDelay: `${index * 0.04}s`,
+                animationFillMode: "backwards",
+                pointerEvents: isDragging ? "none" : "auto",
+              }}
+            >
+              <ProductCard product={product} />
+            </div>
+          ))}
         </div>
       </div>
     </div>

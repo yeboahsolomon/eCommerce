@@ -502,8 +502,17 @@ export interface HomepageFeeds {
   trending: Product[];
   bestSellers: Product[];
   topDeals: Product[];
+  flashSales: Product[];
   newArrivals: Product[];
   topRated: Product[];
   categoryPicks: CategoryPick[];
+}
+
+// ==================== FLASH SALES ====================
+
+export interface FlashSalesPageData {
+  products: Product[];
+  topPicks: Product[];
+  pagination: Pagination;
 }
 

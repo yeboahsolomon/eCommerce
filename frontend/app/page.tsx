@@ -146,7 +146,7 @@ export default function Home() {
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* FLASH DEALS BANNER                                         */}
       {/* ═══════════════════════════════════════════════════════════ */}
-      <FlashSalesBanner products={feeds?.topDeals || []} isLoading={feedsLoading} />
+      <FlashSalesBanner products={feeds?.flashSales || []} isLoading={feedsLoading} />
 
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* 💰 TOP DEALS                                               */}

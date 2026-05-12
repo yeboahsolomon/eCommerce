@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { Product, Category, Pagination, ProductQueryParams, CreateProductInput, UpdateProductInput, DealOfTheDay, HomepageFeeds } from '../../types';
+import type { Product, Category, Pagination, ProductQueryParams, CreateProductInput, UpdateProductInput, DealOfTheDay, HomepageFeeds, FlashSalesPageData } from '../../types';
 
 export const productsApi = {
   async getProducts(params?: ProductQueryParams) {
@@ -20,6 +20,10 @@ export const productsApi = {
 
   async getHomepageFeeds() {
     return request<HomepageFeeds>('GET', '/products/homepage-feeds');
+  },
+
+  async getFlashSales(page: number = 1, limit: number = 20) {
+    return request<FlashSalesPageData>('GET', '/products/flash-sales', undefined, { params: { page, limit } });
   },
 
   async createProduct(data: CreateProductInput) {

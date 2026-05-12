@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 const FOOTER_LINKS = {
   shop: [
     { label: "Shop All Products", href: "/products" },
-    { label: "Today's Deals", href: "/products?deals=true" },
+    { label: "Today's Deals", href: "/flash-sales" },
     { label: "Track Order", href: "/account/orders" },
     { label: "Become a Seller", href: "/seller/register" },
   ],
